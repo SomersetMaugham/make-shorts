@@ -1,13 +1,36 @@
-import sys, glob
+"""Contact sheets and labelled frames for render.py --screenshot (run inside work/ with the venv's python).
+  sheet.py '<glob>' out.png [cols]        tiles in name order, each labelled "m:ss.ss [cue]" from its file name
+  sheet.py --label "text" in.png out.png  one frame with its label (render.py --at)
+File names are <seconds>[_<cue>].png; the label is the same time and cue the player's S key copies."""
+import glob, os, re, sys
 from PIL import Image, ImageDraw, ImageFont
-files = sorted(glob.glob(sys.argv[1])); out = sys.argv[2]; cols = int(sys.argv[3]) if len(sys.argv)>3 else 6
+
+
+def font(px):
+    for f in ('fonts/PretendardVariable.ttf', '/System/Library/Fonts/Supplemental/Arial.ttf', 'arial.ttf'):
+        try: return ImageFont.truetype(f, px)
+        except OSError: pass
+    return ImageFont.load_default()
+
+
+def label_of(path):
+    m = re.match(r'([\d.]+)(?:_(\w+))?$', os.path.basename(path).rsplit('.', 1)[0])
+    if not m: return os.path.basename(path)
+    t = float(m.group(1)); mm, ss = divmod(t, 60)
+    return f'{int(mm)}:{ss:05.2f}' + (f'  [{m.group(2)}]' if m.group(2) else '')
+
+
+def stamp(im, text):
+    d = ImageDraw.Draw(im); px = max(16, im.size[1] // 40)
+    d.text((px // 2, px // 3), text, fill='yellow', font=font(px), stroke_width=max(2, px // 8), stroke_fill='black')
+
+
+if sys.argv[1] == '--label':
+    im = Image.open(sys.argv[3]).convert('RGB'); stamp(im, sys.argv[2]); im.save(sys.argv[4]); sys.exit(0)
+files = sorted(glob.glob(sys.argv[1])); out = sys.argv[2]; cols = int(sys.argv[3]) if len(sys.argv) > 3 else 6
 ims = [Image.open(f).convert('RGB') for f in files]
-w, h = ims[0].size; rows = (len(ims)+cols-1)//cols
-sheet = Image.new('RGB', (cols*w, rows*h), 'black'); d = ImageDraw.Draw(sheet)
-try: font = ImageFont.truetype('arial.ttf', max(14, h//10))
-except: font = None
-for i,(f,im) in enumerate(zip(files, ims)):
-    x, y = (i%cols)*w, (i//cols)*h; sheet.paste(im, (x,y))
-    lab = __import__('os').path.basename(f).rsplit('.',1)[0].split('_',1)[-1]
-    d.text((x+4,y+2), lab, fill='yellow', font=font, stroke_width=2, stroke_fill='black')
+w, h = ims[0].size; rows = (len(ims) + cols - 1) // cols
+sheet = Image.new('RGB', (cols * w, rows * h), 'black')
+for i, (f, im) in enumerate(zip(files, ims)):
+    stamp(im, label_of(f)); sheet.paste(im, ((i % cols) * w, (i // cols) * h))
 sheet.save(out); print(out, sheet.size)

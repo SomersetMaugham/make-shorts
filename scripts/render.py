@@ -10,6 +10,10 @@ A copy sits in work/ (setup.sh puts it there); run it from work/ or the project 
     python3 render.py --list               the shorts and whether each is ready (recorded, gates)
     python3 render.py --screenshot --short s1 --from 12.0 --to 14.0 [--gapframe 10] [--fast] [--jobs 1]
     python3 render.py --screenshot --run s1_r3 [--gapframe 10]   the same over one whole run (a graphic's own check)
+    python3 render.py --screenshot --short s1 --at 12.5,40 [--res full] [--out DIR]
+                                           exactly these moments, one image each (labelled with the time and cue): --res full
+                                           is the stage at 1080x1920 (small type, detail; what the art director judges),
+                                           without it 540x960. --out puts sheets or frames in DIR (before / after sets)
                                            a contact sheet of the preview (index.html) from..to, every gapframe-th frame at
                                            60 fps, shot with headless Chrome -> chk/shot_<short>_<from>-<to>.png. No render
                                            needed. The A key in index.html copies this command for the moment on screen.
@@ -43,6 +47,7 @@ if '--screenshot' in flags_all:
     else:
         a = float(opt('--from', '0')); b = float(opt('--to', str(C[sk]['END'])))
     gap = int(opt('--gapframe', '10')); jobs = int(opt('--jobs', '1')); fast = '--fast' in argv
+    at = opt('--at'); res = opt('--res', ''); outd = opt('--out')
     chrome = next((p for p in ('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                                shutil.which('google-chrome') or '', shutil.which('chromium') or '', shutil.which('chrome') or '')
                    if p and os.path.exists(p)), None)
@@ -50,17 +55,27 @@ if '--screenshot' in flags_all:
     if not os.path.exists('index.html'): subprocess.run([PY, 'scripts/preview.py'], check=True)
     ts, t = [], a
     while t <= b + 1e-9: ts.append(round(t, 3)); t += gap / 60
-    w, h = (540, 960) if fast else (720, 1280)        # Chrome keeps a window at least ~500 px wide: smaller would crop
-    out_dir = os.path.join('chk', f'shot_{sk}_{a:.2f}-{b:.2f}'); os.makedirs(out_dir, exist_ok=True)
+    if at: ts = [round(float(x), 3) for x in at.split(',') if x.strip()]
+    w, h = (1080, 1920) if res == 'full' else (540, 960) if fast or at else (720, 1280)   # Chrome keeps a window >= ~500 px wide
+    out_dir = os.path.join(outd or 'chk', f'shot_{sk}_{a:.2f}-{b:.2f}' if not at else f'at_{sk}'); os.makedirs(out_dir, exist_ok=True)
     url = 'file://' + os.path.abspath('index.html')
+    cues = C[sk].get('cues', [])
+    cue_at = lambda t: next((c['id'] for c in cues if c['start'] <= t < c['end']), '-')
     def shoot(t):
-        f = os.path.abspath(os.path.join(out_dir, f'{t:08.3f}.png'))
+        f = os.path.abspath(os.path.join(out_dir, f'{t:08.3f}_{cue_at(t)}.png'))
         subprocess.run([chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', f'--window-size={w},{h}',
                         '--virtual-time-budget=8000', f'--screenshot={f}', f'{url}?s={sk}&t={t}&still'],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return f
     with ThreadPoolExecutor(max(1, jobs)) as ex: files = list(ex.map(shoot, ts))
-    sheet = os.path.join('chk', f'shot_{sk}_{a:.2f}-{b:.2f}.png')
+    if at:                                             # one image per moment, the time and cue written on it
+        for t, f in zip(ts, files):
+            q = cue_at(t)
+            m, sec = divmod(t, 60); dst = os.path.join(out_dir, f'{sk}_{t:07.2f}_{q}.png')
+            subprocess.run([PY, 'scripts/sheet.py', '--label', f'{int(m)}:{sec:05.2f}  [{q}]', f, dst], check=True)
+            os.remove(f); print(os.path.abspath(dst))
+        sys.exit(0)
+    sheet = os.path.join(outd or 'chk', f'shot_{sk}_{a:.2f}-{b:.2f}.png')
     subprocess.run([PY, 'scripts/sheet.py', os.path.join(out_dir, '*.png'), sheet, str(min(6, len(files)))], check=True)
     print(f'{len(files)} frames ({a:.2f}-{b:.2f} s, every {gap} frames) -> {os.path.abspath(sheet)}')
     sys.exit(0)

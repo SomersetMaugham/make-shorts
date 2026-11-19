@@ -66,6 +66,17 @@ You build HyperFrames compositions for <N> standalone vertical shorts (1080x1920
 - `s1_r3` logo <dur> s: <words with @times>
   Idea: <official logo lockup, transition to product interface on phrase>
 
+## Sections and hero frames (look development; references/elevate.md)
+<!-- 3-5 story sections of the short, each a span of runs, and the ONE hero run + moment per section that is built first.
+     The rest is built only after the art director scores these hero frames 4+ on 그래픽 디자인. -->
+- hook: `s1_r0`–`s1_r2` · hero `s1_r1` @ <phrase> — <what the frame is>
+- <section>: `s1_r3`–`s1_r8` · hero `s1_r5` @ <phrase> — <what the frame is>
+
+## The bar
+Score is absolute (elevate.md §4): 3 = competent explainer graphics, 4 = a crafted world (material, light, depth) a
+viewer finds beautiful on its own. A glass card holding a title and a line of text is a slide. One hero per moment,
+filling the content zone; vary the shots (wide · medium · close-up · insert); camera moves only for a reason in the words.
+
 ## Assignment
 - Agent A (tag `a`): `s1_r0`, `s1_r1` - real captures and statistic cards
 - Agent B (tag `b`): `s1_r2`, `s1_r3` - concept diagrams and product lockups

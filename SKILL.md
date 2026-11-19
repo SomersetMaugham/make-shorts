@@ -66,10 +66,23 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    (`W(ws, '구절')`), marks `thumb` windows, and checks its work on PNG contact sheets of the preview
    (`$PY scripts/preview.py`, then `python3 render.py --screenshot --run s1_r3 --gapframe 20 --fast --jobs 3`). **No MP4 of any kind is made
    before the user has finished reviewing** (the MP4 scripts refuse to run outside render.py).
+   **Look development first** (references/elevate.md §1): GFX_BRIEF.md names the short's 3–5 sections; the agents build
+   ONE hero run per section first, you shoot its hero moment (`python3 render.py --screenshot --short s1 --at T,… --res
+   full --out chk/lookdev-1`) and the art director scores it (`python3 scripts/art_director.py lookdev 1 chk/lookdev-1`,
+   Gemini Neon, in the background). The rest is built only when every hero frame reaches 4 on 그래픽 디자인; otherwise
+   the frames are rebuilt and sent again (up to 3 rounds).
 5. **Preview in the browser:** `$PY scripts/preview.py` writes `work/index.html`: every short playing in Chrome with
    its live compositions, captions, chips and cover on the narration's clock (silent before recording; script-to-motion's
-   player and keys). No render is needed, so a fix shows after `build_gfx.py`, `preview.py` and a reload. Check it
-   yourself (`python3 render.py --screenshot …`), then hand the user `work/index.html` and `narration/<sk>/script.txt`,
+   player and keys). No render is needed, so a fix shows after `build_gfx.py`, `preview.py` and a reload.
+   **Before the user sees it, look and elevate, on your own** (references/visual-review.md, references/elevate.md):
+   (a) the visual review — the whole short and each section on sheets, then every run boundary, camera move and key
+   moment frame by frame, judged by the motion reviewer (`art_director.py motion <n> chk/motion-<n>`); fix the floor;
+   (b) the elevation — fresh images into `chk/elevate-<n>` (whole `--gapframe 120`, sections `--gapframe 30`, hero and
+   upgrade moments `--at … --res full`), `art_director.py whole <n> chk/elevate-<n> [--before chk/elevate-<n-1>]`
+   scores 연출 and 디자인 per section and ranks upgrades; re-create (never decorate) the weak beats, rebuild, re-shoot,
+   send again, until every section scores ≥ 4 on 연출, 디자인 and 모션 or three rounds. The heavy looking (dozens of
+   frames) is Gemini Neon's (`gemini-4-neon-medium`, the user's choice); you open only the frames it names. Log the rounds
+   in `review/elevate.md`. Then hand the user `work/index.html` and `narration/<sk>/script.txt`,
    list the lines to listen to first once recorded, and **ask whether to record**.
 
    **The review loop, on the review desk:** start `python3 -u scripts/review_server.py > review/server.log 2>&1` (in work/,
@@ -112,6 +125,9 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
 
 ## Things that are easy to get wrong
 Read `references/lessons.md` before improvising. The biggest ones:
+- **Handing over a short nobody has judged.** Passing the graphics checks is the floor; the elevation (step 5,
+  references/elevate.md) scores it against an absolute bar and keeps going until every section reaches 4. A round that
+  only adds layers to the same frames does not count; a glass card holding a title and a line of text is a slide.
 - **Recording without the user's word.** Never run `--approved` on your own, and never on a line that hasn't passed the
   first-time-listener gates.
 - **Deciding silence in code.** Cuts and phrase times are yours, read off `wave.mjs`; `autocut.py` is only a draft.
