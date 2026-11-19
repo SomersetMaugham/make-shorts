@@ -4,8 +4,10 @@ usage (inside work/, with review_server.py running):
   python3 scripts/review.py show n003                         one note in full (time, cue, run, caption, box, screenshot, replies)
   python3 scripts/review.py reply n003 [--status S] "text"    answer on the page; S = fixing | done | question | recording | wontfix
   python3 scripts/review.py status n003 fixing                only the status
+  python3 scripts/review.py announce "text"                   a message on the page (send it when a batch is fixed and rebuilt)
   python3 scripts/review.py reload [s1_r6 ...]                tell the page to reload those runs (or the page); normally automatic
-Statuses: open (new) -> fixing -> done (rebuilt; the page offers the user 확인 / 다시) -> confirmed by the user.
+Statuses: queued (collected on the page, not sent yet; the agent leaves these alone) -> open (sent: one by one with
+"바로 고치기", or all at once as a BATCH) -> fixing -> done (rebuilt; the page offers the user 확인 / 다시) -> confirmed by the user.
 question: the agent needs the user's answer (the reply is the question). recording: the fix changes a spoken line,
 so it waits for the user's word to record (tts.mjs --approved is never run on a note alone)."""
 import json, os, sys, urllib.request
@@ -38,6 +40,8 @@ elif cmd == 'reply':
     n = call(f'/api/note/{a[0]}', dict(text=' '.join(a[1:]), status=st, who='agent')); print(f'{n["id"]} [{n["status"]}] replied')
 elif cmd == 'status':
     n = call(f'/api/note/{a[0]}', dict(status=a[1], who='agent')); print(f'{n["id"]} [{n["status"]}]')
+elif cmd == 'announce':
+    call('/api/announce', dict(text=' '.join(a))); print('announced')
 elif cmd == 'reload':
     call('/api/reload', dict(rids=a)); print('reload sent')
 else: raise SystemExit(__doc__)

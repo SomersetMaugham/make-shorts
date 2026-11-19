@@ -16,7 +16,8 @@ The player is script-to-motion's (assets/template/js/player.js + css/player.css)
   move the mouse to scrub: fine at the bottom of the screen, coarse at the top). The position and the captions setting are
   remembered. Letter keys work by their physical position, so they also work with the Korean input on.
 Opens from file:// by double-click (the page talks to the compositions by postMessage). Served by
-scripts/review_server.py (http://127.0.0.1:8765/index.html) it is also the review desk: Space while playing pauses and writes a note for the moment
+scripts/review_server.py (http://127.0.0.1:8765/index.html) it is also the review desk. Notes are collected while you watch and go to the agent together when you press
+"검수 끝 · 일괄 수정 요청" in the L list ("바로 고치기" sends one at once). Space while playing pauses and writes a note for the moment
 (drag on the picture to mark the spot; Enter sends and plays on, Esc cancels), V held says it, L lists the notes with the agent's replies (확인 / 다시); the
 agent is told of each note with a screenshot, and every rebuilt run or page shows here by itself (see review_server.py).
 &box=x,y,w,h draws a marked box (the notes' screenshots use it). ?s=s2 opens another short,
@@ -104,6 +105,7 @@ body.vp-playing:not(.vp-cursor){cursor:none}
 .rv-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px;color:#aab}
 .rv-btn{background:#2F95FF;color:#fff;border:0;border-radius:7px;padding:6px 12px;font:600 13px Pretendard,sans-serif;cursor:pointer}
 .rv-btn.ghost{background:#2a2d34}
+.rv-btn.big{width:100%;margin-top:8px;padding:9px 12px;font-size:14px}
 .rv-list{position:fixed;right:16px;top:16px;z-index:140;width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 80px);overflow:auto;box-sizing:border-box;padding:12px;
   border-radius:14px;background:rgba(20,21,24,.97);border:1px solid rgba(255,255,255,.14);color:#eee;font:14px/1.45 Pretendard,sans-serif;display:none}
 .rv-card{padding:10px;border-radius:10px;background:#1b1d22;margin-top:8px;border-left:4px solid var(--c)}
@@ -124,7 +126,8 @@ body.vp-playing .rv-badge{opacity:0}
 <div class="vp-rate" id="toast"></div>
 <div class="rv-panel" id="rvPanel"><div class="rv-head" id="rvHead"></div>
   <textarea id="rvText" rows="3" placeholder="무엇을 고칠까요? 화면을 끌면 위치가 표시돼요"></textarea>
-  <div class="rv-row"><span id="rvHint">Enter 보내기 · Shift+Enter 줄바꿈 · Esc 취소</span><button class="rv-btn" id="rvSend">보내기</button></div></div>
+  <div class="rv-row"><span id="rvHint">Enter 모아 두기 · Shift+Enter 줄바꿈 · Esc 취소</span>
+  <label style="white-space:nowrap;cursor:pointer"><input type="checkbox" id="rvNow"> 바로 고치기</label><button class="rv-btn" id="rvSend">모아 두기</button></div></div>
 <div class="rv-list" id="rvList"></div>
 <div class="rv-badge" id="rvBadge" style="display:none"></div>
 <audio id="aud" preload="auto"></audio>
@@ -186,7 +189,7 @@ function seek(x) { t = clamp(x, 0, duration); anchorT = t; anchorPerf = now(); i
 function tick() {
   if (playing) {
     t = D.audio && !aud.paused ? aud.currentTime : anchorT + (now() - anchorPerf) * rate;
-    if (loopB != null && t >= loopB) seek(loopA);       // a note's moment, looped from the notes list (Esc ends it)
+    if (loopB != null && t >= loopB) { if (tour) tourNext(); else seek(loopA); }   // a note's moment, looped (Esc ends it)
     else if (t >= duration) { t = duration; pause(); }
   }
   // every frame, playing or not: a composition that finished loading late (or a headless screenshot) still gets the
@@ -305,9 +308,9 @@ const boxEl = $('box'), drawEl = $('draw');
 const showBox = (b) => { if (!b) { boxEl.style.display = 'none'; return; }
   Object.assign(boxEl.style, { display: 'block', left: b[0] + 'px', top: b[1] + 'px', width: b[2] + 'px', height: b[3] + 'px' }); };
 if (params.get('box')) showBox(params.get('box').split(',').map(Number));
-const ST = { open: ['새 메모', '#FFD23F'], fixing: ['수정 중', '#2F95FF'], question: ['질문', '#FF8A5B'], recording: ['녹음 대기', '#9C7CFF'],
+const ST = { queued: ['모아 둠', '#c8ccd4'], open: ['보냄', '#FFD23F'], fixing: ['수정 중', '#2F95FF'], question: ['질문', '#FF8A5B'], recording: ['녹음 대기', '#9C7CFF'],
   done: ['반영됨', '#4FD6A0'], confirmed: ['확인됨', '#6b7280'], wontfix: ['보류', '#6b7280'] };
-let wasPlaying = false, notesList = [], panelOpen = false, noteBox = null, noteT = 0, noteVia = 'text', loopA = null, loopB = null, rec = null, recBase = '';
+let tour = null, wasPlaying = false, notesList = [], panelOpen = false, noteBox = null, noteT = 0, noteVia = 'text', loopA = null, loopB = null, rec = null, recBase = '';
 const capsAt = (x) => D.caps.filter((c) => c.t0 <= x + 1e-6 && x < c.t1).map((c) => c.text).join(' / ');
 function stagePt(e) { const b = stage.getBoundingClientRect(), k = 1080 / b.width; return [clamp((e.clientX - b.left) * k, 0, 1080), clamp((e.clientY - b.top) * k, 0, 1920)]; }
 let drag0 = null;
@@ -322,7 +325,7 @@ function openPanel(via) {
   loopA = loopB = null; panelOpen = true; noteT = t; noteVia = via; noteBox = null; showBox(null);
   const c = cueAt(t), r = D.runs[runAt(t)];
   $('rvHead').textContent = `${fmt(t)} · ${c ? c.id + ' · ' : ''}${sk}_r${r.i} +${(t - r.T0).toFixed(2)}s · ${capsAt(t) || (c ? c.text : '')}`;
-  $('rvText').value = ''; $('rvPanel').classList.add('vp-on'); drawEl.style.display = 'block';
+  $('rvText').value = ''; $('rvNow').checked = false; $('rvPanel').classList.add('vp-on'); drawEl.style.display = 'block';
   if (via !== 'voice') setTimeout(() => $('rvText').focus(), 0);
 }
 function closePanel() { panelOpen = false; $('rvPanel').classList.remove('vp-on'); drawEl.style.display = 'none'; showBox(null); if (rec) { rec.abort(); rec = null; } $('rvText').blur(); }
@@ -330,10 +333,10 @@ async function sendNote() {
   const text = $('rvText').value.trim(); if (!text) { toast('메모가 비어 있어요', 1200); return; }
   const c = cueAt(noteT), r = D.runs[runAt(noteT)];
   const body = { sk, t: noteT, run: `${sk}_r${r.i}`, rt: noteT - r.T0, cue: c ? c.id : null, line: c ? c.text : '', caption: capsAt(noteT),
-    text, box: noteBox && noteBox.map(Math.round), via: noteVia };
+    text, box: noteBox && noteBox.map(Math.round), via: noteVia, mode: $('rvNow').checked ? 'now' : 'batch' };
   closePanel(); if (wasPlaying) play();                // sent while watching: carry on watching
   try { const n = await (await fetch('/api/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
-    toast(`${n.id} 보냄 · 에이전트에게 전달돼요`, 1800); } catch (e) { toast('보내지 못했어요: 검수 서버가 꺼져 있어요', 2500); }
+    toast(n.status === 'queued' ? `${n.id} 모아 둠 · 다 보신 뒤 L 목록에서 일괄 수정 요청` : `${n.id} 바로 보냄`, 1800); } catch (e) { toast('보내지 못했어요: 검수 서버가 꺼져 있어요', 2500); }
   loadNotes();
 }
 $('rvSend').onclick = sendNote;
@@ -365,12 +368,28 @@ function reviewKey(e) {
   if (e.key === ' ' && playing) { e.preventDefault(); openPanel('text'); return true; }   // Space while playing: stop here and note it
   if (e.code === 'KeyV') { e.preventDefault(); if (!e.repeat) voiceStart(); return true; }
   if (e.code === 'KeyL') { $('rvList').classList.toggle('vp-on'); return true; }
-  if (e.key === 'Escape') { if (loopB != null) { loopA = loopB = null; showBox(null); toast('반복 끝', 800); } else $('rvList').classList.remove('vp-on'); return true; }
+  if (e.key === 'Escape') { if (loopB != null) { loopA = loopB = null; tour = null; showBox(null); toast('반복 끝', 800); } else $('rvList').classList.remove('vp-on'); return true; }
   return false;
 }
 async function answer(id, status, text) {
   await fetch('/api/note/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ who: 'user', status, text }) });
   loadNotes();
+}
+function tourNext() {
+  // after a batch: each fixed moment once, in time order, then the list for 확인 / 다시
+  const n = tour.shift();
+  if (!n) { tour = null; loopA = loopB = null; showBox(null); pause(); $('rvList').classList.add('vp-on'); toast('다 봤어요 · 목록에서 확인 / 다시', 2500); return; }
+  loopA = Math.max(0, n.t - 1); loopB = Math.min(duration, n.t + 2); showBox(n.box); seek(loopA);
+  toast(`${n.id} · ${n.text.slice(0, 40)}` + (n.replies.length ? ' → ' + n.replies[n.replies.length - 1].text.slice(0, 40) : ''), 2800);
+}
+function startTour() {
+  tour = notesList.filter((n) => n.status === 'done').sort((x, y) => x.t - y.t);
+  if (!tour.length) { tour = null; return; }
+  $('rvList').classList.remove('vp-on'); tourNext(); play();
+}
+async function sendBatch() {
+  const r = await (await fetch('/api/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sk }) })).json();
+  toast(`메모 ${r.n}개를 한 번에 보냈어요 · 다 고치면 알려 드려요`, 2500); loadNotes();
 }
 function loopNote(n) {
   loopA = Math.max(0, n.t - 1); loopB = Math.min(duration, n.t + 2); showBox(n.box); seek(loopA); play();
@@ -380,12 +399,25 @@ function drawList() {
   const L = $('rvList'); L.innerHTML = '';
   const head = document.createElement('div'); head.className = 'rv-row'; head.style.marginTop = '0';
   head.innerHTML = `<b style="color:#fff">검수 메모 ${notesList.length}</b><span>Space 메모 · V 말하기 · L 닫기</span>`; L.appendChild(head);
+  const nq = notesList.filter((n) => n.status === 'queued').length, nd = notesList.filter((n) => n.status === 'done').length;
+  if (nq) { const b = document.createElement('button'); b.className = 'rv-btn big'; b.textContent = `검수 끝 · 일괄 수정 요청 (${nq})`; b.onclick = sendBatch; L.appendChild(b); }
+  if (nd) { const b = document.createElement('button'); b.className = 'rv-btn big ghost'; b.textContent = `반영된 곳 이어 보기 (${nd})`; b.onclick = startTour; L.appendChild(b); }
   for (const n of [...notesList].reverse()) {
     const [label, col] = ST[n.status] || [n.status, '#aaa'];
     const el = document.createElement('div'); el.className = 'rv-card'; el.style.setProperty('--c', col);
     el.innerHTML = `<div class="hd"><span>${n.id} · ${fmt(n.t)} · ${esc(n.cue || '')} ${esc(n.run)}</span><span class="st">${label}</span></div>
       <div style="margin-top:4px">${esc(n.text)}</div>` + n.replies.map((r) => `<div class="rp ${r.who}">${r.who === 'user' ? '나' : '에이전트'}: ${esc(r.text)}</div>`).join('');
     el.querySelector('.hd').onclick = () => loopNote(n);
+    if (n.status === 'queued') {                        // still the user's: change or drop it before the batch
+      const act = document.createElement('div'); act.className = 'act';
+      act.innerHTML = '<input><button class="rv-btn ghost" data-a="edit">고치기</button><button class="rv-btn ghost" data-a="del">지우기</button>';
+      const inp = act.querySelector('input'); inp.value = n.text;
+      const post = (body) => fetch('/api/note/' + n.id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ who: 'user' }, body)) }).then(loadNotes);
+      act.querySelector('[data-a=edit]').onclick = () => { if (inp.value.trim()) post({ edit: inp.value }); };
+      act.querySelector('[data-a=del]').onclick = () => post({ delete: true });
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing && inp.value.trim()) post({ edit: inp.value }); });
+      el.appendChild(act);
+    }
     if (['done', 'question', 'recording'].includes(n.status)) {
       const act = document.createElement('div'); act.className = 'act';
       act.innerHTML = `<input placeholder="${n.status === 'done' ? '다시 고칠 점 (선택)' : '답하기'}">` +
@@ -410,10 +442,12 @@ function drawPins() {
     p.style.left = (n.t / duration) * 100 + '%'; p.style.setProperty('--c', (ST[n.status] || ['', '#aaa'])[1]); p.title = `${n.id}: ${n.text}`; $('bar').appendChild(p); }
 }
 function badge() {
-  const open = notesList.filter((n) => !['confirmed', 'wontfix'].includes(n.status)).length;
+  const open = notesList.filter((n) => ['open', 'fixing'].includes(n.status)).length;
+  const nq = notesList.filter((n) => n.status === 'queued').length;
   const wait = notesList.filter((n) => ['done', 'question', 'recording'].includes(n.status)).length;
   $('rvBadge').style.display = 'block';
-  $('rvBadge').textContent = `검수 연결됨 · 진행 중 메모 ${open}` + (wait ? ` · 내 차례 ${wait}` : '') + ' · 재생 중 Space 메모 · V 말하기 · L 목록';
+  $('rvBadge').textContent = '검수 연결됨' + (nq ? ` · 모은 메모 ${nq} (다 보신 뒤 L에서 일괄 수정 요청)` : '') + (open ? ` · 수정 중 ${open}` : '')
+    + (wait ? ` · 내 차례 ${wait}` : '') + ' · 재생 중 Space 메모 · V 말하기 · L 목록';
 }
 async function loadNotes() {
   try { notesList = await (await fetch('/api/notes?s=' + sk)).json(); } catch (e) { return; }
@@ -437,6 +471,7 @@ if (REVIEW) {
       if (n) toast(`${n.id} ${ST[n.status] ? ST[n.status][0] : n.status}` + (n.replies.length ? ' · ' + n.replies[n.replies.length - 1].text : ''), 3500);
     });
     else if (ev.type === 'runs') swapRuns(ev.rids);
+    else if (ev.type === 'announce') { toast(ev.text, 5000); loadNotes(); }
     else if (ev.type === 'page') { store.set(POS_KEY, t.toFixed(2)); try { sessionStorage.setItem('vp-hot', '1'); } catch (e) {} location.reload(); }
   };
   es.onerror = () => { $('rvBadge').textContent = '검수 서버 연결 끊김 · 다시 연결 중…'; };

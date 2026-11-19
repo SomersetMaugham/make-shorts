@@ -74,16 +74,20 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
 
    **The review loop, on the review desk:** start `python3 -u scripts/review_server.py > review/server.log 2>&1` (in work/,
    in the background, binds 127.0.0.1 only) and watch the log apart from it (Claude Code: Monitor on
-   `tail -n 0 -F review/server.log | grep --line-buffered -E 'NOTE|USER|Error|Traceback'`, re-armed when it expires;
+   `tail -n 0 -F review/server.log | grep --line-buffered -E 'BATCH|NOTE|USER|Error|Traceback'`, re-armed when it expires;
    a watcher that runs the server itself kills it on expiry) and hand the user the `REVIEW http://127.0.0.1:…` link it prints,
-   not the file. On the page the user presses Space while it plays (pause and write; drag on the picture to mark the spot; Enter sends and plays on) or holds V (say it) at
-   what needs fixing; each note prints one `NOTE n003 s1 12.34s [c05 · s1_r6 +1.20s] text | box … | shot review/n003.png`
-   line, which wakes you. For each: look at the shot, `python3 scripts/review.py status n003 fixing`, fix and rebuild
-   (`build_gfx.py` swaps that run on the page by itself; `prep.sh`/`compose.py` + `preview.py` reloads the page at the
-   same moment), then `review.py reply n003 --status done "what changed"`. The user loops it from the L list and
-   answers 확인 (confirmed) or 다시 with a comment (a `USER n003 open: …` line). Unclear → `--status question "…"`.
-   A fix that changes a spoken line → `--status recording`: **a note is never the user's word to record**; ask in the
-   chat. Without the server, index.html still works from file:// (S copies the moment, A the screenshot command).
+   not the file. On the page the user presses Space while it plays (pause and write; drag on the picture to mark the spot;
+   Enter keeps the note and plays on) or holds V (say it). **Notes are collected by default** (status `queued`, nothing
+   printed): the user watches to the end, then presses "검수 끝 · 일괄 수정 요청" in the L list, and you get one
+   `BATCH b1 s1: N notes (…)` line followed by a `NOTE n003 s1 12.34s [c05 · s1_r6 +1.20s] text | box … | shot review/n003.png`
+   line per note. Fix the batch together: look at every shot first, group the notes by run and by kind, resolve notes that
+   pull against each other, gather every spoken-line change into **one** recording question in the chat (status
+   `recording`; **a note is never the user's word to record**), rebuild once (`build_gfx.py`; `prep.sh`/`compose.py`
+   + `preview.py`), then `review.py reply n003 --status done "what changed"` for each and
+   `review.py announce "N개 반영 · L에서 '반영된 곳 이어 보기'"`. The page plays each fixed moment in turn and the user
+   answers 확인 or 다시 (`USER n003 open: …` lines: the next round). A note sent with "바로 고치기" ticked arrives alone at
+   once (a NOTE line with no BATCH): fix just that one. Unclear → `--status question "…"`.
+   Without the server, index.html still works from file:// (S copies the moment, A the screenshot command).
    The loop runs until the user says the review is complete. Only then is an MP4 made, and the user makes it.
 6. **Record (on the user's word):** `node scripts/narration/tts.mjs narration/<sk> --approved`; then the after-recording
    pass (`references/narration.md`): read every take (`wave.mjs narration/<sk> --unreviewed`; `autocut.py` drafts a cut
