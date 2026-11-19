@@ -372,6 +372,8 @@ function reviewKey(e) {
   return false;
 }
 async function answer(id, status, text) {
+  // an answer (확인 / 다시 / 보내기) ends the loop of that moment, and the replay of fixed moments: the user listened
+  loopA = loopB = null; tour = null; showBox(null); if (playing) pause();
   await fetch('/api/note/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ who: 'user', status, text }) });
   loadNotes();
 }
