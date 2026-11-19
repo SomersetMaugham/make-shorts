@@ -28,6 +28,13 @@
 
 ## HyperFrames and Rendering
 
+- **Headless Chrome keeps the window at least ~500 px wide.** A 360 px screenshot of index.html laid the page out at
+  500 px and cropped it; render.py --screenshot shoots at 540 px or wider.
+- **The 240 fps capture is inherited, not measured.** It came from the original spec ("240 fps, blend 3 of every 4"); it
+  quadruples capture time. render_full.sh takes RENDER_FPS=240|120|60 (render.py --fps); engine.js's own viewport blur
+  is computed from the camera's time derivative, so it is the same at every capture rate. Compare before changing the
+  default (the GRPO short has a 60 fps twin for that, 2026-11-19).
+
 - **engine.js must not assume the HyperFrames runtime.** It wrote `window.__timelines[id]` and threw in a plain browser,
   where that object doesn't exist, so `__render` was never set and the preview froze every composition at t = 0. It now
   creates the object when missing.

@@ -18,6 +18,15 @@ export PRODUCER_ENABLE_BROWSER_POOL=false
 cd "$(dirname "$0")/../gfx"
 mkdir -p png240 out60 .render_slots
 RENDER_SLOTS=${RENDER_SLOTS:-3}
+# capture rate and frame blend (the motion blur): 240 = 4 captures per output frame, 3 blended (a 270° shutter; the
+# default); 120 = 2 captures, both blended (180°); 60 = one capture per frame, no blend (only engine.js's own viewport blur)
+RENDER_FPS=${RENDER_FPS:-240}
+case "$RENDER_FPS" in
+  240) BLEND="tmix=frames=3,fps=60," ;;
+  120) BLEND="tmix=frames=2,fps=60," ;;
+  60)  BLEND="" ;;
+  *)   echo "RENDER_FPS must be 240, 120 or 60"; exit 2 ;;
+esac
 HF_WORKERS=${HF_WORKERS:-8}
 
 take_slot() {   # blocks until a slot is free; echoes the slot path
@@ -38,19 +47,19 @@ one() {
   trap 'rm -rf "$slot"' EXIT
   t0=$(date +%s)
   rm -rf png240/$r
-  if ! npx --yes hyperframes render -c $r.html --fps 240 --quality high --format png-sequence --video-frame-format png \
+  if ! npx --yes hyperframes render -c $r.html --fps $RENDER_FPS --quality high --format png-sequence --video-frame-format png \
        --workers $HF_WORKERS --output png240/$r --quiet > png240/$r.log 2>&1; then
     echo "FAILED $r: render (see gfx/png240/$r.log)"; rm -rf "$slot"; return 1
   fi
   n=$(ls png240/$r | grep -c png)
   t1=$(date +%s)
-  if ! ffmpeg -v error -y -framerate 240 -i png240/$r/frame_%06d.png \
-       -vf "format=gbrp,tmix=frames=3,fps=60,scale=out_color_matrix=bt709:out_range=tv,format=yuv420p" \
+  if ! ffmpeg -v error -y -framerate $RENDER_FPS -i png240/$r/frame_%06d.png \
+       -vf "format=gbrp,${BLEND}scale=out_color_matrix=bt709:out_range=tv,format=yuv420p" \
        -c:v libx264 -crf 10 -preset slow -colorspace bt709 -color_primaries bt709 -color_trc bt709 -color_range tv out60/$r.mp4; then
-    echo "FAILED $r: tmix"; rm -rf "$slot"; return 1
+    echo "FAILED $r: blend"; rm -rf "$slot"; return 1
   fi
   rm -rf png240/$r "$slot"
-  echo "done $r $(ffprobe -v error -show_entries format=duration -of csv=p=0 out60/$r.mp4) ($n frames at 240 fps: capture $((t1 - t0)) s, tmix $(( $(date +%s) - t1 )) s, $HF_WORKERS workers)"
+  echo "done $r $(ffprobe -v error -show_entries format=duration -of csv=p=0 out60/$r.mp4) ($n frames at $RENDER_FPS fps: capture $((t1 - t0)) s, tmix $(( $(date +%s) - t1 )) s, $HF_WORKERS workers)"
 }
 
 for r in "$@"; do one $r & done

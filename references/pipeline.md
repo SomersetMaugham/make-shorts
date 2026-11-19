@@ -114,14 +114,16 @@ $PY scripts/preview.py            # -> work/index.html (every short; ?s=s2 picks
 `index.html` stacks each run's live composition (`gfx/<sk>_r<i>.html`) as an iframe and drives it by the narration's
 clock (`narration/<sk>/audio/narration.mp3`, silent before recording), with the captions, keyword chips and cover drawn
 where `compose.py` puts them. It opens from `file://` (the page sends each composition its time by `postMessage`; the
-listener is in every page `build_gfx_common.page()` writes). Keys: space, ←/→ 1 s, shift 5 s, `[`/`]` previous/next run,
-`0` start. The corner shows `<sk>_r<i>` and the time inside the run. No motion blur (that comes from the 240 fps render);
+listener is in every page `build_gfx_common.page()` writes). The player is script-to-motion's (its look and keys):
+Space play/pause · ←/→ 0.5 s, Shift 5 s · `.`/`,` one frame · 0/Home start · R from the top at 1× · Shift+`>`/`<` speed
+0.25×–3× · F fullscreen · C captions · S copy "time / length [cue · run +time] line" · A copy the screenshot command for
+±1 s · D the debug bar (click to seek; Shift + mouse move scrubs). No motion blur (that comes from the render);
 otherwise it is the short. A graphics fix shows after `build_gfx.py` and a reload.
 
-Check it yourself before handing it over (headless Chrome, no extra install):
+Check it yourself before handing it over: a contact sheet of any stretch, shot from the page with headless Chrome
+(no render, no extra install; the A key copies exactly this for the moment on screen):
 ```bash
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=560,1164 \
-  --virtual-time-budget=4000 --screenshot="$PWD/chk/pv_<t>.png" "file://$PWD/index.html?t=<t>&still"
+python3 render.py --screenshot --short s1 --from 12.0 --to 14.0 --gapframe 10 --fast --jobs 4   # -> chk/shot_s1_12.00-14.00.png
 ```
 
 **User Gate**: hand over `work/index.html` and `narration/s1/script.txt` and ask whether to record. This is the **only
@@ -178,6 +180,8 @@ Once the user approves recording:
 After recording: `prep.sh`, `build_gfx.py`, `preview.py`; hand over `work/index.html` again. The user renders:
 ```bash
 python3 work/render.py s1 01 slug-name     # = render_full.sh for every stale composition, then finish.sh s1 01 slug-name
+python3 work/render.py s1 --fps 60         # graphics capture rate: 240 (default; 4 per frame, 3 blended), 120 (2, blended), 60 (no blend)
+                                           # a project's default can be set in project.json "render_fps"
 python3 work/render.py --list              # which shorts are ready
 ```
 The two steps it runs, for reference (run them yourself only when the user asks):
