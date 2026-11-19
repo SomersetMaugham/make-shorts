@@ -72,8 +72,17 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    yourself (`python3 render.py --screenshot …`), then hand the user `work/index.html` and `narration/<sk>/script.txt`,
    list the lines to listen to first once recorded, and **ask whether to record**.
 
-   **The review loop:** index.html → the user reviews (S copies the moment, A the screenshot command) → you fix → a new
-   index.html → … until the user says the review is complete. Only then is an MP4 made, and the user makes it.
+   **The review loop, on the review desk:** start `python3 scripts/review_server.py` (in work/) under a watcher (Claude
+   Code: Monitor on its output; it binds 127.0.0.1 only) and hand the user the `REVIEW http://127.0.0.1:…` link it prints,
+   not the file. On the page the user presses N (write; drag on the picture to mark the spot) or holds V (say it) at
+   what needs fixing; each note prints one `NOTE n003 s1 12.34s [c05 · s1_r6 +1.20s] text | box … | shot review/n003.png`
+   line, which wakes you. For each: look at the shot, `python3 scripts/review.py status n003 fixing`, fix and rebuild
+   (`build_gfx.py` swaps that run on the page by itself; `prep.sh`/`compose.py` + `preview.py` reloads the page at the
+   same moment), then `review.py reply n003 --status done "what changed"`. The user loops it from the L list and
+   answers 확인 (confirmed) or 다시 with a comment (a `USER n003 open: …` line). Unclear → `--status question "…"`.
+   A fix that changes a spoken line → `--status recording`: **a note is never the user's word to record**; ask in the
+   chat. Without the server, index.html still works from file:// (S copies the moment, A the screenshot command).
+   The loop runs until the user says the review is complete. Only then is an MP4 made, and the user makes it.
 6. **Record (on the user's word):** `node scripts/narration/tts.mjs narration/<sk> --approved`; then the after-recording
    pass (`references/narration.md`): read every take (`wave.mjs narration/<sk> --unreviewed`; `autocut.py` drafts a cut
    you correct), set each `cut` (in `narration/<sk>/script.json`), run `phrasing-check.mjs` and fix wrong breaks with
@@ -114,7 +123,7 @@ Read `references/lessons.md` before improvising. The biggest ones:
 ## Files
 - `scripts/`: the pipeline, run inside `work/`. Stage scripts: `setup.sh`, `prep.sh`, `render_draft.sh`,
   `render_full.sh`, `finish.sh`, and `render.py` (the user's MP4 render; setup.sh copies it into `work/`). Python:
-  `preview.py` (`work/index.html`, the browser preview), `narration_init.py` (shorts.json → narration folders), `timeline.py` (cues →
+  `preview.py` (`work/index.html`, the browser preview), `review_server.py` + `review.py` (the review desk: notes on the page, live reload), `narration_init.py` (shorts.json → narration folders), `timeline.py` (cues →
   cut.json + voice.wav), `brief_runs.py`, `build_gfx.py` / `build_gfx_common.py` (compositions, `W()` phrase anchors),
   `compose.py` (captions, chips, cover, segments, `--draft`), `check_text.py`, `check_narration.py`, `mix.py`,
   `verify_final.py`, `thumbnail.py`, `report_data.py`, `check_publish.py`, `draftsheet.py`, `sheet.py`, `config.py`,

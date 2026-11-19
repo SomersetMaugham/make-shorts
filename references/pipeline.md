@@ -130,7 +130,7 @@ python3 render.py --screenshot --short s1 --from 12.0 --to 14.0 --gapframe 10 --
 ```
 
 **User Gate**: hand over `work/index.html` and `narration/s1/script.txt` and ask whether to record. This is the **only
-question** the skill asks. Then the review loop: the user reviews index.html, you fix and rebuild the preview, until the
+question** the skill asks. Then the review loop on the review desk (`scripts/review_server.py`, SKILL.md step 5): the user reviews index.html, you fix and rebuild the preview, until the
 user says the review is complete. No MP4 before that.
 
 ---
