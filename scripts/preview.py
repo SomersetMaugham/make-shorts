@@ -16,8 +16,8 @@ The player is script-to-motion's (assets/template/js/player.js + css/player.css)
   move the mouse to scrub: fine at the bottom of the screen, coarse at the top). The position and the captions setting are
   remembered. Letter keys work by their physical position, so they also work with the Korean input on.
 Opens from file:// by double-click (the page talks to the compositions by postMessage). Served by
-scripts/review_server.py (http://127.0.0.1:8765/index.html) it is also the review desk: N writes a note for the moment
-(drag on the picture to mark the spot), V held says it, L lists the notes with the agent's replies (확인 / 다시); the
+scripts/review_server.py (http://127.0.0.1:8765/index.html) it is also the review desk: Space while playing pauses and writes a note for the moment
+(drag on the picture to mark the spot; Enter sends and plays on, Esc cancels), V held says it, L lists the notes with the agent's replies (확인 / 다시); the
 agent is told of each note with a screenshot, and every rebuilt run or page shows here by itself (see review_server.py).
 &box=x,y,w,h draws a marked box (the notes' screenshots use it). ?s=s2 opens another short,
 ?t=12.5 seeks there, &still hides the start screen (for screenshots: render.py --screenshot uses it).
@@ -296,7 +296,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------- the review desk: only when served by review_server.py (http://127.0.0.1) ----------
-// N: a note for this moment (drag on the picture to mark the spot) · V held: say it · L: the notes list.
+// Space while playing: pause and note this moment (drag on the picture to mark the spot; Enter sends and plays on,
+// Esc cancels and stays paused; Space when paused plays, as before) · V held: say it · L: the notes list.
 // The server stores each note with a screenshot and prints it for the agent; its replies and every rebuilt run come
 // back here by server-sent events, so nothing is copied, pasted or reloaded by hand.
 const REVIEW = location.protocol.startsWith('http');
@@ -306,7 +307,7 @@ const showBox = (b) => { if (!b) { boxEl.style.display = 'none'; return; }
 if (params.get('box')) showBox(params.get('box').split(',').map(Number));
 const ST = { open: ['새 메모', '#FFD23F'], fixing: ['수정 중', '#2F95FF'], question: ['질문', '#FF8A5B'], recording: ['녹음 대기', '#9C7CFF'],
   done: ['반영됨', '#4FD6A0'], confirmed: ['확인됨', '#6b7280'], wontfix: ['보류', '#6b7280'] };
-let notesList = [], panelOpen = false, noteBox = null, noteT = 0, noteVia = 'text', loopA = null, loopB = null, rec = null, recBase = '';
+let wasPlaying = false, notesList = [], panelOpen = false, noteBox = null, noteT = 0, noteVia = 'text', loopA = null, loopB = null, rec = null, recBase = '';
 const capsAt = (x) => D.caps.filter((c) => c.t0 <= x + 1e-6 && x < c.t1).map((c) => c.text).join(' / ');
 function stagePt(e) { const b = stage.getBoundingClientRect(), k = 1080 / b.width; return [clamp((e.clientX - b.left) * k, 0, 1080), clamp((e.clientY - b.top) * k, 0, 1920)]; }
 let drag0 = null;
@@ -317,7 +318,7 @@ drawEl.addEventListener('pointermove', (e) => {
 });
 drawEl.addEventListener('pointerup', () => { drag0 = null; if (noteBox && (noteBox[2] < 24 || noteBox[3] < 24)) { noteBox = null; showBox(null); } $('rvText').focus(); });
 function openPanel(via) {
-  if (playing) pause();
+  wasPlaying = playing; if (playing) pause();
   loopA = loopB = null; panelOpen = true; noteT = t; noteVia = via; noteBox = null; showBox(null);
   const c = cueAt(t), r = D.runs[runAt(t)];
   $('rvHead').textContent = `${fmt(t)} · ${c ? c.id + ' · ' : ''}${sk}_r${r.i} +${(t - r.T0).toFixed(2)}s · ${capsAt(t) || (c ? c.text : '')}`;
@@ -330,7 +331,7 @@ async function sendNote() {
   const c = cueAt(noteT), r = D.runs[runAt(noteT)];
   const body = { sk, t: noteT, run: `${sk}_r${r.i}`, rt: noteT - r.T0, cue: c ? c.id : null, line: c ? c.text : '', caption: capsAt(noteT),
     text, box: noteBox && noteBox.map(Math.round), via: noteVia };
-  closePanel();
+  closePanel(); if (wasPlaying) play();                // sent while watching: carry on watching
   try { const n = await (await fetch('/api/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
     toast(`${n.id} 보냄 · 에이전트에게 전달돼요`, 1800); } catch (e) { toast('보내지 못했어요: 검수 서버가 꺼져 있어요', 2500); }
   loadNotes();
@@ -361,7 +362,7 @@ function reviewKey(e) {
     return true;
   }
   if (!start.classList.contains('vp-hidden')) return false;
-  if (e.code === 'KeyN') { e.preventDefault(); openPanel('text'); return true; }
+  if (e.key === ' ' && playing) { e.preventDefault(); openPanel('text'); return true; }   // Space while playing: stop here and note it
   if (e.code === 'KeyV') { e.preventDefault(); if (!e.repeat) voiceStart(); return true; }
   if (e.code === 'KeyL') { $('rvList').classList.toggle('vp-on'); return true; }
   if (e.key === 'Escape') { if (loopB != null) { loopA = loopB = null; showBox(null); toast('반복 끝', 800); } else $('rvList').classList.remove('vp-on'); return true; }
@@ -378,7 +379,7 @@ function loopNote(n) {
 function drawList() {
   const L = $('rvList'); L.innerHTML = '';
   const head = document.createElement('div'); head.className = 'rv-row'; head.style.marginTop = '0';
-  head.innerHTML = `<b style="color:#fff">검수 메모 ${notesList.length}</b><span>N 메모 · V 말하기 · L 닫기</span>`; L.appendChild(head);
+  head.innerHTML = `<b style="color:#fff">검수 메모 ${notesList.length}</b><span>Space 메모 · V 말하기 · L 닫기</span>`; L.appendChild(head);
   for (const n of [...notesList].reverse()) {
     const [label, col] = ST[n.status] || [n.status, '#aaa'];
     const el = document.createElement('div'); el.className = 'rv-card'; el.style.setProperty('--c', col);
@@ -412,7 +413,7 @@ function badge() {
   const open = notesList.filter((n) => !['confirmed', 'wontfix'].includes(n.status)).length;
   const wait = notesList.filter((n) => ['done', 'question', 'recording'].includes(n.status)).length;
   $('rvBadge').style.display = 'block';
-  $('rvBadge').textContent = `검수 연결됨 · 진행 중 메모 ${open}` + (wait ? ` · 내 차례 ${wait}` : '') + ' · N 메모 · V 말하기 · L 목록';
+  $('rvBadge').textContent = `검수 연결됨 · 진행 중 메모 ${open}` + (wait ? ` · 내 차례 ${wait}` : '') + ' · 재생 중 Space 메모 · V 말하기 · L 목록';
 }
 async function loadNotes() {
   try { notesList = await (await fetch('/api/notes?s=' + sk)).json(); } catch (e) { return; }

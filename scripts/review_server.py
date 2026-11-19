@@ -3,7 +3,8 @@ usage: python3 scripts/review_server.py [--port 8765]           (run inside work
 
 Why: from file:// the page cannot talk to anyone, so a review meant S (copy), switch to the terminal, paste, type,
 then reload by hand. Served from here, the page itself is the review desk:
-  N        pause and write a note for this moment; drag on the picture to mark the spot (optional); Enter sends, Esc cancels
+  Space    (while playing) pause and write a note for this moment; drag on the picture to mark the spot (optional);
+           Enter sends and plays on, Esc cancels and stays paused (Space when paused plays, as before)
   V (hold) say the note (Korean speech recognition in Chrome); release, check the text, Enter sends
   L        the notes list: status, the agent's replies; click a note to loop that moment, confirm or reopen it
 Each note is stored in review/notes.json with the time, cue, run, caption on screen, the marked box, and a screenshot

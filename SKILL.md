@@ -74,7 +74,7 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
 
    **The review loop, on the review desk:** start `python3 scripts/review_server.py` (in work/) under a watcher (Claude
    Code: Monitor on its output; it binds 127.0.0.1 only) and hand the user the `REVIEW http://127.0.0.1:…` link it prints,
-   not the file. On the page the user presses N (write; drag on the picture to mark the spot) or holds V (say it) at
+   not the file. On the page the user presses Space while it plays (pause and write; drag on the picture to mark the spot; Enter sends and plays on) or holds V (say it) at
    what needs fixing; each note prints one `NOTE n003 s1 12.34s [c05 · s1_r6 +1.20s] text | box … | shot review/n003.png`
    line, which wakes you. For each: look at the shot, `python3 scripts/review.py status n003 fixing`, fix and rebuild
    (`build_gfx.py` swaps that run on the page by itself; `prep.sh`/`compose.py` + `preview.py` reloads the page at the
