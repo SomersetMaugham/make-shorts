@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const SKILL_ENV = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env')   // [create-video-shorts] the skill root's .env (scripts/narration/lib -> root);   // fileURLToPath: spaces, Hangul
+export const SKILL_ENV = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env');   // fileURLToPath: spaces, Hangul · [create-video-shorts] one level deeper: the skill root's .env
 export const FISH_KEY_NAMES = ['FISH_API_KEY', 'FISH_AUDIO_API_KEY'];
 
 /** the value of the first of `names` set in a .env file (NAME=value, optionally quoted or after `export`), or null */
