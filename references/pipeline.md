@@ -1,237 +1,242 @@
 # Pipeline: exact commands
 
+This skill creates standalone 9:16 vertical shorts (YouTube Shorts, TikTok, Instagram Reels) from a topic, material, or finished script without any source video or talking-head footage.
+
+Narration is spoken Korean generated via Google Cloud TTS Chirp 3 HD (`ko-KR-Chirp3-HD-Enceladus`). Every run is a full visual (`mode: 'fv'`), rendered with HyperFrames in the neutral stage theme ([references/theme.md](theme.md)). Audio consists of the narration alone, mastered to −14 LUFS integrated / true peak ≤ −1 dBTP.
+
 Conventions:
 - `SKILL`: this skill's folder.
-- `P`: the user's video folder.
-- `W`: `P/work-<video stem>`. Every script runs with `W` as the working directory.
+- `P`: the project folder (it may be empty).
+- `W`: `P/work`. Every command runs with `W` as the working directory.
 - `PY`: `../.venv/Scripts/python.exe` (Windows), or `../.venv/bin/python` elsewhere.
-- Shorts are named `s1`, `s2` and so on. Graphic runs are named `<short>_r<run index>`.
+- `NODE`: Node.js (v22+).
+- Shorts are named `s1`, `s2`, and so on. Graphic runs are named `<sk>_r<run index>`.
 
-Contents: [0 Setup](#0-setup) · [1 Ingest](#1-ingest-and-analysis-all-in-parallel) · [2 Plan](#2-plan) · [3 Cut](#3-cut) · [4 Fan out](#4-fan-out) · [5 Composite](#5-audio-and-composite) · [6 Deliver](#6-verify-and-deliver) · [7 Edits](#7-edits)
+Contents: [0 Setup](#0-setup) · [1 Research & Plan](#1-research-and-plan) · [2 Prep](#2-prep-placeholder-timeline) · [3 Graphics Fan-out](#3-graphics-fan-out) · [4 Review Copy](#4-review-copy-the-single-user-gate) · [5 Recording & Re-timing](#5-recording-and-re-timing) · [6 Final Assembly](#6-final-assembly-and-delivery) · [7 Incremental Edits](#7-incremental-edits) · [8 Environment](#8-environment-and-windows-notes)
+
+---
 
 ## 0. Setup
+
 ```bash
-bash "$SKILL/scripts/setup.sh" "$P"
-bash "$SKILL/scripts/setup.sh" "$P/<video>.mp4"     # ONE video in a folder that also holds others (e.g. a finished edit next to its raw recordings)
+bash "$SKILL/scripts/setup.sh" "$P"       # default: current directory
 ```
-The single-file form works in `<its folder>/shorts/` with a hard link to that video only (a copy if the link fails), so the other videos aren't processed. `P` is then that `shorts/` folder.
 
 Setup creates:
-- `P/.venv`. It takes about 15 s if the uv cache is warm and a few minutes on a new machine.
-- `P/edit/`.
-- `W` for every video in the root of `P`, each with `scripts/`, `gfx/` (HyperFrames project and engine), `fonts/`, `face_landmarker.task` and `project.json`.
+- `P/.venv`: local virtual environment containing `numpy`, `scipy`, `soundfile`, `pyloudnorm`, `opencv-python`, `pillow`, and `fonttools`.
+- `SKILL/assets/fonts/PretendardVariable.ttf`: variable Korean typeface (SIL OFL 1.1), downloaded and verified against its sha256 checksum.
+- `P/work/`: working directory containing `scripts/`, `scripts/narration/` (TTS and wave tools), `gfx/` (HyperFrames engine), `fonts/`, and `project.json`.
+- `P/edit/`: destination for final deliverables.
+- Checks Google Cloud authentication (`gcloud auth print-access-token`) for Chirp 3 HD and prints a `🔑` status line.
 
-Check `project.json`:
-- `clean_audio`: a separate clean recording, if one was found next to the video.
-- `fps`, `source_size` and `duration`.
+---
 
-## 1. Ingest and analysis (all in parallel)
+## 1. Research and Plan
+
+1. **Input**: a topic, raw materials, notes, or a finished script.
+   - If the user provides a script, use it word for word.
+   - If writing the script autonomously, follow [references/script-writing.md](script-writing.md) (spoken Korean, ~75% ~니다 / ~25% ~요, one idea and at most one number per sentence, topic-change cushions).
+2. **Research subagent**:
+   - Fact-checks every claim and number against 2+ sources (`research.md`).
+   - Captures source web pages, docs, pricing tables, and dashboards as 2x PNGs into `work/captures/` (`captures/index.json`, `captures/facts.json`).
+   - Downloads official product/project logos into `work/captures/logos/`.
+3. **Plan in `shorts.json`**:
+   - 1–5 shorts, each structured around "one question, one answer".
+   - Per short:
+     - `title`: short title.
+     - `cover`: 1–2 title lines for the frame-0 glass card (centred at y ~432).
+     - `accent`: `'azure'` (default), `'ember'` (limits/costs), `'mint'` (success), or `'iris'`.
+     - `highlights`: list of 1–3 word phrases for glass keyword chips (longest first).
+     - `lines`: list of dialogue lines:
+       - `id`: cue identifier (`L1`, `L2`, etc.).
+       - `text`: exact display text in Korean.
+       - `scene`: visual category (`capture`, `ui`, `diagram`, `number`, `logo`).
+       - `switches`: optional list of `[{"at": "<phrase>", "scene": "..."}]` to cut visual scene mid-cue.
+       - `caption`: set to `'top'` (y 365–634) if lower third contains important visual details; defaults to lower third (y 1290–1560).
+4. **Visual rotation rules**:
+   - Every run is a full visual (`mode: 'fv'`). No cameras, no splits, no face mattes.
+   - No run exceeds ~8 s.
+   - Two consecutive runs must never share the same scene type.
+   - The hook (`r0`) is the strongest visual (a key number, real capture, or striking result).
+   - The short ends on the last line and its end hold (`tail`, 1.5 s). No CTA card, no "watch full video" prompt, no comment box.
+
+---
+
+## 2. Prep (Placeholder Timeline)
+
 ```bash
 cd "$W"
-bash scripts/analyze.sh              # ingest -> transcribe / detect_camera / gaze / zoomscan, each started the moment its input exists
+bash scripts/prep.sh s1 [s2 ...]         # all shorts in shorts.json if none specified
 ```
-One call, run it in the background while you brief the research subagent. It prints a summary (sync, camera window, pose clusters, framing events, transcript size) and keeps every log in `logs/`. A 15 min 4K master takes about 1.7 min on the reference machine (ingest 60 s, then camera detection, then gaze + zoom scans ~30 s). With several videos, start one `analyze.sh` per work folder at once.
 
-What it runs (the same scripts, which you can still run by hand):
+What `prep.sh` executes:
+1. `narration_init.py`: writes `narration/<sk>/script.json` from `shorts.json` lines (defaults: Google Chirp 3 HD `ko-KR-Chirp3-HD-Enceladus`, `leadIn 0.3`, `gap 0.12`, `tail 1.5`).
+2. `scripts/narration/tts.mjs`: creates silent placeholder cues in `narration/<sk>/js/cues.js` with estimated lengths (API calls are blocked without `--approved`).
+3. `scripts/narration/sync.mjs`: writes `narration/<sk>/js/sync.js`.
+4. `scripts/timeline.py`: generates `cut.json` (runs, word boundaries, `END`) and `<sk>/voice.wav` (silent 48 kHz audio). Word timings are estimated from character positions with script-to-motion weights. Run boundaries snap down to the frame (`fr(t) = math.floor(t * FPS) / FPS`) so audio never leads into the previous run.
+5. `compose.py <sk> --events-only`: writes `<sk>/captions.json` (1–3 어절 chunks, highlight chips).
+
+Then print the run brief:
 ```bash
-$PY scripts/ingest.py                 # the ONE decode of the master; writes ingest_audio.done, then ingest.done
-$PY scripts/transcribe.py clean16.wav transcript_full.json   # GPU Whisper large-v3, batched, word timestamps (~8 s for 15 min; as soon as ingest_audio.done exists)
-$PY scripts/detect_camera.py          # as soon as ingest.done exists -> LOOK at detect_camera.png
-$PY scripts/gaze.py &  $PY scripts/zoomscan.py &              # both read the proxy + camera window, 8 parallel slices each
+$PY scripts/brief_runs.py s1
 ```
-`ingest.py` writes:
-- `clean48.wav`, `clean16.wav` and `rms10ms.npy`, then the marker `ingest_audio.done`.
-- `proxy1080_10.mp4` and `thumbs/`, then the marker `ingest.done`.
+This lists every run, its scene, duration, and words with run-relative start times (`~` indicates character-position estimates). Copy [examples/GFX_BRIEF_template.md](../examples/GFX_BRIEF_template.md) to `GFX_BRIEF.md`, paste the output under `## Compositions`, and add one `Idea:` line per run.
 
-If a clean-audio file exists, ingest cross-correlates it against the camera track (16 kHz mono) and saves `sync` to `project.json`: the offset and the peak. It then writes the clean track already shifted onto video time. If not, it records that the embedded channels line up at zero lag.
-- **`detect_camera.py`:**
-  - Sets `camera.mode`: `full` means the frame is the camera; `pip` means a webcam window inside a screen recording.
-  - Sets `camera.window` and `camera.safe`, which is the window inset past its border and rounded corners.
-  - Always look at `detect_camera.png`. The red box is the window; the green box is the safe area. Fix `project.json` by hand if it's wrong.
-- **`detect_camera.py` WARNING:** it lists sample times whose face sits elsewhere (the webcam moves for a stretch, or a full-frame shot). Keep camera runs out of those stretches.
-- **`gaze.py`:**
-  - Prints two head-pose clusters: on-lens vs reading. The on-lens one is NOT always the frontal one: with the webcam beside the screen, looking at the lens is the turned cluster. Nor is it always the turned one (Harness Engineering: the frontal cluster was the lens, the slides were to his left). Calibrate on frames of known moments (a to-camera sign-off, a line read off a slide) with `eyesheet.py --window`.
-  - In `pip` mode, it also lists stretches where a finished edit cuts to a full-frame camera shot. Mark lines taken from those with `"cam": "fullframe"`.
-  - It runs `GAZE_WORKERS` (8) slices of the proxy in parallel, each with its own landmarker warmed up on the second before its slice. If `detect_camera.py` got the window wrong, fix `project.json` and re-run `gaze.py` (under a minute).
-- **`zoomscan.py`:** lists punch-ins and framing jumps baked into the source. Keep every camera run clear of them. Also sliced (`ZOOM_WORKERS`, 8), with identical rows to a sequential pass.
+---
 
-### 1b. Finished edit with sound under the voice (only if needed)
-If the source is a finished edit whose audio has music, a riser or SFX under lines you may keep, rebuild the clean audio from a clean voice stem (e.g. the long-form edit's dialogue track; a davinci-resolve-pro-edit run keeps `voice48.wav`). Do this before `cut.sh`. The transcript doesn't need re-running.
+## 3. Graphics Fan-out
+
+Spawn 2–4 long-lived graphics subagents by tag (`a`, `b`, ...), grouped by topic or visual style.
+Each tag owns:
+- `scripts/prep_assets_<tag>.py`: crops stills/clips into `gfx/assets/<tag>_*` and writes `gfx/asset_dims_<tag>.json`.
+- `scripts/gfx_<tag>.py`: builds compositions using `scripts/build_gfx_common.py`.
+
 ```bash
-# project.json -> "clean_stem": {"voice": "<stem.wav>"}
-$PY scripts/clean_from_stem.py --scan        # piecewise sync map (trims found automatically) + stretches the stem lacks
-$PY scripts/clean_from_stem.py --suspects    # where the export has extra low-band sound: risers, pops, whooshes, music bass
-# project.json -> "clean_stem.patches": [[t0, t1, "why"], ...]   kept lines inside music/SFX spans; boundaries in quiet gaps
-$PY scripts/clean_from_stem.py --build       # clean48/clean16/rms10ms rebuilt, export audio kept as export48.wav
+$PY scripts/build_gfx.py [tag]              # builds gfx/<rid>.html and gfx/thumbs.json
+bash scripts/render_draft.sh s1_r0 s1_r1    # 10 fps draft MP4 + contact sheet chk/<rid>_sheet.png
 ```
-- **What gets patched:** only the patch windows take the stem. It is EQ-, compression- and level-matched to the export, so patched and unpatched lines sound the same. Everything else stays the export's own (processed) voice.
-- **Never patch** a stretch the stem lacks, e.g. a call's far-end voice. `--scan` lists it as weak correlation.
-- **The hook:** treat it as suspect even when `--suspects` is quiet. A music bed far under the voice doesn't show in the low band.
 
-### 1c. Finished long-form edit made with davinci-resolve-pro-edit (optional)
-Reuse that run instead of redoing its work. `setup.sh` already ran `import_longform.py --auto` and printed a `long-form:` line: the run was imported, only its `pro-edit-media/` report and publishing copy were found (edited on another machine), or nothing was found and the shorts are made standalone (the default path: research subagent, graphics from the source video). By hand:
+Graphics rules ([references/graphics.md](graphics.md)):
+- Every composition is `mode: 'fv'` at 1080×1920.
+- **Timing**: ALWAYS anchor moves, steps, and landings on Korean phrases with `W(ws, '<phrase>')`, never on hardcoded seconds.
+- **Frame 0 of r0**: keep all elements below y 620 so the glass title cover card (centred at y ~432) remains unobstructed.
+- **Pretendard font**: use Pretendard for all Korean text; Geist Mono is reserved for uppercase Latin labels (`.label`).
+- Inspect `chk/<rid>_sheet.png` to verify typography (≥ 30 px), alignment, and layout bounds before full renders.
+
+---
+
+## 4. Review Copy (The Single User Gate)
+
 ```bash
-$PY scripts/import_longform.py                 # finds its work folder (%LOCALAPPDATA%/video-pro-edit/<project>__<timeline>) by the recordings it used; or pass the path
-$PY scripts/import_longform.py --at 545.2      # final-video time -> raw recording + time, with an ffmpeg still command (for the graphics brief)
-$PY scripts/import_longform.py --range 545 552 # the raw pieces under a final-video stretch
+bash scripts/finish.sh s1 --draft
 ```
-- **`longform_program.json`:** the final video's time mapped to the RAW recordings (file, source frames). Graphics grab clean, unzoomed screen footage from the raw files (never the finished render, which carries the long-form's zooms, pops and cards). The raw files still show the webcam PiP: crop it away.
-- **`captures/`** (with `index.json` and the fact check `facts.json`) and **`longform_assets/`** (logos, avatars and thumbnails it cut out): reuse them. The research subagent only checks claims they don't cover.
-- **`clean_stem.voice`** = its `voice48.wav` (and `clean_audio` back to null if setup paired a copy of the stem); then §1b. Its `report.md` (Audio section) gives the hook-music window for `clean_stem.fit_exclude`.
-- **`project.json` `longform`:** the paths of its report and `PUBLISH.md`. The full video's title for the CTA lines is the one it went LIVE with (spec 8b).
 
-**No work folder, but the raw recordings are next to the video** (the long-form was edited on another machine or cleaned up; `setup.sh`'s `long-form:` line names the other recordings it found). Rebuild what the work folder would have given, after `analyze.sh`:
-```bash
-$PY scripts/build_raw_map.py                 # the recordings next to the video; or name them: build_raw_map.py 1.mkv 2.mkv ...
-$PY scripts/clean_from_stem.py --scan        # the stem is on the export's own timeline: offset ~0 wherever it matched
-```
-- **`build_raw_map.py`** matches every 0.5 s of the export's audio against all the raw tracks (GPU FFT cross-correlation; 25 s for a 25 min export against an hour of raw). It writes `longform_program.json` (so `import_longform.py --at`, `rawsheet.py` and the graphics brief work as after a real import), `raw/stem48.wav` (the raw mic at its final-video time) and `clean_stem.voice`.
-- **Patch only the voiced stretches you keep.** A raw recording that caught game or demo audio through the speakers also matches the export's montage or playthrough, so `--scan` reports sync there too. Set `clean_stem.sync` and `clean_stem.patches` by hand to the talk (e.g. `[[0, 42.2, 0], [114.3, 928, 0]]`), with boundaries in quiet gaps. Set `fit_exclude` on any patch with music under the voice (an intro over gameplay). Stretches outside the patches keep the export's audio; a line of the game's own dialogue can come from there.
-- `--build`, then check the EQ match it prints (Last Call: within 0.6 dB per band).
+What `finish.sh --draft` does:
+1. `check_text.py`: verifies that all text is valid UTF-8 without mojibake.
+2. `check_narration.py s1 --draft`: verifies narration state, permitting silent placeholder cues.
+3. `mix.py s1`: outputs silent `<sk>/mix.wav`.
+4. `compose.py s1 --segments --draft`: renders segments using 10 fps draft graphics held to 60 fps with captions and cover.
+5. `compose.py s1 --concat --draft`: produces `chk/s1_draft.mp4`.
 
-Meanwhile, spawn a research subagent (after §1c: only for claims `captures/facts.json` doesn't cover). It fact-checks every figure the speaker says against 2+ sources. It also captures source pages, logos and pricing tables as 2x PNGs into `W/captures/` using a local Playwright, and writes `captures/facts.json`.
+**User Gate**: Hand over `chk/s1_draft.mp4` and `narration/s1/script.txt` to the user and ask:
+> "Draft review copy and script are ready. Shall I proceed with recording the voiceover?"
 
-## 2. Plan
-1. Read `transcript_full.json`, the gaze runs and the zoom events, then pick the lines for each short.
-2. Look at eye crops before committing a line to a camera layout:
+This is the **only question** the skill asks the user.
+
+---
+
+## 5. Recording and Re-timing
+
+Once the user approves recording:
+
+1. **Record the audio**:
    ```bash
-   $PY scripts/eyesheet.py --window 122.4,127.0 --step 0.2
+   node scripts/narration/tts.mjs narration/s1 --approved
    ```
-   Use `--step 0.1` around a head turn. Its crops show the whole face small. Before you lock the layouts, look at full-resolution eye crops of every candidate camera line. This matters most when the webcam sits just above the screen, where reading shows only as a lowered gaze:
+   Calls Google Cloud TTS Chirp 3 HD (`ko-KR-Chirp3-HD-Enceladus`). Takes are cached in `narration/s1/.tts-cache/`.
+
+2. **Review takes and set cuts**:
    ```bash
-   $PY scripts/eyecrop.py e_L4 347.4:354.0:0.3   # -> chk/e_L4.png, tight crops round the eyes at ~0.75x
+   node scripts/narration/wave.mjs narration/s1 --unreviewed
    ```
-3. Write `shorts.json`, using `SKILL/examples/harness-engineering/shorts.json` as the model (`plan_example_shorts.json` is a smaller one). Per short:
-   - `title` and `cover` (one or two lines). The outro card is "Watch the full video" by default (`cta_mode: 'full_video'`, optional `cta_text`); `cta_mode: 'comment'` + `cta_keyword` only on request
-   - `highlights`: meaningful caption words or phrases, longest first
-   - `music`: `{"style": "cinematic"}` (the default, Leon's pick) or `indie` | `piano_pop` | `electro_pop` | `lofi` | `chillhop` | `ambient` | `synthwave` | `upbeat`, chosen to fit this short's topic and energy. Optional: `prompt` / `structure` (your own ACE-Step caption and section tags), `bpm`, `takes` (3), `seed`, `under_voice_lu` (15), `file` (a WAV to use as it is), `generate: false` (the synthesized bed of `music.py`, with `mood` warm|moody). The seeds default to a hash of the title, so every short gets its own takes.
-   - `lines`
-4. Give each line:
-   - `id`
-   - `a` and `b`: the source start times of its first and last word, from the transcript
-   - `layout`: `split`, `fc` or `fv`
-   - optional `cam: "fullframe"`
-   - `text`, which is the exact words and is used for alignment
-   - `switches`: `[{"t": <source s near a word>, "layout": ...}]`, to hide or show the camera at a word boundary
-   - `cta: true` on the outro line (the last line; the card sits on its run)
-   - optional `echo: true` on a line with a room echo (an AI voice on a call through speakers): align_lines collapses the phrases the ASR hears twice. Never on a stutter.
+   Inspect RMS and ZCR numbers. `autocut.py` suggests draft cuts; write each take's `"cut"` into `narration/s1/script.json` (`"ranges": []` if nothing to cut).
 
-   Write `text` exactly as it should read on screen: captions take it word for word whenever its word count matches the aligned span (casing, numbers as said, misheard words fixed).
-
-Rules for choosing layouts are in `editing-spec.md` sections 3–4. The hook is a split, the outro is full cam, no run runs past about 8 s, and no two runs in a row share a layout.
-
-## 3. Cut
-```bash
-bash scripts/cut.sh s1               # align_lines -> cut2 -> verify_voice + eyesheet (in parallel); prints the runs, the proof and the sheet name
-```
-What it runs:
-```bash
-$PY scripts/align_lines.py           # silence-bounded re-transcription (4 parallel CUDA workers) + wav2vec2 forced alignment on the GPU -> line_align.json
-$PY scripts/cut2.py                  # onsets / true ends / pause compression / J-cuts / loud-to-loud joins -> <sk>/voice.wav, cut.json (runs + words)
-$PY scripts/verify_voice.py s1 &     # re-transcribe voice.wav (must read word-perfect) + list quiet stretches (joins must be <= 150 ms)
-$PY scripts/eyesheet.py s1 &         # 8 eye crops per line -> s1_eyes.png (LOOK at it); the stills are grabbed by 12 parallel ffmpeg seeks and cached in eyes/
-```
-- **Switch points:** a switch snaps to the nearest aligned word start. To place one precisely, check `cut.json` → `lines[].words` and the RMS dips.
-- **Missing word:** if Whisper drops a word, add it by hand at the end of `align_lines.py`. There's a commented example there.
-- **A last word missing from the proof** ("Last Call" without "98", "realistic" without "look"): the line's window ends at the first 120 ms of silence after `b + 0.25`. The full transcript's word starts run up to 0.4 s early, so a word after a short pause falls outside the window. Set `b` about 0.4 s later and re-cut.
-- **A previous word kept at the start** ("Now, Claude cannot..."): when the window's transcript lacks the short word before the line, the onset search has no previous word and keeps it. Hand-fix it in `align_lines.py`: insert that word (its RMS start and end) before `fi`, so the onset is cut in the dip between the two words. The same fix works for a line whose window starts inside the previous line's last word (heard as a stray "Hey").
-- **Re-running:** `cut2.py` takes seconds, so iterate freely.
-
-## 4. Fan out
-**Graphics (a few long-lived agents):** copy `SKILL/examples/GFX_BRIEF_template.md` to `GFX_BRIEF.md` and fill it in like `SKILL/examples/harness-engineering/GFX_BRIEF.md` (paths, where to grab footage, webcam window, regions never to show, baked zooms/titles/censor, the fact-check numbers). Paste `$PY scripts/brief_runs.py` (every split / fv run with its words at run-relative times) under its Compositions heading and add one idea per composition. Then start 2-4 long-lived agents, one per 1-2 shorts, grouped by kind (real sources and footage / concept diagrams / one continuous world), each with a tag (`a`, `b`, `c`…). Never one agent per few compositions (Leon); the reference run used 3 agents for 31 compositions, about an hour each in parallel. Each tag owns `scripts/prep_assets_<tag>.py`, `gfx/asset_dims_<tag>.json` (all `asset_dims*.json` are merged) and `scripts/gfx_<tag>.py`, built with `build_gfx.py <tag>` (no tag = every `gfx_*.py`). For one short done by one agent, the single-file form below still works:
-1. Write `scripts/prep_assets.py`, modelled on `SKILL/examples/prep_assets.py`. It copies captures into `gfx/assets/`, cuts still crops and synced footage clips (`synced()` follows the edit map), and writes `gfx/asset_dims.json`.
-2. Give one long-lived agent the whole short (never one per composition):
-   - the run's brief, from `cut.json` runs plus the plan
-   - `references/graphics.md`
-   - `SKILL/examples/gfx_s1.py`
-3. Each subagent writes its part of `scripts/gfx_<sk>.py`, with the `thumb` windows of each composition's eye-catching still moments (graphics.md), builds it, renders a 10 fps draft, checks a contact sheet, fixes, then renders at full quality:
+3. **Check phrasing**:
    ```bash
-   $PY scripts/build_gfx.py s1                 # -> gfx/<r>.html, gfx/sfx_events.json, gfx/thumbs.json (thumb windows clipped to where nothing moves)
-   bash scripts/render_draft.sh s1_r0 s1_r3    # 10 fps draft + contact sheet in one call -> gfx/draft/<r>.mp4, chk/<r>_sheet.png (LOOK)
-   bash scripts/render_full.sh s1_r0 s1_r3     # 240 fps + motion blur (lossless PNG frames) -> tmix -> gfx/out60/<r>.mp4
+   node scripts/narration/phrasing-check.mjs narration/s1
    ```
-   `render_full.sh` takes any number of compositions and throttles itself machine-wide: at most `RENDER_SLOTS` (3) renders at once, `HF_WORKERS` (8) Chrome browsers each, so every subagent can call it freely. An 8 s composition (1,949 frames at 240 fps) takes about 45 s alone (it was 168 s). It prints `done <r> <duration> (<frames> frames ...)` per composition; a `FAILED` line names the log.
-   The old form still works for one-offs: `(cd gfx && npx --yes hyperframes render -c s1_r0.html --fps 10 --quality draft --video-frame-format png --workers 4 --output draft/s1_r0.mp4)` then `$PY scripts/draftsheet.py s1_r0 8`.
+   Examines pause placement via STT. If Chirp placed an unnatural pause, insert `[pause short]` in the line's `say` **in
+   `shorts.json`** (prep.sh copies `text` and `say` from there into script.json; an edit made only in script.json is
+   overwritten), run `bash scripts/prep.sh s1`, and re-record that cue (a fix of a wrong break found right after the
+   recording the user approved counts as their decision; any other re-take needs their OK first):
+   ```bash
+   node scripts/narration/tts.mjs narration/s1 --only <id> --approved
+   ```
 
-**Music, in the background (GPU, 2-4 min for all shorts):**
-```bash
-$PY scripts/music_takes.py s1 s2             # 3 takes per short in ONE model load -> <sk>/music/take_<k>.wav (+ analysis), pick.json
-```
-Each take is generated 30 s longer than the short and cut so its lift (kick + bass entering) lands exactly on the hook join; the
-pick rejects takes with a vocal stem or no lift, then scores lift, gaps and dips (`pick.json` lists the others and why).
-`music_gen.py` runs in its own env (`~/.venvs/music-gen`, made by setup.sh) and waits out a busy GPU. `finish.sh` calls
-`music_takes.py <sk> --ensure`, so a short whose takes were never started still gets them (or the synthesized bed, without a GPU).
+4. **Verify silence rules**:
+   Run `wave.mjs narration/s1` across the full track. Ensure no silence gap meets or exceeds 0.4 s (excluding the 1.5 s `tail` hold).
 
-**At the same time, in the main agent:**
-```bash
-bash scripts/prep.sh s1 s2                   # cam clips (all runs at once, NVDEC) -> mattes (one GPU call, all shorts) -> captions/CTA events -> split frame checks
-```
-What it runs:
-```bash
-$PY scripts/cam_prep.py s1 s2                # frame-exact camera clips per camera run, 4 runs at a time -> <sk>/cam/r<i>.mkv + plan.json
-# matte, split runs only (same frames as the card => frame-locked), ALL shorts in one GPU call:
-$PY scripts/matte_rvm.py s1:0,3,5 s2:0,3 --jobs 4   # Robust Video Matting (ResNet-50, ONNX CUDA, recurrent state warmed on 45 frames), FFV1 output + r<i>_matte.json
-# without the RVM model or CUDA: matte_gpu.py (u2net_human_seg + speaker-only cleanup), which itself falls back to
-# `hyperframes remove-background` on the CPU (~0.8 s/frame). compose.py erodes only a u2net matte (its dark rim).
-$PY scripts/compose.py s1 --events-only      # captions.json + events_extra.json (CTA pop/keys/click), nothing else: audio.py can run now
-$PY scripts/compose.py s1 --runs 0,6 --preview 4.0,40.4     # one full-resolution frame per split run (+ frame 0) -> s1/preview/, chk/s1_splits.png (LOOK)
-```
-The split check needs the split runs' graphics in `gfx/out60/`; `prep.sh` skips it and says so when they aren't rendered yet, so run `prep.sh` again (or the preview line above) once they are.
+5. **Set phrase timing (`at`)**:
+   For every keyword chip in `shorts.json` `highlights` and every phrase a graphic lands on, measure the exact time in `wave.mjs` (`--cue <id> --step 0.01`) and enter it in `script.json` `"at"`.
 
-## 5. Audio and composite
-```bash
-bash scripts/finish.sh s1 [NN slug]          # audio.py + every segment in parallel (cached) -> concat + thumbnail candidates -> verify_final -> ../edit/short-NN_<slug>/
-```
-What it runs:
-```bash
-$PY scripts/music_takes.py s1 --ensure       # the music take: waits for the background job, or generates now
-$PY scripts/audio.py s1                      # library SFX (graphics events, highlight reveals, CTA, the hit on the join), riser, music, mix -> s1/stems/, s1/mix.wav, sfx_log.json
-$PY scripts/compose.py s1 --segments --no-concat   # one process per run, all at once; skips runs whose inputs are unchanged; checks every segment's frame count
-$PY scripts/thumbnail.py s1 &                # in the background: the gfx/thumbs.json moments as clean frames (no captions, CTA or cover),
-                                             # one compose.py --preview --clean seek each, all at once (~3 s) -> s1/thumb/, chk/s1_thumbs.png
-$PY scripts/compose.py s1 --concat           # -> s1/final_video.mp4 (stream-copied segments + AAC 48 kHz)
-```
-Run it only after every `render_full.sh` for the short has printed `done`. The old per-run form still works: `$PY scripts/compose.py s1 --runs 3 --seg-out s1/seg/run03.mp4`.
+6. **Update sync, timeline, and graphics**:
+   ```bash
+   node scripts/narration/sync.mjs narration/s1
+   bash scripts/prep.sh s1
+   $PY scripts/build_gfx.py
+   ```
+   `prep.sh` updates `cut.json` and `<sk>/voice.wav`. Because graphics timing uses `W(ws, '<phrase>')`, re-running `build_gfx.py` automatically pulls in the new recorded times.
 
-**Split geometry** (`s1/cam/split_geom.json`) comes from measurements. Delete the file to re-measure.
-- **Webcam window:** one scale for the whole short, so the whole face (hair to chin) fits in the visible card, with the hair about 95 px above the edge. Blurred side strips fill in where needed.
-- **16:9 camera:** exactly the spec's geometry, 1890×1063 at x −405, y 1008.
+---
 
-## 6. Verify and deliver
-`finish.sh` already ran this and copied the deliverables when given `NN slug`:
-```bash
-$PY scripts/verify_final.py s1/final_video.mp4 chk/s1_final.png   # streams, loudness, 2 s contact sheet (parallel grabs) -> LOOK
-```
-Otherwise copy `final_video.mp4` to `../edit/short-NN_<slug>/final.mp4`, and `s1/stems/` to `stems/`.
+## 6. Final Assembly and Delivery
 
-**Thumbnail** (`editing-spec.md` 8c): LOOK at `chk/s1_thumbs.png`. It shows each candidate at full and Shorts-feed size, with Instagram's 4:5 crop marked, plus its sharpness and whether the mouth is between words. Then:
-```bash
-$PY scripts/thumbnail.py s1 --pick 40.95 01 half-the-price   # -> s1/thumbnail.jpg (1080x1920, <2 MB) + thumbnail.json -> ../edit/short-01_<slug>/thumbnail.jpg
-$PY scripts/thumbnail.py s1 12.4,33.1                        # only if no candidate is strong: these moments too (the marked ones are re-rendered with them)
-```
+1. **Render full graphics (240 fps)**:
+   ```bash
+   bash scripts/render_full.sh s1_r0 s1_r1 ...
+   ```
+   Renders lossless 240 fps PNG sequences and blends them to 60 fps motion-blurred video in `gfx/out60/<rid>.mp4`. Throttled by `RENDER_SLOTS` (3) × `HF_WORKERS` (8) browsers.
 
-Write `report.md` (`editing-spec.md` section 8) and update `../edit/PUBLISH.md` (section 8b: the thumbnail, then YouTube Shorts, TikTok and Instagram Reels copy). With several shorts, write them by script like `SKILL/examples/harness-engineering/make_reports.py` and `make_publish.py`: every number from the data, the judgement written per short after looking at every sheet. Then:
-```bash
-$PY scripts/check_publish.py      # ../edit/PUBLISH.md against spec 8b: must print "PUBLISH.md OK"
-```
-The CTA lines use the full video's LIVE title: `curl -s "https://www.youtube.com/oembed?url=<watch URL>&format=json"`.
+2. **Assemble and package**:
+   ```bash
+   bash scripts/finish.sh s1 01 slug-name
+   ```
+   What `finish.sh` executes:
+   - `check_text.py`: validates on-screen Korean text.
+   - `check_narration.py`: confirms no placeholders, no unreviewed takes, matching sync, and no unanchored keyword chips.
+   - `mix.py`: masters `<sk>/voice.wav` to −14.0 LUFS integrated and true peak ≤ −1.0 dBTP (gain + limiter only) -> `<sk>/stems/voice.wav`, `<sk>/mix.wav`.
+   - `compose.py --segments --no-concat`: renders each run segment in parallel, cached by `.key` files.
+   - `compose.py --concat`: stream-copies segments with `mix.wav` -> `<sk>/final_video.mp4`.
+   - `thumbnail.py`: renders clean thumbnail candidate frames into `chk/<sk>_thumbs.png`.
+   - `verify_final.py`: verifies 1080×1920, 60 fps, AAC 48 kHz stereo, loudness, and writes `chk/<sk>_final.png`.
+   - Copies deliverables to `../edit/short-01_slug-name/` (`final.mp4`, `stems/voice.wav`, `script.txt`).
 
-`$PY scripts/report_data.py s1` prints the report's numbers in one go:
-- lines with source ranges, runs and END;
-- every SFX event with its absolute time and level, the riser, and the music parameters;
-- the split geometry, the file facts, and the integrated loudness and true peak of `final_video.mp4`;
-- the picked thumbnail and the candidates it beat.
+3. **Select thumbnail**:
+   Inspect `chk/<sk>_thumbs.png` (displays candidates at 1/3 size and Shorts-feed size with Instagram 4:5 guide). Pick the best frame:
+   ```bash
+   $PY scripts/thumbnail.py s1 --pick <time_seconds> 01 slug-name
+   ```
+   Outputs `../edit/short-01_slug-name/thumbnail.jpg` (1080×1920 JPEG under 2 MB) and `thumbnail.json`.
 
-## 7. Edits
-Change the smallest thing and re-run only what it touches. `finish.sh` re-renders only the segments whose inputs changed (it prints which), so after any of these the last step is always `bash scripts/finish.sh s1 NN slug`:
-- **Captions, cover or CTA:** edit `shorts.json` (highlights, cover, `cta_text`), then `finish.sh`. Only the runs whose captions changed are re-rendered.
-- **A caption word's text while graphics are rendering:** don't re-run `align_lines.py`, because re-transcription can move a word edge by a frame. Patch the `w` field in `cut.json` (and the line's `text` in `shorts.json`), then `compose.py <sk> --events-only` and `finish.sh`.
-- **Camera framing (split):** delete `s1/cam/split_geom.json`, then `finish.sh` (the split segments re-render).
-- **One graphic:** edit `gfx_<sk>.py`, rebuild, `render_full.sh` for that run, then `finish.sh` (that run's segment only).
-- **Line timing or line choice:** edit `shorts.json`, then `cut.sh` (align_lines re-transcribes every line; it's fast), `prep.sh` (the camera clips and mattes of the runs that moved; mattes are cached per run file), re-render the graphics whose runs moved, then `finish.sh`.
-- **Music or SFX levels:** `finish.sh` (audio.py + concat, seconds; no segment is touched).
-- **Another music take:** listen to `edit/short-NN_<slug>/music_takes/`, then `$PY scripts/music_takes.py s1 --pick 2` and `finish.sh` (audio + concat only). **A given track instead** (e.g. the long-form hook track after a rejected take): `"music": {"style": "cinematic", "file": "<track.wav>", "file_offset": <s>}` in `shorts.json`, the offset putting the track's lift on the hook join, then `finish.sh` (it delivers the track marked "(in the short)"). New takes in another style: change `music.style` in `shorts.json`, delete `s1/music/`, run `music_takes.py s1`.
-- **SFX levels and rules:** shorts.json `sfx_levels` (LU under the voice per type) and `sfx_rules` override `sfxlib.SHORTS_TARGET` / `SHORTS_RULES`; `audio.py` prints the short's sounds per minute and anything it did not play.
-- **SFX:** the library lives in the skill (`assets/sfx`); `sfx_library.py --check` / `build` / `list`. Prefer other sounds per short with `"sfx_prefer": {"sting": ["hit_minimal"], "riser": ["cinematic_build"]}`; `"sting": false` drops the hit on the join; `"auto_sfx": false` drops the automatic highlight swishes and the hit.
-- **Title, description or captions:** edit `PUBLISH.md` only.
-- **Thumbnail:** `thumbnail.py s1 --pick <t> NN slug` with another candidate, or add moments first (`thumbnail.py s1 t1,t2`); nothing else re-renders. After a graphic changes, `finish.sh` re-renders the candidates by itself.
+4. **Publishing copy and reports**:
+   - Write `../edit/short-01_slug-name/report.md` (TTS provider, voice, take IDs, cuts, `at` points, loudness, mix stats from `$PY scripts/report_data.py s1`).
+   - Write `../edit/PUBLISH.md` (Korean title, description, and hashtags for YouTube Shorts, TikTok, and Instagram Reels; no external community links, no full-video CTA, no related video).
+   - Validate publishing package:
+     ```bash
+     $PY scripts/check_publish.py
+     ```
+
+Deliverables in `edit/short-NN_<slug>/`:
+- `final.mp4`: 1080×1920, 60 fps, H.264 high quality, AAC 48 kHz stereo.
+- `thumbnail.jpg`: clean 1080×1920 cover image (< 2 MB).
+- `stems/voice.wav`: 48 kHz stereo dialogue track before mastering.
+- `script.txt`: full spoken script.
+- `report.md`: production metrics and audit report.
+- `../edit/PUBLISH.md`: multi-platform posting copy.
+
+---
+
+## 7. Incremental Edits
+
+Change the smallest component and re-run only what it affects. `finish.sh` caches unchanged segments:
+
+| Change | Re-run Steps | What Re-renders |
+|---|---|---|
+| **Script wording (before recording)** | Edit `shorts.json` → `bash scripts/prep.sh <sk>` → update `W()` if phrases changed → `bash scripts/finish.sh <sk> --draft` | Only modified runs re-render. |
+| **Script wording (after recording)** | Edit `text` / `say` in `shorts.json` → `prep.sh` (the cue becomes a silent placeholder) → **ask the user**; on their OK `tts.mjs narration/<sk> --approved --only <id>` → `wave.mjs` (set `cut`, `at`) → `prep.sh` → `build_gfx.py` → `render_full.sh` (the runs from that cue on) → `finish.sh` | One take re-recorded; the runs after it move, so their graphics re-render. |
+| **Re-take / phrasing adjustment** | Edit `say` in `shorts.json` (`[pause short]`, joined words) → `prep.sh` → `tts.mjs --approved --only <id>` (user's report or OK) → `wave.mjs` (set `cut`, `at`) → `prep.sh` → `build_gfx.py` → `render_full.sh` (changed runs) → `finish.sh` | One take re-recorded; graphics re-timed by their phrase anchors. |
+| **Cut or `at` adjustment** | Edit `cut` / `at` in `narration/<sk>/script.json` (kept across prep.sh runs) → `prep.sh` (runs tts.mjs and sync.mjs) → `build_gfx.py` → `render_full.sh` for runs whose length or anchors changed → `finish.sh` | Timeline updates; only changed segments re-composite. |
+| **Graphics visual or animation fix** | Edit `scripts/gfx_<tag>.py` → `$PY scripts/build_gfx.py <tag>` → `bash scripts/render_full.sh <rid>` → `bash scripts/finish.sh <sk> NN slug` | Only that graphic and its composite segment re-render (~30–60 s). |
+| **Captions, highlights, or cover** | Edit `shorts.json` → `bash scripts/prep.sh <sk>` (or `$PY scripts/compose.py <sk> --events-only`) → `bash scripts/finish.sh <sk> NN slug` | No graphics re-render; only composite segments with changed captions re-render. |
+| **Change thumbnail pick** | `$PY scripts/thumbnail.py <sk> --pick <new_time> NN slug` | Instant JPEG export. No video re-render. |
+| **Publishing metadata** | Edit `../edit/PUBLISH.md` → `$PY scripts/check_publish.py` | Text edit only. No rendering. |
+
+---
+
+## 8. Environment and Windows Notes
+
+- **UTF-8 everywhere**: Python scripts default to UTF-8 (`PYTHONUTF8=1` exported in all shell scripts). Always open JSON and text files with `encoding='utf-8'` to prevent Korean characters from corrupting into mojibake. `check_text.py` halts assembly if corrupted characters are detected.
+- **Git Bash syntax**: Never embed heredocs containing real newlines or Korean characters in Git Bash commands. Use dedicated Python scripts or file tools.
+- **Subshell backgrounding**: When running background commands with directory changes, use subshells: `(cd work && command1 && command2) &`.
+- **Frame pipes**: Never set `bufsize=10**8` on FFmpeg raw video pipes; default pipe buffers read at ~1.6 GB/s, whereas oversized buffers degrade throughput to ~130 MB/s on Windows.
+- **Chrome browser pool**: Both `render_draft.sh` and `render_full.sh` set `PRODUCER_ENABLE_BROWSER_POOL=false` to assign each HyperFrames worker its own Chrome instance, preventing screenshot bottlenecks.

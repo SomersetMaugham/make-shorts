@@ -11,6 +11,7 @@ copied unchanged on 2026-11-19: its SKILL.md steps 3 and 4, then `references/sou
 |---|---|
 | `<skill>/scripts/tts.mjs`, `wave.mjs`, `sync.mjs`, `phrasing-check.mjs`, `autocut.py` | `scripts/narration/…` (run from `work/`) |
 | `<dir>`, the project | `narration/<sk>` — one narration folder per short, written by `scripts/narration_init.py` from `shorts.json` |
+| a cue's `text`, `say`, `gapAfter` in script.json | edit them in **`shorts.json`**: `narration_init.py` (prep.sh) copies them into script.json and overwrites edits made there. `cut`, `at` and the top-level settings (`tts`, `leadIn`, `gap`, `tail`, `narration`) live in script.json and are kept |
 | `check.mjs` refuses the hand-off | `scripts/check_narration.py` (finish.sh runs it) refuses the final assembly |
 | `cue(id).when('phrase')`, the scenes follow the cues | `timeline.py` turns the cues into the runs, the words and the captions; graphics anchor on `W(ws, '<phrase>')` |
 | "build and verify the whole video on silent placeholders", "hand it off and ask whether to record" | `finish.sh <sk> --draft` → `chk/<sk>_draft.mp4` + `narration/<sk>/script.txt`; then ask. This is the only question the skill asks. |

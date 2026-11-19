@@ -70,8 +70,8 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    once recorded, and **ask whether to record**.
 6. **Record (on the user's word):** `node scripts/narration/tts.mjs narration/<sk> --approved`; then the after-recording
    pass (`references/narration.md`): read every take (`wave.mjs narration/<sk> --unreviewed`; `autocut.py` drafts a cut
-   you correct), set each `cut`, run `phrasing-check.mjs` and fix wrong breaks with `[pause short]` and `--only`
-   re-takes, set `at` for every keyword chip and every phrase a graphic lands on, read the whole sound for dead air.
+   you correct), set each `cut` (in `narration/<sk>/script.json`), run `phrasing-check.mjs` and fix wrong breaks with
+   `[pause short]` in the line's `say` **in shorts.json** (prep.sh copies it over) and `--only` re-takes, set `at` for every keyword chip and every phrase a graphic lands on, read the whole sound for dead air.
    Then `bash scripts/prep.sh <sk>` and `$PY scripts/build_gfx.py <tags>`: the runs and every graphic follow the takes.
 7. **Finish:** `render_full.sh` (240 fps with motion blur, throttled machine-wide), then
    `bash scripts/finish.sh s1 NN slug`: check_text, check_narration (no placeholder, no unread take, sync up to date),

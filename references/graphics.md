@@ -1,138 +1,178 @@
 # Graphics: the HyperFrames world engine
 
-Every split or full-visual run is one standalone HyperFrames composition, `gfx/<sk>_r<i>.html`.
+Every run is a standalone HyperFrames composition: `gfx/<sk>_r<i>.html`.
 
-It is generated from a compact Python config by `scripts/build_gfx.py <sk>`, which imports `scripts/gfx_<sk>.py`. Each page contains the shared `gfx/engine.js`, which implements the spec's style, camera, depth of field and motion blur, plus one `window.CFG` object. The worked example for a whole short is `SKILL/examples/gfx_s1.py`. Copy its patterns.
+Compositions are generated from compact Python configs by `scripts/build_gfx.py [tag]`, which imports `scripts/gfx_<tag>.py`. Each page loads the shared `gfx/engine.js`, implementing the skill's stage theme, world camera, depth of field, and motion blur, driven by a `window.CFG` object. The reference implementation for a complete short is [examples/gfx_s1.py](../examples/gfx_s1.py).
 
-Contents: [Build helpers](#build-helpers) · [CFG](#cfg) · [Cards](#cards) · [Camera moves](#camera-moves) · [Depth of field](#depth-of-field) · [Captures](#real-captures-full-visual) · [Split rules](#split-rules) · [SFX](#sfx-events) · [Check](#checking)
+Contents: [Theme](#theme-the-neutral-stage-look) · [Timing & Phrase Anchors](#timing-and-phrase-anchors) · [Build Helpers](#build-helpers-scriptsbuild_gfx_commonpy) · [CFG Schema](#cfg-schema) · [Cards](#cards-and-surfaces) · [Camera Moves](#camera-moves) · [Depth of Field](#depth-of-field) · [Motion Blur](#motion-blur) · [Real Captures](#real-captures-in-full-visual) · [Thumbnails](#thumbnail-moments) · [Checking](#checking-and-validation)
 
-## Theme: the channel's design system (default)
-`theme: 'stage'` (the default; `'paper'` restores the old bright white world, only on request) paints Leon's "Leon YouTube"
-design system, the one his slides use: the graphite stage with soft light from above, two faint beams, a vignette and
-the horizon wave of azure dots (`wave: {level: 'low'|'middle'|'high', k: 1}` or `False`; a split's wave peeks over the
-camera card, a full visual's runs under the caption band). `accent: 'azure'` (default) or `'ember'` (limits, costs, warnings).
-- Card kinds: `glass` (diagrams, statements, lists; `highlight: True` = accent hairline + bloom, one per scene), `window` /
-  `paper` / `media` / `capture` (white, for product UI, chats, files and real pages), `tile`, `phone`, `logo`, `plain`.
-- CSS classes: `.display .h1 .h2 .sub .body .caption .label (.accent/.white) .mono .ink .ink2 .pill (.mint/.ember/.neutral)
-  .hair .band .caret`; tokens `var(--azure)`, `var(--accent)`, `var(--text-secondary)`, `var(--ink)` ... Figtree 600 and Geist Mono
-  are loaded from `gfx/assets/`. Nothing under 30 px.
-- `tile_html(color, glyph, size, tilt, svg=None)`: his glossy icon tiles (azure / iris / ember / mint; glyphs code, arrow,
-  check, shield, sparkle, bolt, bars, eyes, or your own white `<svg>`).
-- Text on the bare stage is white; text on paper is ink. Dark product UI sits in a white window frame or on glass.
-- The 9:16 code to copy first: THIS skill's `examples/harness-engineering/` (five shorts Leon called "spot on"):
-  `gfx_a.py` (real pages and posts banded on the word, real app footage from the raw recordings with logo chips and an
-  inner camera), `gfx_b.py` (concept diagrams at true scale, real CLI / docs, the keyframe library), `gfx_c.py` (one
-  continuous world across a whole short). The long-form reference edit in the davinci-resolve-pro-edit skill,
-  `examples/harness-engineering/`, has more of the same patterns in 16:9: re-lay them out for 9:16.
-- **Footage layering:** HyperFrames `<video>` elements are root children ABOVE the world viewport (z-index 3). So anything
-  drawn over live footage (a highlight band, a logo chip) must be a root-level layer above it (z-index 4/5), and a band
-  that should ride moving footage needs a layer that copies the video's transform and clip every frame (`vov()` in
-  `gfx_a.py`). In a split, mask the footage by hand to the world's fade (y 900 -> 1060) so it never shows in the caption band.
-- **One continuous world for a multi-run concept** (a factory, a pipeline, a loop): write the world as one pure function
-  of the short's own time F (run `T0` + t) and let every composition render its window of it (`gfx_c.py` `world()`), so
-  the story carries across the cuts, even across a full-cam run in between.
-- **Heavy pages:** a full-resolution clip plus its blurred backdrop clone can run Chrome out of memory. Give the backdrop
-  its own 640 px wide copy; render with `NODE_OPTIONS=--max-old-space-size=16384`.
+---
 
-## Build helpers (`scripts/build_gfx_common.py`)
-- **`words(sk, ri)`:** returns `(run, words)`. Word times are relative to the run start, taken from `cut.json`.
-- **`W(words, 'text', n=1)`:** the start time of the n-th occurrence of a word, with punctuation stripped. Use it for every cue, e.g. a step starts at `W(ws, 'opus') - 0.25`.
-- **`page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_js='')`:** writes the composition.
-  - `videos=[(card_id, 'assets/clip.mp4', fw, fh)]` gives a card live footage. Video must be a root child in HyperFrames; the engine positions it and clips it to the card every frame.
-  - `backdrop=('img'|'video', src, fw, fh)` adds the washed clone behind a capture.
-- **`capture_card(id, fw, fh, x=540, y=720, inner0=…, inner=[…], img=…)`:** the spec's fixed capture frame: x 24, y 200, 1032×1040, radius 36, when the world camera rests at (540, 720, s=1) in `fv` mode.
-- **`LOGO_HTML`:** `<img src="assets/claude-logo.svg">`. Copy the product's official logo into `gfx/assets/` in `prep_assets.py`, and swap the file per product.
-- **`D`:** asset dimensions, merged from `gfx/asset_dims.json` and every `gfx/asset_dims_<tag>.json`. Parallel graphics subagents each write their own file, so they never race. Modules are `scripts/gfx_<tag>.py`; `build_gfx.py <tag>` builds one, and with no tag it builds them all.
+## Theme: the neutral stage look
 
-## CFG
+`theme: 'stage'` (the default; `'paper'` restores the white style only on explicit request) applies the skill's neutral dark look ([references/theme.md](theme.md)):
+- **Ground**: graphite stage (#18191C at top to #0B0C0E at bottom), soft overhead spotlight, two faint angled beams, subtle vignette.
+- **Horizon wave**: an animated accent wave under the caption band (crest ~y 1600–1700). Set `wave: False` on CFG to disable.
+- **Accents**: `'azure'` (default #2F95FF), `'ember'` (limits, costs #FF8A5B), `'mint'` (passes, success #4FD6A0), `'iris'` (#9C7CFF). Use one accent per scene.
+- **Typography**:
+  - **Pretendard** (SIL OFL 1.1) for every word on screen. The shorts are in Korean, and Pretendard keeps Hangul, Latin, and numbers in the same clean voice.
+  - Type classes: `.display` 128px, `.h1` 96px (-0.03em), `.h2` 54px (-0.025em), `.sub` 46px (accent color), `.body` 32px, `.caption` 30px.
+  - Spacing: Keep Korean lines at -0.02em or looser; `word-break: keep-all` breaks between 어절, never mid-word.
+  - **Geist Mono** 500 for uppercase Latin labels (`.label`), falling back to Pretendard for any Hangul characters.
+  - Minimum size: nothing under 30 px.
+- **Cards**: `glass` (diagrams, architecture, statements; `highlight: True` adds accent hairline and bloom), `window` / `paper` / `media` / `capture` (white surfaces for product UI, chats, code, and captures), `tile` (glossy 3D icon tiles via `tile_html`), `plain`.
+- **Layout bounds**: Every run is a full visual (`mode: 'fv'`). Main visual content sits above y 1230; captions occupy the lower third (y 1290–1560) or the top third (y 365–634 if `"caption": "top"`).
+
+---
+
+## Timing and Phrase Anchors
+
+Before voiceover recording, all cue lengths and word timings are estimates based on character positions (`est: true`). Recording with Chirp 3 HD changes the cadence and length of every cue.
+
+To prevent re-timing from breaking animations or requiring manual edits, all graphics timing is anchored on phrases:
+
+```python
+r, ws = words('s1', 0)
+t_phrase = W(ws, '핵심 구절')
+```
+
+### Semantics
+1. **`words(sk, ri)`**: Returns `(run, ws)`. Each item in `ws` is `dict(w=..., t=..., est=...)`, where `t` is the run-relative start time in seconds and `est` indicates whether the time is an estimate (`True`) or locked by an `"at"` measurement (`False`).
+2. **`W(ws, '<phrase>', n=1)`**: Returns the run-relative start time of the n-th occurrence of `<phrase>`.
+   - The phrase is written as in the Korean cue text.
+   - Punctuation is ignored.
+   - Trailing particles may be omitted: `W(ws, '하네스')` matches `'하네스가'`.
+
+### The Re-time Loop
+1. Graphics subagents draft animations and camera moves using `W(ws, '<phrase>')` against placeholder cues.
+2. The user approves recording. Real takes are recorded with `tts.mjs --approved`.
+3. The agent reviews takes with `wave.mjs`, sets `"cut"` and `"at"` points in `script.json`, and runs `prep.sh`.
+4. The agent re-runs `python scripts/build_gfx.py`. Every `W()` call re-evaluates against the newly measured times in `cut.json`.
+5. Every move, landing, and reveal lands on the real spoken phrase automatically—without modifying graphics code.
+
+> [!IMPORTANT]
+> Never hardcode seconds for animations or landings that correspond to speech. Always anchor on `W(ws, '<phrase>')` or simple offsets (e.g. `W(ws, '요금제') - 0.25` for a camera step).
+
+---
+
+## Build Helpers (`scripts/build_gfx_common.py`)
+
+- **`words(sk, ri)`**: returns `(run_dict, word_list)` for run `ri` of short `sk`.
+- **`W(ws, phrase, n=1)`**: returns the run-relative start time for `phrase`.
+- **`page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_js='')`**: writes `gfx/<rid>.html`.
+  - `videos=[(card_id, 'assets/clip.mp4', fw, fh)]`: attaches video footage to a card.
+  - `backdrop=('img'|'video', src, fw, fh)`: creates a blurred, enlarged clone behind captures.
+- **`capture_card(cid, fw, fh, x=540, y=720, inner0=None, inner=(), backdrop=True, land=None, **kw)`**: generates the standard capture card: 1032×1040, radius 36, centred at (540, 720).
+- **`logo_html(src)`**: returns a responsive SVG/PNG logo tag (`<img src="{src}" style="width:100%;height:100%;object-fit:contain;display:block">`).
+- **`tile_html(color='azure', glyph='code', size=140, tilt=-8, svg=None)`**: generates a glossy 3D icon tile with inner shadow and top highlight. Glyphs: `code`, `arrow`, `check`, `shield`, `sparkle`, `bolt`, `bars`, `eyes`, or custom SVG.
+- **`D`**: dictionary of asset dimensions loaded from `gfx/asset_dims.json` and `gfx/asset_dims_<tag>.json`.
+
+---
+
+## CFG Schema
+
 ```python
 cfg = dict(
-  id='s1_r3', dur=r['dur'],            # duration = the run exactly
-  mode='fv' | 'split',                  # split: content in y 40-900, world fades out from 900 over 160 px (built in)
-  anchor=[540, 720],                    # default: split [540,470], fv [540,720] - where the camera point lands on screen
-  cam0=dict(x=540, y=720, s=1),         # frame-0 camera = the landing state (sharp, at rest)
-  cards=[...], moves=[...], heroes=[...],
-  pushRef=1.0,                          # camera scale that counts as "not pushed" (neighbour blur grows as s exceeds it)
-  reveals=[dict(el='hlb2', t=2.1, dur=0.5, type='scaleX'|'fade'|'pop'|'fadeout')],
-  typings=[dict(el='cmd', t0=0.3, cps=14, text='claude update', caret=True)],   # typed text with the accent caret
-  sfx=[dict(t=1.35, type='whoosh'|'click'|'pop'|'chime'|'key')],                 # run-relative; audio.py mixes them
+  id='s1_r0', dur=r['dur'],             # run duration exactly
+  mode='fv',                            # every run is a full visual ('fv')
+  anchor=[540, 720],                    # screen anchor point (default: [540, 720])
+  cam0=dict(x=540, y=720, s=1.0),       # frame-0 camera position
+  cards=[...],                          # list of card objects
+  moves=[...],                          # list of world camera moves
+  heroes=[dict(t=0, id='hero_card')],   # depth of field targets
+  pushRef=1.0,                          # camera scale threshold for neighbor blur
+  reveals=[dict(el='band1', t=W(ws, '반값'), dur=0.5, type='scaleX')],
+  typings=[dict(el='cmd', t0=0.3, cps=18, text='npm run build', caret=True)],
+  thumb=[[1.2, 3.4]],                   # thumbnail candidate windows
 )
 ```
-`extra_js` can define `window.CFG_RENDER = function(t, cam){...}`. It is called every frame after the engine renders; use it for custom, time-driven UI such as the moving menu highlight in `gfx_s1.py`. Keep it a pure function of `t`.
 
-## Cards
+> [!NOTE]
+> The CFG `sfx` field is ignored. Shorts have no sound effects, risers, or music; audio is narration only.
+
+---
+
+## Cards and Surfaces
+
 ```python
-dict(id='bench', kind='media'|'doc'|'tile'|'phone'|'capture'|'logo'|'plain',
-     x=540, y=1300, w=1040, h=438,         # world px, centre-based
-     img='assets/x.png' | html='<div>…</div>',
-     radius=None,                          # default per kind: media 3% of w, doc 40, tile 72, phone 84, capture 36
-     bg='#fff', land=dict(t=0.3, dur=0.55), exit=dict(t=5, dur=0.35),
-     fw=..., fh=..., inner0=dict(fx, fy, k), inner=[dict(t, dur, fx, fy, k, ease)],  # footage camera INSIDE the card
-     overlay='<div …>',                    # html in footage px: moves with the inner camera (e.g. a highlight on a UI row)
-     backdrop={'tIn': -1},                 # washed clone behind this capture (tIn/tOut fade)
-     noDof=True, forceSharp=True)
+dict(
+  id='card1', kind='glass'|'window'|'paper'|'media'|'capture'|'tile'|'plain',
+  x=540, y=720, w=1032, h=640,          # world coordinates, centre-based
+  img='assets/shot.png' | html='...',
+  radius=32,                            # corner radius (defaults per kind)
+  land=dict(t=W(ws, '시작'), dur=0.55), # entrance animation (power3.out, +70px dy, scale 0.92->1)
+  exit=dict(t=W(ws, '종료'), dur=0.35), # exit animation
+  inner0=dict(fx=500, fy=400, k=1.0),   # initial inner footage camera
+  inner=[dict(t=W(ws, '확대')-0.25, dur=0.6, fx=600, fy=450, k=1.4)],
+  overlay='<div ...>',                  # HTML layer moving with inner camera
+  backdrop={'tIn': -1},                 # blurred clone fade-in
+  noDof=True, forceSharp=True,
+)
 ```
-- **Shadows:** every non-logo card gets the spec's three-layer shadow automatically.
-- **Landing:** a landing uses power3.out: scale 0.92 → 1, +70 px → 0, fade in. Add a `pop` SFX at `land.t`. Nothing lands at frame 0, and the HERO is already on screen at frame 0: the cut lands on it. Landing the hero at 0.05 s leaves empty frames after the cut. Only supporting cards (logo tiles, a message arriving) land later.
-- **Highlight bands on screenshots:** blend modes are isolated per card. Put the band `div` (class `band`: an azure wash) under the screenshot inside the same card `html`, and give the `<img>` `mix-blend-mode:multiply`; reveal it with a `scaleX` reveal on the word (audio.py adds the marker swish). On an overlay layer, `overlayBlend: 'multiply'` does the same. See the `bench` card in `gfx_s1.py`.
-- **Highlights on dark UI:** a multiply band vanishes on a dark app. Instead, pre-render the real text re-inked dark on the azure wash as an overlay revealed by a left-to-right wipe, or use an azure outline with a soft azure glow, with a hole over bright elements.
 
-## Camera moves
-`moves` is a list of `dict(t, dur, kind, to=dict(x, y, s), ease=None)`. Geometric scale interpolation is built in.
+- **Frame 0 landing state**: The hero card must ALREADY be on screen at t = 0. Never animate a hero's landing starting at 0.05 s (which leaves black or empty frames after the cut). `land` is only for secondary supporting cards that enter later.
+- **Frame 0 of r0 (cover safe)**: Run 0 frame 0 is also the video cover frame. Keep all graphics elements below y 620 so the glass title cover card (centred at y ~432) has full clearance.
+- **Highlight bands on captures**: Blend modes are isolated per card. Place an azure wash `<div id="band" class="band">` under a `<img style="mix-blend-mode:multiply">` inside the card's `html`, then reveal it with `scaleX` on the keyword phrase. On dark UI, re-ink the text dark on the wash, or use an accent outline with soft glow.
 
-| kind | use | default ease | spec timing |
+---
+
+## Camera Moves
+
+`moves` contains objects: `dict(t, dur, kind, to=dict(x, y, s), ease=None)`.
+
+| kind | purpose | default ease | timing |
 |---|---|---|---|
-| `glide` | slow drift while holding | sine.inOut | scale change ≤ 0.04 |
-| `step` | to the next item | power3.inOut | 0.5 s, starting 0.25 s before the word that names it |
-| `push` | onto the card being talked about | power2.inOut | 1.2–2 s, up to about 1.6× |
-| `pull` | back out to reveal the bigger picture | power2.inOut | 1–2 s |
-| `whip` | `dict(t, kind='whip', to=…, via=…)` | power3.in / power3.out | 0.45 s out, 0.6 s in, at most one per run and three per short |
+| `glide` | gentle holding drift | sine.inOut | scale change ≤ 0.04 |
+| `step` | shift focus to next item | power3.inOut | 0.5 s, starting 0.25 s before the phrase |
+| `push` | zoom in on active element | power2.inOut | 1.2–2.0 s, up to ~1.6× |
+| `pull` | zoom out to reveal broader layout | power2.inOut | 1.0–2.0 s |
+| `whip` | rapid pan across world | power3.in / power3.out | 0.45 s out, 0.6 s in (`to` and `via`), max 1 per run |
 
-Add a `whoosh` SFX at the whip midpoint, which is `t + 0.45`.
+---
 
-While a product window is the subject, keep the world camera still and move only its `inner` camera (1.15–1.4×, 0.4–0.7 s, power2.inOut).
+## Depth of Field
 
-## Depth of field
-`heroes=[dict(t, id)]` names the card being read from each time `t`. The engine handles:
-- **Push blur:** as the camera pushes, neighbours blur up to 14 px and dim 30%.
-- **Old hero:** the previous hero goes to a 9 px blur at 40% opacity.
-- **All sharp:** `id='none'` switches depth of field off, e.g. when a pull-back should show every card sharp.
-- **Readability:** never blur a word the viewer needs to read.
+`heroes=[dict(t, id)]` specifies which card has focal focus at time `t`:
+- As the camera pushes (`cam.s > pushRef`), non-hero cards blur up to 14 px and dim by 30%.
+- A previous hero fades to a 9 px blur at 40% opacity.
+- `id='none'` disables depth of field (keeps all cards sharp).
+- Never blur text the viewer needs to read.
 
-## Motion blur
-Built in: the viewport and each footage layer are blurred along their screen velocity every frame (σ = 0.29 × speed × 0.75/60, capped at 24 px). `render_full.sh` renders at 240 fps, then `tmix=frames=3,fps=60`. A frame at rest is sharp; if it isn't, something is still moving.
+---
 
-## Real captures (full visual)
-Anything that happened (a release, a number, pricing, benchmarks, your own usage stats) is shown as the real page or the real UI:
-- **Pages:** 2x screenshots by the research subagent.
-- **Your UI:** stills or synced clips of your screen recording, cut by `prep_assets.py`.
+## Motion Blur
 
-The frame never moves; the footage pans and zooms inside it with `inner` keyframes (`fx`, `fy` = footage px at the frame centre; `k` = CSS px per footage px). The engine clamps `inner` so the view never leaves the footage. Crops must avoid the webcam window. Dark UI is fine inside the white frame.
+Motion blur is computed per-frame based on screen velocity. Full renders are captured at 240 fps and temporally blended to 60 fps via FFmpeg `tmix` in `render_full.sh`. A frame at rest is completely sharp.
 
-## Split rules
-- **Frame 0 of run 0** (the hook) is also the cover frame: keep all content below y 620. For example, put the product logo at y ≈ 700–820, then step to the hero card with the card landing so its bottom edge sits at y 880–900.
-- **Content** stays in y 40–900.
-- **Captions** sit at y 941–1114, and the camera card with the head pop-out starts at 1200. `compose.py` draws both; the graphic stays clear of them.
+---
 
-## SFX events
-Put `sfx` on each CFG, run-relative. `audio.py` reads `gfx/sfx_events.json`, which `build_gfx.py` writes, and places each one:
-- **Whooshes:** only on whips.
-- **UI sounds:** only for visible real presses, typing and landings.
-- **Camera moves:** nothing on steps, pushes, glides or layout cuts.
+## Real Captures in Full Visual
 
-## Thumbnail moments
-The short's thumbnail is picked from moments the compositions mark while they're built (editing-spec.md 8c), so nothing has to scan the finished short. Put `thumb` on the CFG, run-relative: a window `[a, b]` where the composition's most eye-catching state is on screen (the official logo large, the real UI doing the thing, the number or result the short is built on), or a single time. `build_gfx.py` writes them to `gfx/thumbs.json` and clips each window to where nothing moves: camera moves (glides excepted), focus hand-offs (0.5 s), inner-camera moves, landings, exits and reveals. A window that is all movement is dropped with a message. On a split, `thumbnail.py` takes the frame from the longest word gap inside the window, so the mouth is at rest. Mark one or two per composition that has something worth a thumbnail, none on the rest.
+Show real sources whenever discussing articles, docs, benchmarks, pricing, or releases:
+- Real 2x PNG screenshots from `captures/`.
+- Standard capture card via `capture_card`: frame centred at (540, 720), 1032×1040, radius 36.
+- The outer card remains stationary while the content pans and zooms inside using `inner` keyframes (`fx`, `fy`, `k`). The engine automatically clamps the inner view to the footage boundaries.
 
-## Checking
-Before any full render, check each composition:
-- a 10 fps draft
-- a contact sheet (`scripts/draftsheet.py <rid> 8`)
-- one full-resolution frame of anything with text
+---
 
-Look for:
-- the frame-0 landing state (the hero already on screen)
-- any text the viewer must read at 30 px or more (captured UI included)
-- content inside its bounds
-- nothing important blurred at rest
-- the bottom edge in 880–900 (split) or 1200–1240 (full visual)
-- each cue landing on its word
+## Thumbnail Moments
+
+The thumbnail is picked from moments marked in compositions, avoiding post-render scans.
+Add `thumb` to each CFG:
+- A run-relative time window `[[a, b]]` where the composition's primary visual is landed and the camera is at rest (e.g. key statistic large, real UI fully displayed, chart complete).
+- `build_gfx_common.py`'s `still()` helper automatically clips out camera moves, landings, focus shifts, and reveals.
+- Mark 1–2 candidates per composition that has strong visual impact; omit `thumb` on transitional runs.
+
+---
+
+## Checking and Validation
+
+Before rendering at 240 fps:
+1. Render a 10 fps draft: `bash scripts/render_draft.sh <rid...>`.
+2. Inspect the contact sheet: `chk/<rid>_sheet.png`.
+3. Verify:
+   - Frame 0 landing state: hero card is already visible at t = 0.
+   - Run 0 frame 0: all elements stay below y 620.
+   - Text legibility: all text ≥ 30 px.
+   - Vertical margins: main visual elements stay above y 1230 (captions occupy y 1290–1560).
+   - Timing: animations step and land on the intended phrase.

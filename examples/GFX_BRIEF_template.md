@@ -1,122 +1,82 @@
 # Graphics brief (shared by every graphics subagent) — TEMPLATE
-<!-- Copy to work-<stem>/GFX_BRIEF.md, fill every <...>, delete what doesn't apply. The filled-in brief of the reference run
-     is examples/harness-engineering/GFX_BRIEF.md: match its detail. Then start a FEW LONG-LIVED graphics agents (2-4, one
-     per 1-2 shorts, grouped by kind: real sources / footage, concept diagrams, one continuous world), each with a short
-     prompt: "read GFX_BRIEF.md and every reference it lists; your tag is <a>; your compositions are <ids>". Never one agent
-     per 2-5 compositions: Leon wants few long-lived agents (the reference run: 3 agents, 31 compositions, ~1 h each). -->
+<!-- Copy to work/GFX_BRIEF.md, fill every <...>, and delete what doesn't apply.
+     Start 2-4 LONG-LIVED graphics agents (grouped by visual kind: real sources/captures, concept diagrams, or continuous worlds),
+     each with a prompt: "Read GFX_BRIEF.md and every reference it lists; your tag is <a>; your compositions are <ids>".
+     Never spawn one agent per 2-3 compositions: use few long-lived agents who build, draft, check, and fix their own runs. -->
 
-You build HyperFrames compositions for <N> vertical shorts (1080x1920, 60 fps) cut from <whose video, its title, and one line
-on what it's about, with the names the viewer will see: products, models, the speaker's own apps>. The graphics must match
-the reference shorts (`<SKILL>/examples/harness-engineering/`, Leon: "Everything is spot on"): energetic, things move,
-constantly showing real examples. Work autonomously; make every judgement call yourself and report it.
+You build HyperFrames compositions for <N> standalone vertical shorts (1080x1920, 60 fps) about <topic/title of shorts, with exact product names, tools, and technical terms in Korean>. The shorts are created without any source video; every run is a full visual (`mode: 'fv'`). Work autonomously; make every judgement call yourself and report it.
 
 ## Paths
-- Work folder (run every command from here): `<absolute path of work-<stem>>`
-  (Git Bash: `<the /c/... form>` - QUOTE IT if it has spaces or parentheses)
-- Python: `../.venv/Scripts/python.exe` (`$PY`). Bash is Git Bash on Windows: write longer code with a file tool, not
-  heredocs (a `\n` inside a heredoc string becomes a real newline; non-ASCII text gets mangled).
-- Skill references (READ FIRST, all of them): `<SKILL>/references/graphics.md` (start with "Theme"),
-  `<SKILL>/references/editing-spec.md` sections 4-6, `<SKILL>/references/lessons.md` (HyperFrames, finished-edit and brand
-  sections), `<SKILL>/examples/gfx_s1.py`, `<SKILL>/examples/prep_assets.py`, and `scripts/build_gfx_common.py` + `gfx/engine.js` here.
-- THE QUALITY BAR, read it: `<SKILL>/examples/harness-engineering/README.md` and its `gfx_a.py` (real sources and footage),
-  `gfx_b.py` (concept diagrams at true scale), `gfx_c.py` (one continuous world), plus the pro-edit skill's
-  `examples/harness-engineering/` (16:9, same engine and theme). Their helpers (tiles, `chip`, `ring`, `vov`, `view`,
-  `stack_blocks`, the keyframe library, `world()`) are yours to copy into your own module.
-- `cut.json` (runs, word times) and `shorts.json` (the plan) are READ-ONLY for you.
+- Work folder (run every command from here): `<absolute path of project>/work`
+- Python: `../.venv/Scripts/python.exe` (Windows) or `../.venv/bin/python` (`$PY`).
+- Skill references (READ FIRST):
+  - [references/graphics.md](../references/graphics.md) (Theme, Timing & Phrase Anchors, CFG)
+  - [references/theme.md](../references/theme.md) (Tokens, surfaces, Pretendard typography)
+  - [references/lessons.md](../references/lessons.md) (HyperFrames, text encoding, craft)
+  - [examples/gfx_s1.py](gfx_s1.py) (Reference implementation)
+  - `scripts/build_gfx_common.py` and `gfx/engine.js` in the work folder.
+- `cut.json` (runs, word timings) and `shorts.json` (script and plan) are READ-ONLY for you.
 
-## The source and what to grab from where
-- The short's camera and voice come from `../<video>` (<w>x<h>, <fps> fps, <duration> s). <If it is a finished edit: "It is
-  a FINISHED edit: most of its body is covered by the long-form edit's zooms, graphics, keyword pops and CTA cards. Do NOT
-  grab UI stills or clips from it.">
-- <Finished edit made with davinci-resolve-pro-edit (`import_longform.py` ran): "Clean, unzoomed screen footage: the RAW
-  recordings `<folder>\{<files>}`. `$PY scripts/import_longform.py --at <final-video s>` gives the raw file + time (and an
-  ffmpeg still command); `--range <a> <b>` lists the raw pieces of a stretch. Key stretches (final-video time -> raw):
-  <the article/post ~m:ss, the CLI demo ~m:ss, the app footage ~m:ss>." (The same holds when `build_raw_map.py` rebuilt
-  `longform_program.json` from the raw recordings because the work folder was gone.)>
-- `$PY scripts/rawsheet.py <name> <final s> [...]` makes a labelled contact sheet of the raw frames at those final-video
-  times (`chk/<name>.png`): use it to see what the clean footage shows before choosing a crop. <Paste the sheets you made
-  for the brief: chk/raw_s1.png ...>
-- The raw recordings show the webcam picture-in-picture at x <..>, y <..>, <w>x<h> (source px): never show it in a graphic.
-  Crop UI away from it. LOOK at a frame before choosing a crop: `ffmpeg -ss <t-1> -i <raw> -ss 1 -frames:v 1 x.png`. Keep
-  crops even-sized; re-encode clips with dense keyframes (`-g 12`) for HyperFrames.
-- <When the video builds something (an app, a game) and its project folder is on this machine: point at it READ-ONLY - its
-  real pages, the docs the agent wrote, test or debug captures, review files. It is usually the richest real material.>
-- Real pages: `captures/` (`captures/index.json`: file -> url, what it shows; `captures/facts.json`: the fact check). Reuse
-  them; don't re-capture. Logos / avatars / thumbnails already cut out: `longform_assets/` <and captures/logos/>. Copy what
-  you use into `gfx/assets/` with YOUR tag prefix.
-- Fact-check notes that matter here: <each figure the shorts say, with its TRUE value and source>. Draw the TRUE number when
-  a number is drawn; the captions say what he says.
-- NEVER: <a sponsor of an earlier video, competitors he doesn't name, private details>. No brand or logo the speaker doesn't
-  name in THIS video.
+## Assets and Real Sources
+- Real web pages, documentation, and pricing tables: `captures/` (`captures/index.json` maps file -> URL; `captures/facts.json` lists fact checks). Reuse these captures; do not re-capture.
+- Official product and tool logos: `captures/logos/`. Use `logo_html('assets/<logo_file>')`.
+- Copy assets you use into `gfx/assets/` prefixed with your `<tag>_` (e.g. `gfx/assets/a_pricing.png`).
+- Fact-check figures: <list key numbers, claims, and verified true figures from research.md>. Display the true number in graphic text.
+- Never display unofficial logos, competitors not mentioned in the narration, or placeholder images.
 
-## Regions of the source you must never show
-- The webcam picture-in-picture: x <..>, y <..> (source px), always. <Stretches where it moves: avoid <t0>-<t1> s.>
-- <Baked titles / captions of the long-form edit: text, times, position.>
-- <Censored (blurred) regions: never a subject, never filling the frame.>
-- <Baked zooms of the long-form edit: times. Prefer stills/clips from UNZOOMED moments (or the raw recordings) and do the
-  camera work yourself.>
+## Your Files (never edit another agent's files)
+- `scripts/prep_assets_<tag>.py`: crops stills and clips into `gfx/assets/<tag>_*` and writes `gfx/asset_dims_<tag>.json` (build_gfx_common merges all `asset_dims*.json`).
+- `scripts/gfx_<tag>.py`: contains a `build()` function that defines your assigned compositions (e.g. `s1_r0`, `s1_r1`) using `build_gfx_common` (`words`, `W`, `page`, `capture_card`, `logo_html`, `tile_html`).
+- Build command:
+  ```bash
+  $PY scripts/build_gfx.py <tag>
+  ```
+- Draft render command:
+  ```bash
+  bash scripts/render_draft.sh <ids...>
+  ```
+  Renders 10 fps drafts into `gfx/draft/<id>.mp4` and contact sheets into `chk/<id>_sheet.png`. LOOK at each contact sheet before proceeding.
+- Full render command (only after recording approval and timeline update):
+  ```bash
+  bash scripts/render_full.sh <ids...>
+  ```
+  Wait for `done <id>` output. `render_full.sh` throttles itself machine-wide (3 render slots × 8 browsers). Never run `prep.sh`, `finish.sh`, or `compose.py`.
 
-## Your files (never edit anyone else's)
-- `scripts/prep_assets_<tag>.py`: cuts your stills/clips into `gfx/assets/` with file names prefixed `<tag>_`, copies the
-  captures / logos you use into `gfx/assets/`, and writes `gfx/asset_dims_<tag>.json` (NOT asset_dims.json; build_gfx_common
-  merges them all). Synced footage clips follow the edit map with `synced(sk, ri)` from the example (pieces in cut.json).
-- `scripts/gfx_<tag>.py` with a `build()` that writes your compositions with the exact ids given (e.g. `s2_r0`), using
-  `build_gfx_common` (`words`, `W`, `page`, `capture_card`, `tile_html`, ...). Build with `$PY scripts/build_gfx.py <tag>`.
-- Render only with `bash scripts/render_draft.sh <ids...>` (10 fps draft + `chk/<id>_sheet.png`: LOOK at it) and, after
-  fixing, `bash scripts/render_full.sh <ids...>` (throttles itself machine-wide; wait for a `done <id>` line each; `FAILED`
-  names a log). Render the drafts of ALL your compositions first, check them, then the full renders.
-  Never run prep.sh, finish.sh or compose.py.
-- Two large videos in one page (a full-res clip plus its blurred backdrop clone) can run Chrome out of memory: give the
-  backdrop its own 640 px wide copy and render with `NODE_OPTIONS=--max-old-space-size=16384`.
-- Check one full-resolution frame of anything with text (`ffmpeg -ss <t> -i gfx/out60/<id>.mp4 -frames:v 1 chk/<id>_t.png`)
-  and the right-edge columns 1072-1079 against 1064-1071.
+## Rules That Matter Most
+- **Every run is a full visual (`mode: 'fv'`)**: No split layouts, no cameras, no face cutouts.
+- **Duration**: Matches `r['dur']` from `words(sk, ri)` exactly.
+- **Timing with `W()`**: Cue every animation, camera move, and landing with `W(ws, '<Korean phrase>')` (e.g. `W(ws, '요금제') - 0.25` for a step). Never hardcode seconds. All timings re-time automatically when narration is recorded.
+- **Frame 0 landing state**: The hero card must ALREADY be visible at t = 0 (sharp, camera at rest). Entrance animations (`land`) are only for secondary supporting elements.
+- **Frame 0 of r0 is cover-safe**: Keep all graphic elements below y 620 so the glass title cover card (centred at y ~432) has clear space.
+- **Typography in Pretendard**: Use Pretendard for all Korean text (`.display`, `.h1`, `.h2`, `.sub`, `.body`, `.caption`). Geist Mono is strictly for uppercase Latin labels (`.label`), falling back to Pretendard for Hangul. Nothing under 30 px.
+- **Vertical margins**: Main visual content stays above y 1230. Captions occupy the lower third (y 1290–1560) or upper third (y 365–634 if `"caption": "top"`).
+- **Theme**: Graphite stage (`#18191C` to `#0B0C0E`), glass cards for diagrams (`highlight: True` for accent hairline + bloom), white windows/paper for real UI, glossy icon tiles (`tile_html`). One accent per scene (`azure`, `ember`, `mint`, `iris`).
+- **Highlight bands**: Put `.band` (azure wash) under a `<img style="mix-blend-mode:multiply">` inside the card, revealed with `scaleX` on the keyword phrase. On dark UI, re-ink text or use an outline with glow.
+- **Camera**: `glide`, `step` (0.5 s, starting 0.25 s before word), `push` (to ~1.6×), `pull`, at most one `whip` per run. Never blur readable text.
+- **Thumbnails**: Add `thumb=[[a, b]]` (run-relative window where hero is landed and still) on compositions with high visual impact.
+- **No SFX**: Do not add sound effects or SFX arrays to CFG. The short audio consists of narration only.
 
-## Rules that matter most (the spec has the rest)
-- Duration = the run exactly (`r['dur']` from `words(sk, ri)`); cue every move / landing with `W(ws, 'word')` (steps 0.25 s
-  before the word). The times below are run-relative word starts from cut.json.
-- Frame 0 is the composed landing state: sharp, camera at rest, the hero ALREADY ON SCREEN (the cut lands on it). A card
-  that lands at 0.05 s leaves empty frames after the cut. Supporting cards may land later (pop SFX).
-- `split`: content in y 40-900 (main element's bottom edge at 880-900), world fades out from y 900 (built in). The caption
-  band (941-1114) and the camera card (from 1200, his head pops out above it) are drawn later: keep clear. Footage in a
-  split is masked by hand to the same fade (HyperFrames videos sit above the world viewport).
-- `fv`: content above y 1230 (bottom edge at 1200-1230); captions go in 1290-1560 below it. Real captures in the fixed
-  capture frame (`capture_card`, x 24, y 200, 1032x1040) on the washed backdrop; the frame never moves, the footage pans /
-  zooms inside it (1.15-1.4x, 0.4-0.7 s power2.inOut).
-- **`*_r0` is also the cover frame**: at frame 0 keep everything below y 620 (the glass title card sits at y ~262-603), then
-  step / land so the hero's bottom edge ends at 880-900.
-- The channel's design system (graphics.md "Theme"; the default `theme: 'stage'`): graphite stage, glass panels for
-  diagrams (`highlight` on the one that matters), white window / paper for real UI and pages, his glossy icon tiles,
-  Figtree 600 + Geist Mono labels, azure accent (ember for limits / costs / "busy", mint for passes). Nothing under 30 px,
-  including captured UI text the viewer must read. Highlight bands on real pages: class `band` (azure wash) under a
-  `mix-blend-mode:multiply` screenshot, revealed with a `scaleX` reveal ON the word (on DARK UI re-ink the real text dark on
-  the wash, or an azure outline with a glow); bands and chips over moving footage ride a root-level layer that copies the
-  video's transform every frame (`vov()` in the reference gfx_a.py).
-- Real sources everywhere something happened: the actual article / docs / post / repo with the cited line highlighted on
-  the word, the speaker's own YouTube watch pages for his videos, official logos for named products, his REAL UI doing the
-  thing (from the raw recordings). Concept diagrams at TRUE scale when they show quantities (one cell = 1K tokens).
-- A concept that spans several runs of one short (a factory, a pipeline, a loop) is ONE continuous world: a pure function
-  of the short's own time, each composition rendering its window of it, so the story carries across the cuts
-  (`gfx_c.py` `world()`).
-- Animate the action, never label it. One dominant subject per scene, at most one supporting cue.
-- Camera: glide / step / push (to ~1.6x) / pull, at most ONE whip per composition (whoosh at `t+0.45`). Never blur a word
-  to be read.
-- SFX on the CFG (run-relative): `pop` landing, `click` real press, `key` typing (one per keystroke burst), `chime` answer /
-  success, `whoosh` whip only. Highlight swishes come automatically from `scaleX` reveals.
-- Thumbnail moments on the CFG: `thumb=[[a, b]]` (run-relative), where the composition's most eye-catching state is landed
-  and still (the logo large, the real UI doing the thing, the key number, the chart that jumped). One or two per composition
-  worth a thumbnail, none on the rest. Every short needs at least one strong candidate: a split with his head under a bold
-  real element is best.
+## Compositions
+<!-- Paste the output of `$PY scripts/brief_runs.py` here.
+     Add one "Idea:" line per composition: what it shows, real capture used, and what lands on which phrase. -->
 
-## Compositions (run id, layout, duration, the words with run-relative start times, and the idea)
-<Paste the output of `$PY scripts/brief_runs.py` here and write one "Idea:" line per composition: what it shows, the real
-source or footage (with its time), what lands on which word. One "### Short" heading per short, with its title and cover.>
+### Short s1 "<Title>" · END <dur> s
+- `s1_r0` number <dur> s - cover-safe frame 0 (keep everything below y 620 at t 0): <words with @times>
+  Idea: <what it shows, key statistic, camera push on phrase>
+- `s1_r1` capture <dur> s: <words with @times>
+  Idea: <real page capture, inner camera zoom, highlight band on phrase>
+- `s1_r2` diagram <dur> s: <words with @times>
+  Idea: <glass diagram cards, icon tile, step to outcome on phrase>
+- `s1_r3` logo <dur> s: <words with @times>
+  Idea: <official logo lockup, transition to product interface on phrase>
 
 ## Assignment
-- Agent A (tag `a`): <shorts and composition ids> - <kind, e.g. real sources and footage>
-- Agent B (tag `b`): <...> - <e.g. concept diagrams>
-- Agent C (tag `c`): <...> - <e.g. the continuous world>
+- Agent A (tag `a`): `s1_r0`, `s1_r1` - real captures and statistic cards
+- Agent B (tag `b`): `s1_r2`, `s1_r3` - concept diagrams and product lockups
 
-## Report back (short)
-Per composition: what it shows, which real sources / frames (times) it uses, camera moves and whips, SFX events
-(run-relative), thumbnail windows (and what is on screen in them), judgement calls, and that `render_full.sh` printed `done`
-(with the contact sheet you checked).
+## Report Back (short)
+Per composition:
+1. What it displays and real captures/sources used.
+2. Camera moves and whip transitions.
+3. Thumbnail window (`thumb=[[a, b]]`).
+4. Confirmation that `render_draft.sh` (or `render_full.sh`) completed with `done <id>` and contact sheet was inspected.

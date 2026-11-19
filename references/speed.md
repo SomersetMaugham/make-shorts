@@ -1,72 +1,88 @@
 # Speed and parallelism
-Target: first finished short in 20-30 min of wall time, of which the machine needs about 5 min (1.7 min analysis, ~3 min from the locked plan to the delivered file); any edit after that in under 2 min. The rest is your planning, briefing and checking, so keep those tight: one stage script per stage (`analyze.sh`, `cut.sh`, `prep.sh`, `finish.sh`), run in the background while you do the next judgement call. Size worker counts to the machine (check `nproc` and `nvidia-smi` first; the reference machine had 32 cores and an RTX 5090). Never leave the GPU or spare cores idle while you wait on something else.
 
-9.0 REUSE BEFORE YOU BUILD
-- Use this skill's scripts (copied into each work-<stem>/scripts by setup.sh): the cut engine, forced aligner, HyperFrames world engine, compositor, audio synth and verification scripts. Only write code for what's missing.
-- Keep per-video values in work-<stem>/project.json, never hard-coded in scripts. If you build something reusable, tell the user so it can be added to the skill.
+Target: produce the first draft review copy in 15–20 minutes, iterate quickly on 10 fps drafts, and complete final 240 fps rendering and assembly within 3–5 minutes once the voiceover is recorded. Any incremental edit after that should take under a minute.
 
-9.1 ONE INGEST PASS AT t=0, EVERYTHING IN PARALLEL (background jobs, nothing waits on anything else)
-- Decode the master exactly once, with the GPU (-hwaccel cuda). That one pass writes every proxy you'll need: 48 kHz and 16 kHz audio, a 540p full-frame proxy, a 10 fps crop of the camera region, and 1 fps thumbnails.
-- The decode is bound by the hardware decoder, not by filters or the encoder: moving scale/encode to the GPU (scale_cuda, NVENC) measured no gain. `ingest.py` therefore decodes the master as 4 time slices in parallel (whole-second boundaries keep the 10 fps / 1 fps sampling identical) and stream-copies them together: a 15 min 4K master in 60 s instead of 105 s, same frame count, bit-identical audio. 8 slices measured 61 s, so 4 already saturates the RTX 5090's NVDEC engines (~900 fps of 4K H.264). `INGEST_SLICES=1` restores the single pass. Both audio outputs come from one read of the file. `ingest.py` writes `ingest_audio.done` and `ingest.done` so `analyze.sh` can start transcription about 5 s in and camera detection the moment the proxy lands.
-- Never decode the full 4K master again. Later, extract only the frame ranges you actually use.
-- At the same time (`analyze.sh` sequences all of this on the ingest's `.done` markers, in one call):
-  - GPU transcription, batched (`BatchedInferencePipeline`, batch 16): 14.5 min of audio in ~8 s instead of ~45 s. It only drives planning; kept lines are re-transcribed and aligned. `--sequential` restores the old pass.
-  - Forced alignment for word edges: `align_lines.py` re-transcribes all line windows concurrently (4 CUDA workers on one model; 8 is no faster) and runs wav2vec2 on the GPU (CUDA PyTorch): 59 s -> 29 s for 25 lines, with identical words and word edges.
-  - Face and gaze landmarks, plus a framing-shift / punch-in scan, on the camera proxy (CPU). Both were single-threaded loops over every proxy frame and took the longest of the whole analysis on a 15 min master (gaze ~7 min); both now run as 8 time slices in parallel processes (`GAZE_WORKERS`, `ZOOM_WORKERS`): the zoom scan matches a sequential pass row for row (each slice starts one frame early), and the gaze landmarker warms up on the second before its slice so the VIDEO-mode tracker state at the boundary is the same.
-  - A scene-cut scan.
-- Start a research subagent immediately. It checks every figure against 2+ sources and captures the source pages, logos and pricing tables as PNGs.
+Speed in this skill comes from architecture, not raw hardware:
+1. **Building on silent placeholders with 10 fps drafts** so visual development never waits on audio or heavy renders.
+2. **240 fps motion-blurred rendering only once**, after the user approves recording and locks the timeline.
+3. **Automatic re-timing** via phrase anchors (`W()`) so recording never requires rewriting graphics code.
+4. **Cached segment compositing** and **parallel worker pools**.
 
-9.2 PLAN ONCE, THEN FAN OUT
-- After ingest, write one plan file and lock it. It holds:
-  - the lines and their source ranges
-  - eye-contact switch points
-  - the run layout tiling [0, END]
-  - one graphic brief per run, with word-cue times
-  - the SFX events
-- Everything downstream reads that file. Don't re-derive decisions later.
+---
 
-9.3 PARALLEL SUBAGENTS (a FEW long-lived ones; each checks its own output before reporting)
-- Graphics: 2-4 long-lived agents, one per 1-2 shorts, grouped by kind (real sources and footage / concept diagrams / one continuous world); never one per composition (Leon prefers few long-lived agents). Each gets the shared brief (`GFX_BRIEF.md` with `brief_runs.py`'s word times), the engine and its assets. It then, for ALL its compositions:
-  - lints the composition
-  - draft-renders at 10 fps (`render_draft.sh`: draft + contact sheet in one call)
-  - checks a contact sheet and fixes what it finds
-  - renders at 240 fps with tmix (`render_full.sh`)
-- Render compositions concurrently, but through `render_full.sh` only: it holds a machine-wide budget of RENDER_SLOTS (3) renders x HF_WORKERS (8) Chrome browsers, so several agents rendering at once queue behind each other instead of launching 100 Chromes (24 workers on one render was already slower than 16). One 8 s composition: ~45 s alone; the full-render stage of a six-composition short stays around 2-3 min.
-- The 240 fps intermediate is a lossless PNG sequence, not MOV: HyperFrames' MOV/ProRes path forces its slow alpha capture (~15 fps regardless of workers) and its MP4 path captures JPEG and has the 8 px right-edge strip (lessons.md). `PRODUCER_ENABLE_BROWSER_POOL=false` (exported by both render scripts) gives each worker its own browser, which is what makes the workers count: 11 -> 41 fps at 8 workers.
-- Meanwhile, the main agent does everything that doesn't wait on graphics: frame-exact camera extraction, matting, captions, cover, CTA, and the audio synthesis and mix (`prep.sh`, one call).
-- Several shorts from one recording: a few graphics agents by tag (`examples/GFX_BRIEF_template.md`). Measured, 5 shorts / 31 compositions from a 16 min 4K export (Harness Engineering): 3 agents, about an hour each in parallel, while `music_takes.py` and `prep.sh` ran; `finish.sh` about 70 s per short. Earlier, 3 shorts / 16 compositions from a 12.5 min 4K export:
-  - machine time: analyse 95 s, one `cut.sh` for all three 68 s, one `prep.sh` for all three 39 s (15 camera clips 10 s, 8 mattes 24 s), `finish.sh` 50-80 s per short;
-  - the graphics subagents ran 15-30 min each, overlapping the research subagent and each other.
-  - Finish a short as soon as its own graphics are `done`; don't wait for the other shorts.
+## 1. Reuse Before You Build
+- Use the skill's scripts in `work/scripts/`: narration tools (`scripts/narration/`), timeline generator (`timeline.py`), HyperFrames world engine (`gfx/engine.js`), compositor (`compose.py`), mastering (`mix.py`), and thumbnail extractor (`thumbnail.py`).
+- Keep per-project and per-short data in `shorts.json` and `narration/<sk>/script.json`, never hardcoded in scripts.
 
-9.4 GPU WHEREVER THERE IS A GPU PATH
-- NVDEC decode and CUDA transcription. `cam_prep.py` decodes every camera run on NVDEC too (`-hwaccel cuda` with `format=yuv420p` first, which makes the nv12 output take the same colour conversion as the CPU path: byte-identical frames, verified), four runs at once, into multi-slice FFV1. `CAM_HWACCEL=0` forces the CPU decoder.
-- Matting on GPU: `scripts/matte_gpu.py` runs the same u2net_human_seg model HyperFrames caches, on the onnxruntime-gpu CUDA provider, several runs at once (`--jobs 4`) and three frames in flight per run (`--threads 3`; the model takes a batch of one, the time is in the resizes and the encode, and ORT/OpenCV release the GIL). The matte is written as lossless multi-slice FFV1 (`MATTE_CODEC=png` restores PNG-in-MOV): identical alpha, about 3x faster to write and to read back in compose. Never CPU u2net: `hyperframes remove-background --device cuda` fails on Windows (its onnxruntime-node build has no CUDA) and falls back to CPU at ~0.8 s/frame.
-- setup.sh verifies onnxruntime reports `CUDAExecutionProvider`; a CPU-only `onnxruntime` wheel pulled in by another package shadows onnxruntime-gpu otherwise.
-- The GPU is NOT where the graphics time goes: HyperFrames captures with Chrome's hardware GPU already, and its bottleneck was one shared browser process (9.3). NVENC is fine for intermediates, but it doesn't speed up the ingest proxy (the decode is the bottleneck, see 9.1). Keep x264 -preset slow for the final encode only.
+---
 
-9.5 COMPOSITE IN PARALLEL SEGMENTS
-- Render each run in its own process into a segment with identical encoder settings: `compose.py <sk> --segments` spawns one process per run, all at once (`--jobs N` to limit), verifies every segment's frame count against its run, then concatenates. `finish.sh` runs it together with `audio.py`. A 34 s short with six runs composites in ~55 s (the longest split run bounds it: ~75 ms a frame for the Lanczos upscale, unsharp, blurred strips and the three blends, which run only on the rows below the card's shadow); plain full-visual runs are encoder-bound at ~17 ms a frame.
-- Previews (`--preview t1,t2`) seek each stream straight to the wanted frames: a six-frame spot check takes ~4 s. Use them freely.
-- Concatenate the segments with stream copy, and mux the audio last.
-- For previews, seek to the exact frames you need. Never decode whole streams to grab a few frames.
+## 2. Two-Phase Execution: Drafts First, Heavy Renders Once
 
-9.6 EDITS ARE INCREMENTAL
-- Every segment is cached by its inputs: `compose.py --segments` writes `<sk>/seg/runNN.key` (the run, its captions, the graphic / camera clip / matte / split geometry files with sizes and mtimes, the cover, the CTA spec, the encoder settings and a hash of compose.py) and skips any run whose key is unchanged. `--force` re-renders everything.
-- On a change, re-run only what it touches (`finish.sh <sk>` does the right thing by itself; the list says what to expect):
-  - Caption, cover or CTA fix: only the segments whose captions changed are re-rendered (under a minute).
-  - One graphic: re-render that composition (`render_full.sh`), then `finish.sh`: only its segment is re-rendered.
-  - Webcam framing: delete `<sk>/cam/split_geom.json`, then `finish.sh`: only the split segments change.
-  - Timing change: re-cut that line (`cut.sh`), `prep.sh` for the camera clips and mattes of the runs that moved, re-render the graphics whose runs moved, then `finish.sh`.
-  - Audio level: `finish.sh` re-mixes the stems and re-concatenates; no segment is touched (seconds).
-  - Title, description or caption change: edit only that short's section in edit/PUBLISH.md; nothing is re-rendered.
-  - Thumbnail: the candidates are the moments the graphics marked while being built, rendered as a handful of seeks while `finish.sh` concatenates (seconds), never a scan of the finished short. A different pick is one JPEG encode.
-- Report what was re-rendered and the wall time it took (`finish.sh` prints which runs it rendered and which it kept).
+### Phase 1: Silent Placeholders and 10 fps Drafts
+- Never call the TTS API or render 240 fps during initial planning and visual development.
+- `prep.sh` creates silent placeholder cues with estimated lengths based on character position.
+- Graphics subagents write compositions and render drafts with `bash scripts/render_draft.sh <rid...>`. A 10 fps draft renders in ~3–5 seconds and produces a contact sheet (`chk/<rid>_sheet.png`) for instant visual verification.
+- Assemble the draft review copy with `bash scripts/finish.sh s1 --draft`. This produces `chk/s1_draft.mp4` (10 fps draft graphics held to 60 fps, silent, with captions and cover).
+- Hand over the draft review copy and `narration/s1/script.txt` to the user to decide whether to record.
 
-9.7 CHECK CHEAPLY, FAIL FAST
-- Verify each stage the moment it finishes, as a background job, while the next stage starts:
-  - voice re-transcription and quiet at every join
-  - eye-contact sheets
-  - draft contact sheets for each graphic
-  - one full-resolution frame of each split, checking the whole face (hair to chin) sits inside the card
-- A bug found at the draft stage must never reach a full render.
+### Phase 2: Recording, Re-timing, and 240 fps Rendering
+- Once the user approves recording, run `node scripts/narration/tts.mjs narration/s1 --approved`.
+- Read take numbers with `wave.mjs --unreviewed`, set `"cut"` and phrase `"at"` times, then run `prep.sh`.
+- Re-run `$PY scripts/build_gfx.py`. Because all graphics timing is anchored on phrases using `W(ws, '<phrase>')`, every move and landing re-times automatically to the real voiceover.
+- Render at 240 fps (`bash scripts/render_full.sh <rid...>`) **only now**, when the timeline is final.
+
+---
+
+## 3. Parallel Subagents (Few Long-Lived Agents)
+
+- Graphics work should be handled by 2–4 long-lived subagents by tag (`a`, `b`, ...), grouped by visual style or topic (e.g. real web captures, architecture diagrams, continuous world sequences). Never spawn one agent per composition.
+- Each agent owns its assets (`scripts/prep_assets_<tag>.py`, `gfx/asset_dims_<tag>.json`) and its module (`scripts/gfx_<tag>.py`).
+- Each subagent follows the cycle for all its compositions:
+  1. Write and lint composition configs.
+  2. Render 10 fps drafts with `render_draft.sh`.
+  3. Inspect contact sheets (`chk/<rid>_sheet.png`) and fix issues.
+  4. After recording approval, trigger `render_full.sh`.
+- **Machine-wide throttling**: `render_full.sh` manages a slot budget across all running agents using lock files in `gfx/.render_slots`: at most `RENDER_SLOTS` (3) renders concurrently, with `HF_WORKERS` (8) Chrome browsers each. Multiple agents can call `render_full.sh` safely without overwhelming system resources.
+- **Dedicated browser per worker**: Both `render_draft.sh` and `render_full.sh` export `PRODUCER_ENABLE_BROWSER_POOL=false`. This gives each worker its own Chrome instance, bypassing Chrome's single-GPU-process bottleneck during PNG capture (measuring 41+ fps at 8 workers vs ~15 fps when pooled).
+
+---
+
+## 4. Parallel Segment Compositing and Input Caching
+
+- `compose.py s1 --segments` renders each run's segment in its own parallel process (`--jobs N`).
+- **Input caching (`.key` files)**: For each run, `compose.py` hashes its inputs:
+  - Run metadata (duration, scene, bounds).
+  - Graphic video file size and modification timestamp (`gfx/out60/<sk>_r<i>.mp4` or draft equivalent).
+  - Captions and highlight chips within the run.
+  - Frame-0 cover card (for run 0).
+  - Encoder settings and composite code hash.
+- If a run's `.key` matches, segment rendering is skipped completely.
+- **Stream-copy concatenation**: Once segments are ready, `compose.py --concat` stream-copies the H.264 video segments together and muxes the mastered AAC audio in seconds.
+- **Frame seeking for previews and thumbnails**: `compose.py --preview <t>` and `thumbnail.py` seek frame-accurately directly to the required timestamp (`-ss t -i ... -frames:v 1`). Whole streams are never decoded to extract spot frames.
+
+---
+
+## 5. Background Parallelism in Assembly
+
+`finish.sh` pipelines tasks concurrently:
+1. `check_text.py` and `check_narration.py` run first as fast gates.
+2. `mix.py` (gain adjustment + true peak limiting) runs in the background while `compose.py --segments` renders any pending visual segments.
+3. `thumbnail.py` renders candidate clean frames in parallel while `compose.py --concat` joins the final segments.
+4. `verify_final.py` checks video and audio streams on the assembled file.
+
+---
+
+## 6. Incremental Edits
+
+Re-run only the specific stage affected by a change:
+- **Graphic appearance or motion**: Edit `scripts/gfx_<tag>.py` → `build_gfx.py <tag>` → `render_full.sh <rid>` → `finish.sh`. Only that single run's segment re-composites.
+- **Captions, highlight chips, or cover**: Edit `shorts.json` → `prep.sh` → `finish.sh`. Only runs with changed text re-render (graphics are untouched).
+- **TTS take or phrasing**: Re-record only that cue (`tts.mjs --only <id> --approved`), re-cut, re-sync, and re-run `prep.sh`. Graphics re-time automatically.
+- **Thumbnail change**: `$PY scripts/thumbnail.py s1 --pick <t> NN slug` extracts the new JPEG instantly without re-rendering video.
+
+---
+
+## 7. Check Cheaply, Fail Fast
+
+- **Gate before rendering**: `check_text.py` catches text corruption or missing fonts, and `check_narration.py` catches stale sync or unreviewed takes before launching renders.
+- **Contact sheets at 10 fps**: Verify layout, alignment, and type scale (≥ 30 px) on `chk/<rid>_sheet.png` during the draft stage. Never send an unverified draft to 240 fps full render.
