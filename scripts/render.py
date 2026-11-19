@@ -21,7 +21,7 @@ A copy sits in work/ (setup.sh puts it there); run it from work/ or the project 
 Steps of a render: render_full.sh for every run whose render is missing, older than its composition or made at another
 --fps, then finish.sh (text and narration gates, the -14 LUFS master, the segments, the concat, the final check and
 the thumbnail candidates). It stops at the first failure and says which step."""
-import json, os, shutil, subprocess, sys, time
+import glob, json, os, shutil, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -76,8 +76,11 @@ if '--screenshot' in flags_all:
             os.remove(f); print(os.path.abspath(dst))
         sys.exit(0)
     sheet = os.path.join(outd or 'chk', f'shot_{sk}_{a:.2f}-{b:.2f}.png')
-    subprocess.run([PY, 'scripts/sheet.py', os.path.join(out_dir, '*.png'), sheet, str(min(6, len(files)))], check=True)
-    print(f'{len(files)} frames ({a:.2f}-{b:.2f} s, every {gap} frames) -> {os.path.abspath(sheet)}')
+    for old in glob.glob(sheet[:-4] + '_p*.png') + [sheet]:       # a re-shoot of the same span replaces its parts
+        if os.path.exists(old): os.remove(old)
+    made = subprocess.run([PY, 'scripts/sheet.py', os.path.join(out_dir, '*.png'), sheet, str(min(6, len(files)))],
+                          check=True, capture_output=True, text=True).stdout.split()
+    print(f'{len(files)} frames ({a:.2f}-{b:.2f} s, every {gap} frames) -> ' + '  '.join(made))
     sys.exit(0)
 
 PROJ = json.load(open('project.json', encoding='utf-8')) if os.path.exists('project.json') else {}

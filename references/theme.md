@@ -7,7 +7,7 @@ camera moving through it. It is the skill's neutral default (`theme: 'stage'` in
 
 ## Stage
 - Background #18191C at the top to #0B0C0E at the bottom, a soft overhead spotlight, two faint light beams, a vignette.
-- No decoration at the bottom: the frame's zones are content y 140-1400, captions y 1430-1610, and below y 1610 only
+- No decoration at the bottom: the frame's zones are content y 140-1395, captions y 1410-1550 (and the button column at x > 960, y 1000-1700 kept clear of text), and below y 1560 only
   the stage itself (the platforms draw their UI there). The old horizon wave of dots is gone.
 - No light theme. (`theme: 'paper'`, the old white world, exists only for a user who asks for it.)
 

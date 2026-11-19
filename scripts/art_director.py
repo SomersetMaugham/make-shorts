@@ -63,7 +63,9 @@ TASK = {
     'motion': 'POINT 2 — the motion and sync pass on frame-by-frame sheets (consecutive tiles are 1–6 frames apart at 60 '
               'fps). Score C 모션 per section, check every run boundary and camera move for one-frame jumps, flashes of a '
               'wrong state, muddy overlaps and a hero missing at a run\'s first frame, and check that each visual lands '
-              'with or before its words (elevate.md §4 C and D). Name every finding by sheet and tile label.',
+              'with or before its words (elevate.md §4 C and D). Name every finding by sheet and tile label. A single tile '
+              'that shows a different state in the MIDDLE of a run may be a capture glitch: report it as "suspect flash", separately '
+              'from the must-fix list.',
 }[point]
 prompt = f"""You are the ART DIRECTOR of the elevation described in {RUBRIC} (read it all; use its §4 rubric and answer in
 exactly the format of its §5). You have no stake in this work: you did not build it and you do not defend it. You only
@@ -75,6 +77,8 @@ chips, every run a full-frame HyperFrames graphic on a graphite stage with glass
 scrolling shorts, curious about AI but not specialists. The scale is ABSOLUTE (3 = competent explainer graphics,
 4 = a crafted world a viewer finds beautiful on its own, 5 = reel-worthy); never grade on effort or against a previous
 round. A glass card holding a title and a line of text is a slide (B at most 2).
+On the phone the platform draws its like/comment/share buttons over x > 960, y 1000–1700 and its title below y 1560:
+text or a key element there is a floor violation.
 
 {TASK}
 

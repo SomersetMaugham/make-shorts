@@ -52,7 +52,7 @@ Setup creates:
        - `text`: exact display text in Korean.
        - `scene`: visual category (`capture`, `ui`, `diagram`, `number`, `logo`).
        - `switches`: optional list of `[{"at": "<phrase>", "scene": "..."}]` to cut visual scene mid-cue.
-       - `caption`: set to `'top'` (y 180–360) if the picture's content sits low; defaults to the caption band (y 1430–1610).
+       - `caption`: set to `'top'` (y 180–360) if the picture's content sits low; defaults to the caption band (y 1410–1550).
 4. **Visual rotation rules**:
    - Every run is a full visual (`mode: 'fv'`). No cameras, no splits, no face mattes.
    - No run exceeds ~8 s.

@@ -111,7 +111,7 @@ infographic look (thin lines and small diagrams on a dark gradient, a label colu
 
 **D. The floor — any hit is a must-fix, whatever the scores**
 A frame that would pass as a slide or a document page; the infographic look; text under 30 px; anything outside the
-zones (content y 140–1395, captions y 1410–1550, nothing below 1560) or under the captions; overlaps and clipping;
+zones (content y 140–1395, captions y 1410–1550, nothing below 1560) or under the captions; text or the key element under the platforms' button column (x > 960, y 1000–1700); overlaps and clipping;
 run 0 frame 0 not cover-safe or a hero missing at a run's frame 0; a stretch frozen for lack of a plan; three runs in a
 row with the same layout; an effect landing after its word; a one-frame jump or a flash of the wrong state at a run
 boundary; against an earlier round, a stretch that looks the same at phone size.

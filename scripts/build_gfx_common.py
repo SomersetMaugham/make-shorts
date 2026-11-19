@@ -7,7 +7,7 @@ import os as _os
 _os.chdir(_os.path.dirname(_os.path.abspath(__file__))+'/..')
 C = json.load(open('cut.json', encoding='utf-8'))
 sys.path.insert(0, 'scripts'); import config as _cfg
-LAYOUT = _cfg.LAYOUT   # the frame's zones: content y 140-1400, captions 1430-1610, nothing below 1610 (config.py)
+LAYOUT = _cfg.LAYOUT   # the frame's zones: content y 140-1395, captions 1410-1550, nothing below 1560, the button column x>960 y1000-1700 (config.py)
 import glob as _glob
 D = {}   # asset_dims.json plus one asset_dims_<tag>.json per graphics subagent (so parallel asset preps never race)
 for _f in sorted(_glob.glob('gfx/asset_dims*.json')): D.update(json.load(open(_f, encoding='utf-8')))
@@ -148,6 +148,29 @@ def still(rid, cfg, marks, pad=0.05):
             else: print(f'{rid}: thumb {m} is all movement; dropped')
     return out
 
+def ui_column_check(rid, cfg):
+    """Warn when a card at rest (frame 0, or where a camera move ends) reaches under the platforms' button column
+    (LAYOUT ui_right: x > 960, y 1000-1700; Shorts' like/comment/share). A card's frame or a background may pass
+    under it; its text and the key element must not. uiOk=True on a card silences it once that is checked."""
+    ux, uy0, uy1 = LAYOUT['ui_right']
+    ax, ay = cfg.get('anchor', [540, 720])
+    cam = {'x': 540, 'y': 720, 's': 1.0, **(cfg.get('cam0') or {})}
+    cams = [dict(cam)]
+    for m in cfg.get('moves', []):
+        cam = {**cam, **(m.get('to') or {})}; cams.append(dict(cam))
+    hits = set()
+    for k in cams:
+        for c in cfg['cards']:
+            if c.get('uiOk') or not all(n in c for n in ('x', 'y', 'w', 'h')): continue
+            sc = k.get('s', 1.0)
+            right = ax + sc * (c['x'] + c['w'] / 2 - k['x'])
+            top, bot = ay + sc * (c['y'] - c['h'] / 2 - k['y']), ay + sc * (c['y'] + c['h'] / 2 - k['y'])
+            if right > ux + 4 and bot > uy0 and top < uy1: hits.add(c['id'])
+    if hits:
+        print(f'{rid}: under the platforms\' button column (x > {ux}, y {uy0}-{uy1}) at rest: {", ".join(sorted(hits))}'
+              f' - keep text and the key element left of x {ux} (a frame or background may pass under; uiOk=True when checked)')
+
+
 def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_js='', mapped=True):
     rid = _mapped_id(rid) if mapped else rid
     if rid is None: return                       # retired by gfx/runmap.json
@@ -156,6 +179,7 @@ def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_
     THUMBS[rid] = still(rid, cfg, cfg.pop('thumb', []))
     if cfg.get('mode', 'fv') != 'fv':
         raise SystemExit(f'{rid}: mode {cfg["mode"]!r} - every run is a full visual (mode "fv"); there is no camera to split with')
+    ui_column_check(rid, cfg)
     if cfg.get('sfx'):
         print(f'{rid}: "sfx" ignored - the shorts have no sound effects, only the narration (references/narration.md)')
     split_mask = ''

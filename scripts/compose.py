@@ -62,7 +62,8 @@ def disp_tokens():
 
 _norm = lambda s: _PUNCT.sub('', s)
 HL = [[_norm(x) for x in h.split()] for h in S.get('highlights', [])]
-MAX_LINE = 880                                # a normal chunk stays on one line inside the 1080 frame (with ~100 px margins)
+sys.path.insert(0, 'scripts'); import config as _cfg
+MAX_LINE = 2 * (_cfg.LAYOUT['ui_right'][0] - 540)    # 840: centred captions end at x 960, left of the platforms' button column
 
 USED_HL = set()
 def hl_at(toks, i):

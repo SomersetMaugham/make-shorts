@@ -52,6 +52,14 @@ the user name the same moment. Run boundaries are in `cut.json` (`runs[].T0/T1`)
 wrong with them. You open only the frames it names, confirm, and fix. Steps 1–2 you skim yourself on the sheets; the
 judging of A and B is the director's (elevate.md).
 
+**A one-tile flash is a suspect, not a finding.** Every tile is its own headless Chrome load, and now and then one
+catches a composition before it has taken its time (it shows the run's frame 0 for one tile, in the middle of a run).
+Before fixing a "one-frame jump" or "wrong state for one frame", shoot that moment and its neighbours again
+(`--at T-0.05,T,T+0.05 --jobs 1`): a flash that does not come back was the camera, not the short. A flash exactly at a run
+boundary that does come back is real (the next run's frame 0 differs from the last run's end). The motion reviewer is
+told the same, and its flash findings are confirmed this way before anything is changed (GRPO, 2026-11-20: four
+reported flashes, three gone on a re-shoot).
+
 ## 3. What to look at in every frame
 
 - **Not a slide**: strip the motion away. Would this frame pass as a PPT slide (a title card, cards of text, bullets,
@@ -61,7 +69,7 @@ judging of A and B is the director's (elevate.md).
 - **The shot**: the camera moving only where the words give it a reason; screen direction kept.
 - **Focus**: one clear focal point; nothing important under the captions, off the edge, or behind another element.
 - **Text**: 30 px or more, readable contrast, not overlapping, not cut, Korean words not split, no orphan syllable.
-- **Zones**: content y 140–1395, captions y 1410–1550 (top captions y 180–360), nothing below 1560.
+- **Zones**: content y 140–1395, captions y 1410–1550 (top captions y 180–360), nothing below 1560, and no text or key element at x > 960, y 1000–1700 (the like/comment/share column the platforms draw over the right edge).
 - **Captions and chips**: a chip never covers the hero; caption chunks break at phrase boundaries.
 - **Attached things stay attached**: labels on their objects, glows on their lights through every camera move.
 - **Composition**: balanced, safe margins, intentional empty space vs accidental emptiness.

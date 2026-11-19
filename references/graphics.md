@@ -21,7 +21,7 @@ Contents: [Theme](#theme-the-neutral-stage-look) · [Timing & Phrase Anchors](#t
   - **Geist Mono** 500 for uppercase Latin labels (`.label`), falling back to Pretendard for any Hangul characters.
   - Minimum size: nothing under 30 px.
 - **Cards**: `glass` (diagrams, architecture, statements; `highlight: True` adds accent hairline and bloom), `window` / `paper` / `media` / `capture` (white surfaces for product UI, chats, code, and captures), `tile` (glossy 3D icon tiles via `tile_html`), `plain`.
-- **Layout bounds** (`LAYOUT` in build_gfx_common, from config.py): every run is a full visual (`mode: 'fv'`). Content y 140–1400 (main element's bottom edge ~1360–1400); captions y 1430–1610 (or y 180–360 with `"caption": "top"`); nothing below y 1610, where the platforms draw their own UI.
+- **Layout bounds** (`LAYOUT` in build_gfx_common, from config.py): every run is a full visual (`mode: 'fv'`). Content y 140–1395 (main element's bottom edge ~1360–1395); captions y 1410–1550 (or y 180–360 with `"caption": "top"`); nothing below y 1560, where the platforms draw their title and description; and no text or key element at x > 960 between y 1000 and 1700, under the platforms' like/comment/share column (`ui_right`; a card's frame or the background may pass under it; build_gfx warns).
 
 ---
 
@@ -175,5 +175,5 @@ Before handing the preview over (no MP4 is made before the user's review is comp
    - Frame 0 landing state: hero card is already visible at t = 0.
    - Run 0 frame 0: all elements stay below y 620.
    - Text legibility: all text ≥ 30 px.
-   - Vertical zones: content y 140–1400, captions y 1430–1610, nothing below 1610.
+   - Zones: content y 140–1395, captions y 1410–1550, nothing below 1560; no text or key element at x > 960, y 1000–1700 (the button column).
    - Timing: animations step and land on the intended phrase.
