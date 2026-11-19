@@ -155,7 +155,7 @@ class H(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
 
     def end_headers(self):
-        self.send_header('Cache-Control', 'no-store'); super().end_headers()
+        self.send_header('Cache-Control', 'no-store'); self.send_header('Accept-Ranges', 'bytes'); super().end_headers()
 
     def js(self, obj, code=200):
         b = json.dumps(obj, ensure_ascii=False).encode()
@@ -182,6 +182,28 @@ class H(http.server.SimpleHTTPRequestHandler):
                     self.wfile.write(b'data: ' + json.dumps(ev, ensure_ascii=False).encode() + b'\n\n'); self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError): pass
             finally: clients.remove(q)
+            return
+        rng = self.headers.get('Range', '')
+        f = self.translate_path(u.path)
+        if rng.startswith('bytes=') and os.path.isfile(f):
+            # byte ranges: without them Chrome cannot seek the narration, and every play() after a pause (a note,
+            # an arrow key) jumps back to 0 (SimpleHTTPRequestHandler answers a Range with the whole file)
+            size = os.path.getsize(f)
+            a, _, b = rng[6:].split(',')[0].partition('-')
+            a, b = (int(a), min(int(b) if b else size - 1, size - 1)) if a else (max(0, size - int(b)), size - 1)
+            if a > b or a >= size:
+                self.send_response(416); self.send_header('Content-Range', f'bytes */{size}'); self.end_headers(); return
+            self.send_response(206); self.send_header('Content-Type', self.guess_type(f))
+            self.send_header('Content-Range', f'bytes {a}-{b}/{size}')
+            self.send_header('Content-Length', str(b - a + 1)); self.end_headers()
+            with open(f, 'rb') as fh:
+                fh.seek(a); left = b - a + 1
+                try:
+                    while left > 0:
+                        chunk = fh.read(min(65536, left))
+                        if not chunk: break
+                        self.wfile.write(chunk); left -= len(chunk)
+                except (BrokenPipeError, ConnectionResetError): pass
             return
         return super().do_GET()
 
