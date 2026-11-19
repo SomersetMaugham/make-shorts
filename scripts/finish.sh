@@ -7,6 +7,11 @@
 #                                              narration allowed -> chk/<sk>_draft.mp4 (hand it over with script.txt)
 # Segments are cached by their inputs: after an edit only the runs that changed are re-rendered (seconds to a minute).
 # Run it only after every render_full.sh (or render_draft.sh for --draft) has finished for this short's graphics.
+# No MP4 before the review is done: the user checks work/index.html, asks for fixes, and once the review is complete
+# renders with render.py, which is the only caller allowed here (it sets CVS_RENDER=1). references/pipeline.md.
+if [ -z "${CVS_RENDER:-}" ]; then
+  echo "refused: no MP4 before the review of index.html is done. Check with render.py --screenshot; the user renders with render.py."; exit 3
+fi
 export PYTHONUTF8=1
 set -u
 cd "$(dirname "$0")/.."

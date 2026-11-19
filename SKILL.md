@@ -63,24 +63,29 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    `$PY scripts/brief_runs.py` under its Compositions heading with one idea per composition. Start a FEW LONG-LIVED
    graphics agents (2-4, one per 1-2 shorts, grouped by kind: real sources, concept diagrams, one continuous world), each
    with a tag. Each follows `references/graphics.md` and `examples/gfx_s1.py`, anchors every time on a phrase
-   (`W(ws, '구절')`), marks `thumb` windows, and renders 10 fps drafts with `render_draft.sh` (draft + contact sheet).
-   No full renders yet: the recording will re-time everything.
+   (`W(ws, '구절')`), marks `thumb` windows, and checks its work on PNG contact sheets of the preview
+   (`$PY scripts/preview.py`, then `python3 render.py --screenshot --run s1_r3 --gapframe 20 --fast --jobs 3`). **No MP4 of any kind is made
+   before the user has finished reviewing** (the MP4 scripts refuse to run outside render.py).
 5. **Preview in the browser:** `$PY scripts/preview.py` writes `work/index.html`: every short playing in Chrome with
-   its live compositions, captions, chips and cover on the narration's clock (silent before recording). No render is
-   needed, so a graphics fix shows after `build_gfx.py` and a reload. Check it yourself (headless Chrome with `?t=` and
-   `&still`, pipeline.md), then hand the user `work/index.html` and `narration/<sk>/script.txt`, list the lines to listen
-   to first once recorded, and **ask whether to record**.
+   its live compositions, captions, chips and cover on the narration's clock (silent before recording; script-to-motion's
+   player and keys). No render is needed, so a fix shows after `build_gfx.py`, `preview.py` and a reload. Check it
+   yourself (`python3 render.py --screenshot …`), then hand the user `work/index.html` and `narration/<sk>/script.txt`,
+   list the lines to listen to first once recorded, and **ask whether to record**.
+
+   **The review loop:** index.html → the user reviews (S copies the moment, A the screenshot command) → you fix → a new
+   index.html → … until the user says the review is complete. Only then is an MP4 made, and the user makes it.
 6. **Record (on the user's word):** `node scripts/narration/tts.mjs narration/<sk> --approved`; then the after-recording
    pass (`references/narration.md`): read every take (`wave.mjs narration/<sk> --unreviewed`; `autocut.py` drafts a cut
    you correct), set each `cut` (in `narration/<sk>/script.json`), run `phrasing-check.mjs` and fix wrong breaks with
    `[pause short]` in the line's `say` **in shorts.json** (prep.sh copies it over) and `--only` re-takes, set `at` for every keyword chip and every phrase a graphic lands on, read the whole sound for dead air.
    Then `bash scripts/prep.sh <sk>`, `$PY scripts/build_gfx.py <tags>` and `$PY scripts/preview.py`: the runs, every
-   graphic and the preview follow the takes. Hand over `work/index.html` again, now with the voice.
-7. **The MP4 is the user's to render:** `python3 work/render.py s1 NN slug` (a copy of `scripts/render.py`): every
-   composition at 240 fps with motion blur (`render_full.sh`, only those newer than their render), then `finish.sh`
-   (check_text, check_narration, the master and the segments, concat, `verify_final.py`, thumbnail candidates, the copy
-   into `edit/short-NN_<slug>/`). Don't run it yourself unless the user asks; prepare everything it needs and say the
-   command. `finish.sh <sk> --draft` (a silent MP4 from the 10 fps drafts) is still there for when a file is wanted.
+   graphic and the preview follow the takes. Hand over `work/index.html` again, now with the voice, and run the review
+   loop (step 5) until the user says the review is complete.
+7. **After the review is complete, the user renders the MP4:** `python3 work/render.py s1 NN slug` (a copy of
+   `scripts/render.py`): every composition with motion blur (`render_full.sh`, only those stale or made at another
+   `--fps`), then `finish.sh` (check_text, check_narration, the master and the segments, concat, `verify_final.py`,
+   thumbnail candidates, the copy into `edit/short-NN_<slug>/`). render.py is the only way these steps run (they refuse
+   otherwise); never run it before the review is complete, and only when the user asks you to. Give the command.
 8. **Deliver (before the render):** `edit/PUBLISH.md` with the Korean copy for every short (spec 8b;
    `$PY scripts/check_publish.py` must pass) and the report's narration, script and graphics parts. **After the user's
    render:** look at `chk/<sk>_final.png` and `chk/<sk>_thumbs.png`, pick the thumbnail

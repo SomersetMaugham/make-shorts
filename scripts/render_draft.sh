@@ -2,6 +2,11 @@
 # 10 fps draft of one or more compositions + their contact sheets, in one call:
 #   bash scripts/render_draft.sh s1_r0 s1_r3 ...     -> gfx/draft/<r>.mp4, chk/<r>_sheet.png (LOOK at it)
 # Drafts are small (about 80 frames) so they use 4 Chrome workers each (own browser each, see render_full.sh) and run all at once.
+# No MP4 before the review is done: the user checks work/index.html, asks for fixes, and once the review is complete
+# renders with render.py, which is the only caller allowed here (it sets CVS_RENDER=1). references/pipeline.md.
+if [ -z "${CVS_RENDER:-}" ]; then
+  echo "refused: no MP4 before the review of index.html is done. Check with render.py --screenshot; the user renders with render.py."; exit 3
+fi
 export PYTHONUTF8=1   # Python reads/writes UTF-8 on Windows too (cp1252 garbled non-ASCII names in captions)
 export PRODUCER_ENABLE_BROWSER_POOL=false
 cd "$(dirname "$0")/.."

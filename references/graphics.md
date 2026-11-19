@@ -167,9 +167,10 @@ Add `thumb` to each CFG:
 
 ## Checking and Validation
 
-Before rendering at 240 fps:
-1. Render a 10 fps draft: `bash scripts/render_draft.sh <rid...>`.
-2. Inspect the contact sheet: `chk/<rid>_sheet.png`.
+Before handing the preview over (no MP4 is made before the user's review is complete):
+1. Rebuild and refresh the preview: `$PY scripts/build_gfx.py <tag>` and `$PY scripts/preview.py`.
+2. Shoot a contact sheet of the run from the preview and inspect it:
+   `python3 render.py --screenshot --run <sk>_r<i> --gapframe 20 --fast --jobs 3` → `chk/shot_<sk>_<from>-<to>.png`.
 3. Verify:
    - Frame 0 landing state: hero card is already visible at t = 0.
    - Run 0 frame 0: all elements stay below y 620.

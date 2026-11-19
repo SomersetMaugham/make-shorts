@@ -93,7 +93,8 @@ Each tag owns:
 
 ```bash
 $PY scripts/build_gfx.py [tag]              # builds gfx/<rid>.html and gfx/thumbs.json
-bash scripts/render_draft.sh s1_r0 s1_r1    # 10 fps draft MP4 + contact sheet chk/<rid>_sheet.png
+$PY scripts/preview.py                      # work/index.html with the new compositions
+python3 render.py --screenshot --run s1_r3 --gapframe 20 --fast --jobs 3   # PNG contact sheet of one run, captions on
 ```
 
 Graphics rules ([references/graphics.md](graphics.md)):
@@ -101,7 +102,9 @@ Graphics rules ([references/graphics.md](graphics.md)):
 - **Timing**: ALWAYS anchor moves, steps, and landings on Korean phrases with `W(ws, '<phrase>')`, never on hardcoded seconds.
 - **Frame 0 of r0**: keep all elements below y 620 so the glass title cover card (centred at y ~432) remains unobstructed.
 - **Pretendard font**: use Pretendard for all Korean text; Geist Mono is reserved for uppercase Latin labels (`.label`).
-- Inspect `chk/<rid>_sheet.png` to verify typography (≥ 30 px), alignment, and layout bounds before full renders.
+- Inspect the contact sheet (`chk/shot_<sk>_<from>-<to>.png`) to verify typography (≥ 30 px), alignment and the zones.
+- **No MP4 before the review is complete**: `render_draft.sh`, `render_full.sh` and `finish.sh` refuse to run unless
+  render.py calls them, and render.py is the user's, after the review.
 
 ---
 
@@ -127,7 +130,8 @@ python3 render.py --screenshot --short s1 --from 12.0 --to 14.0 --gapframe 10 --
 ```
 
 **User Gate**: hand over `work/index.html` and `narration/s1/script.txt` and ask whether to record. This is the **only
-question** the skill asks. (`finish.sh s1 --draft` still makes a silent MP4 from the 10 fps drafts when a file is wanted.)
+question** the skill asks. Then the review loop: the user reviews index.html, you fix and rebuild the preview, until the
+user says the review is complete. No MP4 before that.
 
 ---
 

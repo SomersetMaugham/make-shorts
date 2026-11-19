@@ -31,15 +31,11 @@ You build HyperFrames compositions for <N> standalone vertical shorts (1080x1920
   ```bash
   $PY scripts/build_gfx.py <tag>
   ```
-- Draft render command:
+- Check command (PNG only — **no MP4 of any kind before the user's review is complete**; the MP4 scripts refuse):
   ```bash
-  bash scripts/render_draft.sh <ids...>
+  $PY scripts/preview.py && python3 render.py --screenshot --run <id> --gapframe 20 --fast --jobs 3
   ```
-  Renders 10 fps drafts into `gfx/draft/<id>.mp4` and contact sheets into `chk/<id>_sheet.png`. LOOK at each contact sheet before proceeding.
-- Full render command (only after recording approval and timeline update):
-  ```bash
-  bash scripts/render_full.sh <ids...>
-  ```
+  Writes `chk/shot_<sk>_<from>-<to>.png` from index.html with captions on. LOOK at each sheet before proceeding.
   Wait for `done <id>` output. `render_full.sh` throttles itself machine-wide (3 render slots × 8 browsers). Never run `prep.sh`, `finish.sh`, or `compose.py`.
 
 ## Rules That Matter Most
@@ -79,4 +75,4 @@ Per composition:
 1. What it displays and real captures/sources used.
 2. Camera moves and whip transitions.
 3. Thumbnail window (`thumb=[[a, b]]`).
-4. Confirmation that `render_draft.sh` (or `render_full.sh`) completed with `done <id>` and contact sheet was inspected.
+4. Confirmation that the preview contact sheet of each composition was inspected.

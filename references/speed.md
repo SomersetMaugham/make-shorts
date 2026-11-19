@@ -1,10 +1,10 @@
 # Speed and parallelism
 
-Target: produce the first draft review copy in 15–20 minutes, iterate quickly on 10 fps drafts, and complete final 240 fps rendering and assembly within 3–5 minutes once the voiceover is recorded. Any incremental edit after that should take under a minute.
+Target: the first index.html preview in 15–20 minutes; every review fix shows after a rebuild and a reload, in under a minute. The MP4 is rendered once, by the user, after the review is complete.
 
 Speed in this skill comes from architecture, not raw hardware:
-1. **Building on silent placeholders with 10 fps drafts** so visual development never waits on audio or heavy renders.
-2. **240 fps motion-blurred rendering only once**, after the user approves recording and locks the timeline.
+1. **Building on silent placeholders and the live preview** (index.html) so visual development never waits on audio or any render.
+2. **One MP4 render, by the user**, after the review of the recorded preview is complete.
 3. **Automatic re-timing** via phrase anchors (`W()`) so recording never requires rewriting graphics code.
 4. **Cached segment compositing** and **parallel worker pools**.
 
@@ -21,15 +21,16 @@ Speed in this skill comes from architecture, not raw hardware:
 ### Phase 1: Silent Placeholders and 10 fps Drafts
 - Never call the TTS API or render 240 fps during initial planning and visual development.
 - `prep.sh` creates silent placeholder cues with estimated lengths based on character position.
-- Graphics subagents write compositions and render drafts with `bash scripts/render_draft.sh <rid...>`. A 10 fps draft renders in ~3–5 seconds and produces a contact sheet (`chk/<rid>_sheet.png`) for instant visual verification.
-- Assemble the draft review copy with `bash scripts/finish.sh s1 --draft`. This produces `chk/s1_draft.mp4` (10 fps draft graphics held to 60 fps, silent, with captions and cover).
-- Hand over the draft review copy and `narration/s1/script.txt` to the user to decide whether to record.
+- Graphics subagents write compositions, rebuild the preview (`preview.py`) and check PNG contact sheets of it
+  (`python3 render.py --screenshot --run <rid> …`, seconds per run). No MP4 of any kind.
+- Hand over `work/index.html` and `narration/s1/script.txt` to the user to decide whether to record.
 
 ### Phase 2: Recording, Re-timing, and 240 fps Rendering
 - Once the user approves recording, run `node scripts/narration/tts.mjs narration/s1 --approved`.
 - Read take numbers with `wave.mjs --unreviewed`, set `"cut"` and phrase `"at"` times, then run `prep.sh`.
 - Re-run `$PY scripts/build_gfx.py`. Because all graphics timing is anchored on phrases using `W(ws, '<phrase>')`, every move and landing re-times automatically to the real voiceover.
-- Render at 240 fps (`bash scripts/render_full.sh <rid...>`) **only now**, when the timeline is final.
+- Rebuild the preview and run the review loop with the user. The MP4 (`render.py`, which runs `render_full.sh` and
+  `finish.sh`) comes only after the user says the review is complete, and the user runs it.
 
 ---
 
@@ -39,9 +40,8 @@ Speed in this skill comes from architecture, not raw hardware:
 - Each agent owns its assets (`scripts/prep_assets_<tag>.py`, `gfx/asset_dims_<tag>.json`) and its module (`scripts/gfx_<tag>.py`).
 - Each subagent follows the cycle for all its compositions:
   1. Write and lint composition configs.
-  2. Render 10 fps drafts with `render_draft.sh`.
-  3. Inspect contact sheets (`chk/<rid>_sheet.png`) and fix issues.
-  4. After recording approval, trigger `render_full.sh`.
+  2. Rebuild the preview and shoot contact sheets with `render.py --screenshot --run <rid>`.
+  3. Inspect them and fix issues. Never make an MP4 (the user renders after the review).
 - **Machine-wide throttling**: `render_full.sh` manages a slot budget across all running agents using lock files in `gfx/.render_slots`: at most `RENDER_SLOTS` (3) renders concurrently, with `HF_WORKERS` (8) Chrome browsers each. Multiple agents can call `render_full.sh` safely without overwhelming system resources.
 - **Dedicated browser per worker**: Both `render_draft.sh` and `render_full.sh` export `PRODUCER_ENABLE_BROWSER_POOL=false`. This gives each worker its own Chrome instance, bypassing Chrome's single-GPU-process bottleneck during PNG capture (measuring 41+ fps at 8 workers vs ~15 fps when pooled).
 

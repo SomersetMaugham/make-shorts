@@ -9,6 +9,7 @@ A copy sits in work/ (setup.sh puts it there); run it from work/ or the project 
     python3 render.py s1 --skip-graphics   only the composite (the graphics are already rendered and unchanged)
     python3 render.py --list               the shorts and whether each is ready (recorded, gates)
     python3 render.py --screenshot --short s1 --from 12.0 --to 14.0 [--gapframe 10] [--fast] [--jobs 1]
+    python3 render.py --screenshot --run s1_r3 [--gapframe 10]   the same over one whole run (a graphic's own check)
                                            a contact sheet of the preview (index.html) from..to, every gapframe-th frame at
                                            60 fps, shot with headless Chrome -> chk/shot_<short>_<from>-<to>.png. No render
                                            needed. The A key in index.html copies this command for the moment on screen.
@@ -35,7 +36,12 @@ PY = next((p for p in ('../.venv/bin/python', '../.venv/Scripts/python.exe') if 
 
 # ---------- --screenshot: the preview page, shot with headless Chrome ----------
 if '--screenshot' in flags_all:
-    sk = opt('--short') or next(iter(C)); a = float(opt('--from', '0')); b = float(opt('--to', str(C[sk]['END'])))
+    sk = opt('--short') or next(iter(C)); run = opt('--run')
+    if run:                                            # --run s1_r3: the whole of that run
+        sk, ri = run.split('_r'); r = C[sk]['runs'][int(ri)]
+        a, b = float(opt('--from', r['T0'])), float(opt('--to', r['T1'] - 1 / 60))
+    else:
+        a = float(opt('--from', '0')); b = float(opt('--to', str(C[sk]['END'])))
     gap = int(opt('--gapframe', '10')); jobs = int(opt('--jobs', '1')); fast = '--fast' in argv
     chrome = next((p for p in ('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                                shutil.which('google-chrome') or '', shutil.which('chromium') or '', shutil.which('chrome') or '')
@@ -78,7 +84,7 @@ if sk not in C: raise SystemExit(f'no short {sk} in cut.json (have: {", ".join(C
 t0 = time.time()
 def step(name, cmd, env=None):
     print(f'\n== {name}', flush=True)
-    r = subprocess.run(cmd, env=env)
+    r = subprocess.run(cmd, env=dict(env or os.environ, CVS_RENDER='1'))   # the MP4 steps run only from here
     if r.returncode: raise SystemExit(f'{name} failed (exit {r.returncode}); nothing after it ran')
 
 ids = [f'{sk}_r{r["i"]}' for r in C[sk]['runs']]
