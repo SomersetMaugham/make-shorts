@@ -2,12 +2,13 @@
 
 The graphics, captions, chips and cover share one look: a graphite stage lit from above with cards floating in it and a
 camera moving through it. It is the skill's neutral default (`theme: 'stage'` in the engine). The code implements it in
-`scripts/build_gfx_common.py` (CSS tokens and type classes), `assets/gfx/engine.js` (stage, wave, shadows, camera) and
+`scripts/build_gfx_common.py` (CSS tokens and type classes), `assets/gfx/engine.js` (stage, shadows, camera) and
 `scripts/compose.py` (captions, chips, cover). A user's own brand guide, when they give one, replaces these tokens.
 
 ## Stage
 - Background #18191C at the top to #0B0C0E at the bottom, a soft overhead spotlight, two faint light beams, a vignette.
-- The horizon wave of accent dots under the caption band (crest ~y 1600-1700). `wave: False` on a CFG turns it off.
+- No decoration at the bottom: the frame's zones are content y 140-1400, captions y 1430-1610, and below y 1610 only
+  the stage itself (the platforms draw their UI there). The old horizon wave of dots is gone.
 - No light theme. (`theme: 'paper'`, the old white world, exists only for a user who asks for it.)
 
 ## Colour tokens

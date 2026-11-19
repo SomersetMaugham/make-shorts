@@ -103,10 +103,10 @@ that moves through it.
   window is the subject only a camera INSIDE it moves (1.15-1.4x, 0.4-0.7 s power2.inOut). Named-product intro: its
   official logo large and centred first, then the UI. Brand names and logos only when the narration names them.
 - Anything that HAPPENED (a release, a quote, a number, a headline) shows its real source page with the cited line
-  highlighted as it is said. A capture sits sharp in a fixed frame (x 24, y 200, 1032x1040, radius 36, white, shadowed)
+  highlighted as it is said. A capture sits sharp in a fixed frame (x 24, y 160, 1032x1200, radius 36, white, shadowed)
   on a blurred, enlarged, washed clone of itself (blur 40 px, saturate .7, brightness 1.05, a 72 % white wash); the frame
   never moves, the page pans and zooms inside it. Draw the TRUE number when a number is drawn.
-- Keep content above y 1230 (the main element's bottom edge at 1200-1230): captions live below. `*_r0` is also the
+- The frame's zones: content y 140-1400 (the main element's bottom edge at about 1360-1400), captions y 1430-1610, nothing below y 1610 (the platforms draw their title, description and music there; config.LAYOUT). No decoration fills the bottom either (the old horizon wave of dots is gone). `*_r0` is also the
   cover frame: at frame 0 keep everything below y 620.
 - Every move and landing is anchored on a phrase, `W(ws, '<phrase>')`, so the graphic follows the narration when it is
   recorded (graphics.md "Timing").
@@ -122,7 +122,7 @@ that moves through it.
   `highlights`, written as in the text; the last word may stop before a particle). Never two chips in a row, never
   particles or connectives alone. Each highlight is a chip once per short (its first occurrence the spacing allows): list
   one entry per moment, written as it appears there (e.g. "가치 모델이라고"), not a term that recurs in every line. In a recorded short every chip's phrase has an `at` (check_narration.py warns).
-- Position: the lower third, y 1290-1560; `"caption": "top"` on a line moves its run's captions to y 365-634 for a
+- Position: the caption band, y 1430-1610 (centre 1520); `"caption": "top"` on a line moves its run's captions to y 180-360 for a
   picture whose content sits low. A caption never covers the visual's main element.
 - No CTA card. The short ends on its payoff line and the end hold; there is no "watch the full video", no comment box,
   no follow card (there is no other video to send anyone to).

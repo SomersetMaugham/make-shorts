@@ -12,7 +12,7 @@ Contents: [Theme](#theme-the-neutral-stage-look) · [Timing & Phrase Anchors](#t
 
 `theme: 'stage'` (the default; `'paper'` restores the white style only on explicit request) applies the skill's neutral dark look ([references/theme.md](theme.md)):
 - **Ground**: graphite stage (#18191C at top to #0B0C0E at bottom), soft overhead spotlight, two faint angled beams, subtle vignette.
-- **Horizon wave**: an animated accent wave under the caption band (crest ~y 1600–1700). Set `wave: False` on CFG to disable.
+- **No horizon wave**: the old accent dot wave under the captions is gone (it only took room); pages have no `#wave` canvas.
 - **Accents**: `'azure'` (default #2F95FF), `'ember'` (limits, costs #FF8A5B), `'mint'` (passes, success #4FD6A0), `'iris'` (#9C7CFF). Use one accent per scene.
 - **Typography**:
   - **Pretendard** (SIL OFL 1.1) for every word on screen. The shorts are in Korean, and Pretendard keeps Hangul, Latin, and numbers in the same clean voice.
@@ -21,7 +21,7 @@ Contents: [Theme](#theme-the-neutral-stage-look) · [Timing & Phrase Anchors](#t
   - **Geist Mono** 500 for uppercase Latin labels (`.label`), falling back to Pretendard for any Hangul characters.
   - Minimum size: nothing under 30 px.
 - **Cards**: `glass` (diagrams, architecture, statements; `highlight: True` adds accent hairline and bloom), `window` / `paper` / `media` / `capture` (white surfaces for product UI, chats, code, and captures), `tile` (glossy 3D icon tiles via `tile_html`), `plain`.
-- **Layout bounds**: Every run is a full visual (`mode: 'fv'`). Main visual content sits above y 1230; captions occupy the lower third (y 1290–1560) or the top third (y 365–634 if `"caption": "top"`).
+- **Layout bounds** (`LAYOUT` in build_gfx_common, from config.py): every run is a full visual (`mode: 'fv'`). Content y 140–1400 (main element's bottom edge ~1360–1400); captions y 1430–1610 (or y 180–360 with `"caption": "top"`); nothing below y 1610, where the platforms draw their own UI.
 
 ---
 
@@ -62,7 +62,7 @@ t_phrase = W(ws, '핵심 구절')
 - **`page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_js='')`**: writes `gfx/<rid>.html`.
   - `videos=[(card_id, 'assets/clip.mp4', fw, fh)]`: attaches video footage to a card.
   - `backdrop=('img'|'video', src, fw, fh)`: creates a blurred, enlarged clone behind captures.
-- **`capture_card(cid, fw, fh, x=540, y=720, inner0=None, inner=(), backdrop=True, land=None, **kw)`**: generates the standard capture card: 1032×1040, radius 36, centred at (540, 720).
+- **`capture_card(cid, fw, fh, x=540, y=720, inner0=None, inner=(), backdrop=True, land=None, **kw)`**: generates the standard capture card: 1032×1200, radius 36, centred at (540, 760) (y 160–1360).
 - **`logo_html(src)`**: returns a responsive SVG/PNG logo tag (`<img src="{src}" style="width:100%;height:100%;object-fit:contain;display:block">`).
 - **`tile_html(color='azure', glyph='code', size=140, tilt=-8, svg=None)`**: generates a glossy 3D icon tile with inner shadow and top highlight. Glyphs: `code`, `arrow`, `check`, `shield`, `sparkle`, `bolt`, `bars`, `eyes`, or custom SVG.
 - **`D`**: dictionary of asset dimensions loaded from `gfx/asset_dims.json` and `gfx/asset_dims_<tag>.json`.
@@ -150,7 +150,7 @@ Motion blur is computed per-frame based on screen velocity. Full renders are cap
 
 Show real sources whenever discussing articles, docs, benchmarks, pricing, or releases:
 - Real 2x PNG screenshots from `captures/`.
-- Standard capture card via `capture_card`: frame centred at (540, 720), 1032×1040, radius 36.
+- Standard capture card via `capture_card`: frame centred at (540, 760), 1032×1200, radius 36.
 - The outer card remains stationary while the content pans and zooms inside using `inner` keyframes (`fx`, `fy`, `k`). The engine automatically clamps the inner view to the footage boundaries.
 
 ---
@@ -174,5 +174,5 @@ Before rendering at 240 fps:
    - Frame 0 landing state: hero card is already visible at t = 0.
    - Run 0 frame 0: all elements stay below y 620.
    - Text legibility: all text ≥ 30 px.
-   - Vertical margins: main visual elements stay above y 1230 (captions occupy y 1290–1560).
+   - Vertical zones: content y 140–1400, captions y 1430–1610, nothing below 1610.
    - Timing: animations step and land on the intended phrase.

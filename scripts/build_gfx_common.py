@@ -2,10 +2,12 @@
 Each page = shared engine.js + a CFG object. Times are run-relative seconds; W(ws, '<phrase>') looks up when a phrase
 starts, from cut.json - so a composition anchored on phrases follows the narration when it is recorded or re-timed:
 re-run timeline.py, then build_gfx.py, and every time moves with its words (graphics.md "Timing")."""
-import json, os, re
+import json, os, re, sys
 import os as _os
 _os.chdir(_os.path.dirname(_os.path.abspath(__file__))+'/..')
 C = json.load(open('cut.json', encoding='utf-8'))
+sys.path.insert(0, 'scripts'); import config as _cfg
+LAYOUT = _cfg.LAYOUT   # the frame's zones: content y 140-1400, captions 1430-1610, nothing below 1610 (config.py)
 import glob as _glob
 D = {}   # asset_dims.json plus one asset_dims_<tag>.json per graphics subagent (so parallel asset preps never race)
 for _f in sorted(_glob.glob('gfx/asset_dims*.json')): D.update(json.load(open(_f, encoding='utf-8')))
@@ -157,7 +159,7 @@ def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_
 <style>{CSS}{split_mask}{extra_css}</style></head>
 <body>
 <div id="root" class="{'paper' if cfg.get('theme') == 'paper' else 'stage'}{' acc-' + cfg['accent'] if cfg.get('accent') and cfg.get('accent') != 'azure' else ''}" data-composition-id="{rid}" data-start="0" data-duration="{dur}" data-width="1080" data-height="1920">
-<div id="ground"></div><div class="beam" id="beam-a"></div><div class="beam" id="beam-b"></div><canvas id="wave" width="1080" height="1920"></canvas><div id="vignette"></div>
+<div id="ground"></div><div class="beam" id="beam-a"></div><div class="beam" id="beam-b"></div><div id="vignette"></div>
 {bd_html}
 <div id="viewport"><div id="world"></div></div>
 {vid_html}
@@ -173,8 +175,9 @@ window.addEventListener('message', function (e) {{ var d = e.data; if (d && type
 </body></html>"""
     open(f'{OUT}/{rid}.html', 'w', encoding='utf8').write(html)
 
-def capture_card(cid, fw, fh, x=540, y=720, inner0=None, inner=(), backdrop=True, land=None, **kw):
-    c = dict(id=cid, kind='capture', x=x, y=y, w=1032, h=1040, fw=fw, fh=fh, inner=list(inner), backdrop={'tIn': -1} if backdrop is True else backdrop, bg='#fff', **kw)
+def capture_card(cid, fw, fh, x=540, y=760, inner0=None, inner=(), backdrop=True, land=None, **kw):
+    """a real page in the fixed capture frame: 1032x1200 centred at (540, 760), i.e. x 24-1056, y 160-1360"""
+    c = dict(id=cid, kind='capture', x=x, y=y, w=1032, h=1200, fw=fw, fh=fh, inner=list(inner), backdrop={'tIn': -1} if backdrop is True else backdrop, bg='#fff', **kw)
     if inner0: c['inner0'] = inner0
     if land: c['land'] = land
     return c

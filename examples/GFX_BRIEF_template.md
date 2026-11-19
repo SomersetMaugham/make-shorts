@@ -49,7 +49,7 @@ You build HyperFrames compositions for <N> standalone vertical shorts (1080x1920
 - **Frame 0 landing state**: The hero card must ALREADY be visible at t = 0 (sharp, camera at rest). Entrance animations (`land`) are only for secondary supporting elements.
 - **Frame 0 of r0 is cover-safe**: Keep all graphic elements below y 620 so the glass title cover card (centred at y ~432) has clear space.
 - **Typography in Pretendard**: Use Pretendard for all Korean text (`.display`, `.h1`, `.h2`, `.sub`, `.body`, `.caption`). Geist Mono is strictly for uppercase Latin labels (`.label`), falling back to Pretendard for Hangul. Nothing under 30 px.
-- **Vertical margins**: Main visual content stays above y 1230. Captions occupy the lower third (y 1290–1560) or upper third (y 365–634 if `"caption": "top"`).
+- **Vertical zones** (`LAYOUT`): content y 140–1400 (main element's bottom edge ~1360–1400), captions y 1430–1610 (or y 180–360 with `"caption": "top"`), nothing below y 1610 (platform UI). Use the room: a hero card is big, not floating in the upper half.
 - **Theme**: Graphite stage (`#18191C` to `#0B0C0E`), glass cards for diagrams (`highlight: True` for accent hairline + bloom), white windows/paper for real UI, glossy icon tiles (`tile_html`). One accent per scene (`azure`, `ember`, `mint`, `iris`).
 - **Highlight bands**: Put `.band` (azure wash) under a `<img style="mix-blend-mode:multiply">` inside the card, revealed with `scaleX` on the keyword phrase. On dark UI, re-ink text or use an outline with glow.
 - **Camera**: `glide`, `step` (0.5 s, starting 0.25 s before word), `push` (to ~1.6×), `pull`, at most one `whip` per run. Never blur readable text.

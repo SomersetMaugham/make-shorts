@@ -1,7 +1,7 @@
 /* World engine for the shorts graphics (1080x1920). A world of floating cards + a world camera, driven purely by
    time (seek-safe). CFG is defined by the page before this script loads.
    theme 'stage' (default): the skill's stage look (graphite stage lit from above, glass panels, white paper / windows
-   for product UI, Pretendard + Geist Mono, one accent, the horizon wave of dots; references/theme.md). Every run is a
+   for product UI, Pretendard + Geist Mono, one accent; references/theme.md). Every run is a
    full visual (mode 'fv'); the 'split' branches are kept only for old compositions;
    theme 'paper': the old bright white world. */
 (function () {
@@ -162,8 +162,8 @@
   const reveals = (cfg.reveals || []).map((r) => ({ ...r, el: $(r.el) }));
 
   /* ---------- per-frame render ---------- */
-  /* the stage's horizon wave, a pure function of time. On 9:16 it runs where nothing else lives: under the caption
-     band in a full visual (crest ~1600-1700). cfg.wave = {level, k, t0} or false. */
+  /* the old horizon wave of dots: no longer drawn (the page has no #wave canvas since the layout gave its room to the
+     content and the captions); the code stays only for compositions built before that */
   const waveC = $('wave'), waveX = waveC ? waveC.getContext('2d') : null;
   const WAVE = Object.assign({ level: 'low', k: 1, t0: 0 }, cfg.wave || {});
   const LEVELS = cfg.mode === 'split' ? { low: [1150, 0.6], middle: [1090, 0.7], high: [1030, 0.8] }

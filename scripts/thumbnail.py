@@ -18,7 +18,8 @@ sk = sys.argv[1]; FPS = 60
 C = json.load(open('cut.json', encoding='utf-8'))[sk]; RUNS = C['runs']
 snap = lambda t: round(t * FPS) / FPS           # compose.py renders whole frames: name the files the way it does
 path = lambda t: f'{sk}/thumb/f_{t:07.3f}.png'
-AREA = (0, 1230)                                # where sharpness counts: the main element of a full visual
+sys.path.insert(0, 'scripts'); import config as _cfg
+AREA = (0, _cfg.LAYOUT['content'][1])            # where sharpness counts: the main element of a full visual
 
 def run_at(t):
     for r in RUNS:

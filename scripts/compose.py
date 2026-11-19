@@ -213,11 +213,12 @@ def paste_rgba(dst, im, cx, cy, scale=1.0, alpha=1.0):
     sub = dst[ys0:ys1, xs0:xs1]; sub[:] = sub * (1 - al) + src[..., :3] * al
 
 
+sys.path.insert(0, 'scripts'); import config as _cfg
 def caption_center_y(r):
-    """lower third (y 1290-1560) under every full visual; "caption": "top" on a run in shorts.json (or on its scene's
-    first line) moves it to y 365-634 for a visual whose content sits low"""
+    """the caption band under every full visual (config.LAYOUT caption, centre 1520); "caption": "top" on a line in
+    shorts.json moves its run's captions to the top band for a visual whose content sits low"""
     top = any(L.get('caption') == 'top' for L in S['lines'] if L['id'] in r['lines'])
-    return (365 + 634) / 2 if top else (1290 + 1560) / 2
+    return sum(_cfg.LAYOUT['caption_top' if top else 'caption']) / 2
 
 # ---------------------------------------------------------------- readers
 def reader(path, pix='rgb24', ch=3, size=None, start=None, count=None):

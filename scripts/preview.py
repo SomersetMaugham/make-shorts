@@ -34,7 +34,7 @@ for sk in want:
     caps = json.load(open(capf, encoding='utf-8'))
     top = {L['id'] for L in sh['lines'] if L.get('caption') == 'top'}
     runs = [dict(i=r['i'], T0=r['T0'], T1=r['T1'], scene=r.get('scene', ''), src=f'gfx/{sk}_r{r["i"]}.html',
-                 capY=(365 + 634) / 2 if any(l in top for l in r['lines']) else (1290 + 1560) / 2,
+                 capY=sum(Cfg.LAYOUT['caption_top' if any(l in top for l in r['lines']) else 'caption']) / 2,
                  ok=os.path.exists(f'gfx/{sk}_r{r["i"]}.html')) for r in c['runs']]
     cues = [dict(id=q['id'], start=q['start'], end=q['end'], text=q.get('text', '')) for q in c.get('cues', [])]
     audio = f'narration/{sk}/audio/narration.mp3'
