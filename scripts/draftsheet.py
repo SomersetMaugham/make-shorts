@@ -8,7 +8,7 @@ src=f'gfx/draft/{rid}.mp4'
 dur=float(subprocess.run(['ffprobe','-v','error','-show_entries','format=duration','-of','csv=p=0',src],capture_output=True,text=True).stdout)
 ts=[min(dur-0.2, i*dur/(n-1)) for i in range(n)]
 os.makedirs('chk/d',exist_ok=True)
-font=ImageFont.truetype('arial.ttf',28)
+font=ImageFont.load_default(28)
 def grab(t):
     f=f'chk/d/{rid}_{t:.2f}.png'
     subprocess.run(['ffmpeg','-v','error','-y','-ss',f'{t:.3f}','-i',src,'-frames:v','1','-vf','scale=270:480',f],check=True)

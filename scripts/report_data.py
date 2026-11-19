@@ -1,40 +1,31 @@
-# Prints the numbers a short's report.md needs: lines with source ranges, runs, SFX events (absolute time + level),
-# riser, music, final file facts and loudness, the picked thumbnail. usage: python scripts/report_data.py s3
-import json, subprocess, sys, re
+# Prints the numbers a short's report.md needs: the narration (provider, voice, every cue with its take, cut and phrase
+# times), the runs, the mix and the final file's loudness, the picked thumbnail. usage: python scripts/report_data.py s3
+import json, os, re, subprocess, sys
+
 sk = sys.argv[1]
 C = json.load(open('cut.json', encoding='utf-8'))[sk]; S = json.load(open('shorts.json', encoding='utf-8'))[sk]
-print(f'# {sk}: {S["title"]}  cover={S.get("cover")}  cta={S.get("cta_keyword")}')
-print('\n## lines (source s)')
-for L in S['lines']:
-    ps = [p for p in C['pieces'] if p['line'] == L['id']]
-    print(f"{L['id']} | {min(p['src0'] for p in ps):.2f}-{max(p['src1'] for p in ps):.2f} | pieces={len(ps)} | {L['layout']}"
-          f"{' sw=' + str([(s['t'], s['layout']) for s in L.get('switches', [])]) if L.get('switches') else ''} | {L['text']}")
+nd = f'narration/{sk}'
+script = json.load(open(f'{nd}/script.json', encoding='utf-8'))
+N = C['narration']
+print(f'# {sk}: {S["title"]}  cover={S.get("cover")}')
+print(f'\n## narration: {N["provider"]} {N["voice"]}{" (model " + str(N["model"]) + ")" if N.get("model") and N["provider"] == "fish" else ""}'
+      f' · leadIn {N.get("leadIn")} s · tail {N.get("tail")} s · {"PLACEHOLDERS" if N["placeholder"] else "recorded" if N["narration"] else "no narration"}')
+sc = {c['id']: c for c in script['cues']}
+print('id | start-end (s) | take | cut ranges (s in the take) | phrase times set ("at") | gapAfter | text / say')
+for c in C['cues']:
+    s = sc.get(c['id'], {})
+    cut = (s.get('cut') or {}).get('ranges') if (s.get('cut') or {}).get('take') == c.get('take') else None
+    at = (s.get('at') or {}).get('phrases') if (s.get('at') or {}).get('take') == c.get('take') else None
+    print(f"{c['id']} | {c['start']:.3f}-{c['end']:.3f} | {c.get('take', 'placeholder' if c.get('placeholder') else '-')} | {cut} | "
+          f"{at} | {s.get('gapAfter', script.get('gap'))} | {c.get('text')}" + (f" / say: {c['say']}" if c.get('say') and c['say'] != c.get('text') else ''))
+est = sum(w['est'] for w in C['words'])
+print(f'words: {len(C["words"])}, {len(C["words"]) - est} at set phrase times, {est} estimated by character position')
 print('\n## runs')
 for r in C['runs']:
-    print(f"{r['i']} | {r['layout']} | {r['T0']:.3f}-{r['T1']:.3f} | {r['dur']:.2f} | {r.get('text', '')[:90]}")
-END = C['runs'][-1]['T1']
-print(f'END={END:.3f}')
-import os
-M = json.load(open(f'{sk}/music.json', encoding='utf-8')) if os.path.exists(f'{sk}/music.json') else {}
-if os.path.exists(f'{sk}/sfx_log.json'):                       # written by audio.py: what actually plays, and how loud
-    print('\n## sfx (absolute s, sound, level vs voice peak, source)')
-    for e in json.load(open(f'{sk}/sfx_log.json', encoding='utf-8')):
-        print(f"{e['t']:.3f} | {e['type']} | {e['sound']} | {e.get('lu', '-')} LU under the voice ({e['level_db']} dB peak) | {e.get('src')}")
-    print(f"library: {M.get('sfx_library') or 'none (synthesized sounds)'}")
-else:
-    ev = json.load(open('gfx/sfx_events.json', encoding='utf-8'))
-    print('\n## sfx (absolute s) - run audio.py for the sounds and levels')
-    for r in C['runs']:
-        for e in ev.get(f'{sk}_r{r["i"]}', []):
-            print(f"{r['T0'] + e['t']:.3f} | {e['type']} | run {r['i']}")
-print(f"\n## riser: {M.get('riser', 'synth_riser')}, loudest moment on the hook join {C['runs'][0]['T1']:.3f} s, -12 dB vs voice peak")
-alts = M.pop('alternatives', None) or []
-print('## music', json.dumps({k: v for k, v in M.items() if k not in ('sfx_library',)}))
-for a in alts: print(f"   alternative take {a['take']}: score {a['score']} ({a['why']}) {a['file']}")
-geo = f'{sk}/cam/split_geom.json'
-try:
-    g = json.load(open(geo, encoding='utf-8')); print('## split geom', {k: v for k, v in g.items() if k not in ('src',)})
-except Exception as e: print('no split geom', e)
+    print(f"{r['i']} | {r['scene']} | {r['T0']:.3f}-{r['T1']:.3f} | {r['dur']:.2f} | {r.get('text', '')[:90]}")
+print(f"END={C['END']:.3f}")
+if os.path.exists(f'{sk}/mix.json'):
+    print('\n## mix', json.dumps(json.load(open(f'{sk}/mix.json', encoding='utf-8'))))
 p = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_name,profile,width,height,r_frame_rate,nb_frames,sample_rate,channels:format=duration',
                     '-of', 'compact', f'{sk}/final_video.mp4'], capture_output=True, text=True).stdout
 print('\n## file\n' + p.strip())
@@ -45,6 +36,6 @@ I = re.search(r'I:\s+(-?[\d.]+) LUFS', summ); TP = re.search(r'Peak:\s+(-?[\d.]+
 print(f"## loudness integrated {I.group(1) if I else '?'} LUFS, true peak {TP.group(1) if TP else '?'} dBFS")
 try:
     th = json.load(open(f'{sk}/thumbnail.json', encoding='utf-8'))
-    print(f"## thumbnail {th['t']} s (run {th['run']}, {th['layout']}), q{th['quality']} {th['bytes'] / 1e6:.2f} MB; candidates: "
-          + ', '.join(f"{c['t']} s r{c['run']} sharp {c['sharpness']} {c['mouth']}".rstrip() for c in th.get('candidates', [])))
+    print(f"## thumbnail {th['t']} s (run {th['run']}, {th.get('scene')}), q{th['quality']} {th['bytes'] / 1e6:.2f} MB; candidates: "
+          + ', '.join(f"{c['t']} s r{c['run']} sharp {c['sharpness']}" for c in th.get('candidates', [])))
 except Exception as e: print('no thumbnail picked yet', e)

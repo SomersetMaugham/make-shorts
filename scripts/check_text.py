@@ -1,6 +1,7 @@
-"""Stop before rendering if any on-screen text of a short is garbled (mojibake) or empty.
-Windows' cp1252 default once turned "Bölük" into "BÃ¶lÃ¼k" in a caption chip; nothing else caught it (the voice proof
-can't see captions). Checks the plan (cover, highlights, line text), the cut's words, the captions and the CTA events.
+"""Stop before rendering if any on-screen text of a short is garbled (mojibake), empty, or has a character the
+caption font can't draw (it would come out as a blank box).
+Windows' cp1252 default once turned "Bölük" into "BÃ¶lÃ¼k" in a caption chip; nothing else caught it. Checks the plan
+(cover, highlights, line text), the timeline's words and the captions; Hangul is ordinary text here, never "garbled".
 usage: python scripts/check_text.py s1 [s2 ...]        (finish.sh runs it first; exit 1 = fix the text, then re-run)
 Repair stored text in place with s.encode('cp1252').decode('utf-8') rather than re-aligning (word edges stay put)."""
 import json, os, re, sys
@@ -25,9 +26,14 @@ def load(p):
 
 
 bad = 0
+try:                                         # the characters the caption font can draw (fonts/ is copied in by setup.sh)
+    from fontTools.ttLib import TTFont        # setup.sh installs it; without it the glyph check is skipped
+    CMAP = set(TTFont('fonts/PretendardVariable.ttf').getBestCmap())
+except Exception:
+    CMAP = None
 for sk in sys.argv[1:]:
     srcs = {'shorts.json': (load('shorts.json') or {}).get(sk), 'cut.json words': ((load('cut.json') or {}).get(sk) or {}).get('words'),
-            f'{sk}/captions.json': load(f'{sk}/captions.json'), f'{sk}/events_extra.json': load(f'{sk}/events_extra.json')}
+            f'{sk}/captions.json': load(f'{sk}/captions.json')}
     for name, d in srcs.items():
         if d is None: continue
         for path, s in strings(d):
@@ -38,5 +44,12 @@ for sk in sys.argv[1:]:
     for c in items or []:
         if isinstance(c, dict) and 'text' in c and not str(c['text']).strip():
             bad += 1; print(f'{sk}: empty caption chunk at {c.get("t0")}')
+    # every character the cover, captions and chips draw must be in the caption font (Pretendard: Hangul, Latin, digits)
+    sh = srcs['shorts.json'] or {}
+    shown = ' '.join(sh.get('cover', [sh.get('title', '')])) + ' ' + ' '.join(L.get('text', '') for L in sh.get('lines', []))
+    shown += ' ' + ' '.join(sh.get('highlights', []))
+    missing = sorted({ch for ch in shown if not ch.isspace() and ord(ch) not in CMAP}) if CMAP else []
+    if missing:
+        bad += 1; print(f'{sk}: the caption font has no glyph for {missing} (write it differently in text, or spell it out)')
     if not bad: print(f'{sk}: on-screen text OK')
 sys.exit(1 if bad else 0)

@@ -1,0 +1,47 @@
+"""Write each short's narration folder from shorts.json: narration/<sk>/script.json, the file script-to-motion's
+tts.mjs reads. One shorts.json line = one cue (≈ one sentence).
+usage: python scripts/narration_init.py [s1 s2 ...]        (every short in shorts.json when none is given)
+
+What comes from shorts.json, per line: id, text (shown: captions), say (spoken: numbers, units and English terms in
+spoken Hangul, [pause short] where Chirp 3 HD breaks wrongly; defaults to text), gapAfter (optional).
+What is never touched once it is in script.json: every cue's "cut" and "at" (the agent read them off the takes; they
+belong to a take) and the top-level narration settings ("tts", "voice", "narration", "leadIn", "gap", "tail" ...),
+so a re-run after a wording change keeps everything the takes already have. A cue whose say changed gets a new take
+on the next recording and tts.mjs reports its cut as not applied (references/narration.md)."""
+import json, os, sys
+
+sys.path.insert(0, 'scripts'); import config as C
+
+S = json.load(open('shorts.json', encoding='utf-8'))
+DEFAULTS = {
+    # narration: Google Cloud TTS, Chirp 3 HD, Korean male voice Enceladus (script-to-motion's default since
+    # 2026-11-13; gcloud sign-in, no key). Fish Audio instead: "tts": {"provider": "fish"} + the user's voice id in "voice".
+    'tts': {'provider': 'google', 'voice': 'ko-KR-Chirp3-HD-Enceladus'},
+    'lang': 'ko',
+    'leadIn': 0.3,
+    'gap': 0.12,      # Google takes keep 0.3-1.0 s pauses of their own: a short gap avoids dead air
+    'tail': 1.5,      # the end hold after the last line (not dead air)
+}
+
+for sk in sys.argv[1:] or list(S):
+    sh = S[sk]
+    d = C.ndir(sk); os.makedirs(d, exist_ok=True)
+    p = f'{d}/script.json'
+    old = json.load(open(p, encoding='utf-8')) if os.path.exists(p) else {}
+    out = {k: v for k, v in old.items() if k != 'cues'}
+    for k, v in DEFAULTS.items(): out.setdefault(k, v)
+    out['title'] = sh.get('title', out.get('title', ''))
+    prev = {c['id']: c for c in old.get('cues', [])}
+    cues, changed = [], []
+    for L in sh['lines']:
+        c = dict(prev.get(L['id'], {}))
+        say = L.get('say') or L['text']
+        if c and (c.get('say') != say or c.get('text') != L['text']): changed.append(L['id'])
+        c.update(id=L['id'], text=L['text'], say=say)
+        if 'gapAfter' in L: c['gapAfter'] = L['gapAfter']
+        cues.append(c)
+    gone = [i for i in prev if i not in {c['id'] for c in cues}]
+    out['cues'] = cues
+    json.dump(out, open(p, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    print(f'{sk}: {len(cues)} cues -> {p}' + (f'; text/say changed: {", ".join(changed)}' if changed else '') +
+          (f'; removed: {", ".join(gone)}' if gone else '') + f'  next: {C.NODE} {C.NARRATION}/tts.mjs {d}')

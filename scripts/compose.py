@@ -1,20 +1,23 @@
-"""Final compositor for one short: layouts (full cam / split / full visual), camera card + matted head,
-captions, CTA comment box, cover (frame 0). Writes <sk>/final_video.mp4 (video+mix) and caption/CTA metadata.
-usage: python compose.py s1 --events-only            captions.json + events_extra.json only (audio.py can start)
-       python compose.py s1 --preview t1,t2,...      full-resolution frames -> <sk>/preview/ (add --runs i,j to decode only those)
-       python compose.py s1 --preview t1,... --clean the same frames without captions, CTA or cover -> <sk>/thumb/ (thumbnail.py)
+"""Final compositor for one short: every run is a full-frame graphic (no camera, no source video), with the captions
+(glass keyword chips) and the cover on frame 0. Writes <sk>/final_video.mp4 (video + mix) and <sk>/captions.json.
+usage: python compose.py s1 --events-only            captions.json only
+       python compose.py s1 --preview t1,t2,...      full-resolution frames -> <sk>/preview/
+       python compose.py s1 --preview t1,... --clean the same frames without captions or cover -> <sk>/thumb/ (thumbnail.py)
        python compose.py s1 --runs i --seg-out f.mp4 one run as a video segment (one process per run)
        python compose.py s1 --segments [--jobs N] [--no-concat] [--force]
                                                     every run as its own process in parallel, cached by its inputs (a run whose
-                                                    graphic, camera clip, matte, captions and code are unchanged is skipped),
-                                                    frame counts verified, then --concat
-       python compose.py s1 --concat                stream-copy the segments + the mix -> <sk>/final_video.mp4"""
+                                                    graphic, captions and code are unchanged is skipped), frame counts verified,
+                                                    then --concat
+       python compose.py s1 --concat                stream-copy the segments + the mix -> <sk>/final_video.mp4
+  add --draft to any of these: the 10 fps draft graphics (gfx/draft/, each frame held for 6) instead of the 240->60 fps
+  renders, into <sk>/seg_draft/ and <sk>/draft_video.mp4 - the review copy the user watches before deciding to record."""
 import json, sys, os, subprocess, re, numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 sk = sys.argv[1]
 PREVIEW = None
 ONLY = None; SEG_OUT = None; CONCAT = '--concat' in sys.argv; SEGMENTS = '--segments' in sys.argv
+DRAFT = '--draft' in sys.argv
 if '--runs' in sys.argv: ONLY = [int(x) for x in sys.argv[sys.argv.index('--runs') + 1].split(',')]
 if '--seg-out' in sys.argv: SEG_OUT = sys.argv[sys.argv.index('--seg-out') + 1]
 if CONCAT: ONLY = []
@@ -22,22 +25,25 @@ if '--preview' in sys.argv: PREVIEW = [float(x) for x in sys.argv[sys.argv.index
 CLEAN = PREVIEW is not None and '--clean' in sys.argv   # thumbnail candidates: the picture alone
 FPS = 60; Wc, Hc = 1080, 1920
 C = json.load(open('cut.json', encoding='utf-8'))[sk]; S = json.load(open('shorts.json', encoding='utf-8'))[sk]
-CAM = json.load(open(f'{sk}/cam/plan.json', encoding='utf-8'))
 END = C['END']; NF = int(round(END * FPS))
 RUNS = C['runs']
+GFX_DIR, GFX_FPS = ('gfx/draft', 10) if DRAFT else ('gfx/out60', 60)
+SEG_DIR = f'{sk}/seg_draft' if DRAFT else f'{sk}/seg'
+OUT_VIDEO = f'{sk}/draft_video.mp4' if DRAFT else f'{sk}/final_video.mp4'
 F = 'fonts/'
-# The channel's design system ("Leon YouTube": graphite stage, glass, Figtree / Geist Mono, azure accent) - the same
-# look as the long-form edits' keyword pops and CTA cards, which Leon approved ("Now that looks cool. Lock it in").
+# The skill's stage look (graphite stage, glass, one accent) with Pretendard for every word: the outputs are Korean
+# (Figtree and Geist Mono have no Hangul), and Pretendard's Latin keeps names and numbers in the same voice.
+FONT = 'PretendardVariable.ttf'
 def vfont(name, size, weight):
     f = ImageFont.truetype(F + name, int(round(size)))
     try: f.set_variation_by_axes([weight])
     except Exception: pass
     return f
-CAP = vfont('Figtree-VF.ttf', 74, 700)        # captions: Figtree bold, white with a graphite stroke
+CAP = vfont(FONT, 74, 700)                    # captions: Pretendard bold, white with a graphite stroke
 INK = (17, 18, 20); STAGE950 = (11, 12, 14); STAGE800 = (24, 25, 28); STAGE700 = (33, 34, 38)
 TEXT_MUTED = (126, 129, 138); AZURE = (47, 149, 255); AZURE_INK = (21, 96, 208)
 ACCENTS = {'azure': (47, 149, 255), 'ember': (255, 138, 91), 'iris': (156, 124, 255), 'mint': (79, 214, 160)}
-GLASS = (24, 25, 28, 224)                     # stage-800, more opaque than the slides' 62% (no backdrop blur here)
+GLASS = (24, 25, 28, 224)                     # stage-800, more opaque than a slide's 62% (no backdrop blur here)
 
 def run_at(t):
     for r in RUNS:
@@ -45,44 +51,44 @@ def run_at(t):
     return RUNS[-1]
 
 # ---------------------------------------------------------------- captions
+_PUNCT = re.compile(r'[.,!?·…"\'“”‘’()\[\]]+$')
 def disp_tokens():
+    """the words (Korean 어절, as in the cue text) with their times from timeline.py; p = the word ends a clause"""
     toks = []
     for w in C['words']:
         s = w['w']
-        if re.match(r'^\.\d', s) and toks:
-            toks[-1]['w'] += s.rstrip('.,'); toks[-1]['e'] = w['e']; toks[-1]['p'] = s[-1] in '.,?' ; continue
-        toks.append(dict(w=s, s=w['s'], e=w['e'], p=s[-1] in '.,?'))
-    for t in toks:
-        t['d'] = t['w'].rstrip('.,')
-        if t['d'].lower() == 'sonic': t['d'] = 'Sonnet'
+        toks.append(dict(w=s, s=w['s'], e=w['e'], line=w['line'], p=s[-1] in '.,?!…', d=_PUNCT.sub('', s) or s))
     return toks
 
-FUNC = set('a an the to of and or but if in on at for with from by is it its it\'s this that as be are was were you your i i\'m we we\'ll so then than up out like'.split())
-HL = [h.lower().split() for h in S.get('highlights', [])]
+_norm = lambda s: _PUNCT.sub('', s)
+HL = [[_norm(x) for x in h.split()] for h in S.get('highlights', [])]
+MAX_LINE = 900                                # a normal chunk stays on one line inside the 1080 frame
 
-J_LEAD = 0.06
+def hl_at(toks, i):
+    """the highlight that starts at word i: its words as written in "highlights" match the cue words; the last one may
+    carry a particle (하네스 matches 하네스가)"""
+    for h in HL:
+        seg = [t['d'] for t in toks[i:i + len(h)]]
+        if len(seg) == len(h) and seg[:-1] == h[:-1] and seg[-1].startswith(h[-1]): return h
+    return None
 
 def build_chunks():
     toks = disp_tokens(); chunks = []; i = 0; since = 3
+    dummy = ImageDraw.Draw(Image.new('L', (1, 1)))
     while i < len(toks):
-        # J_LEAD: a line's audio (and its first word) starts 50 ms before its picture cut, so a word belongs to the run it
-        # is heard in 60 ms later; otherwise each line's first word flashes alone as a caption at the end of the run before
-        r = run_at(toks[i]['s'] + J_LEAD)
-        # highlight candidate?
-        hit = None
-        for h in HL:
-            seg = [t['d'].lower() for t in toks[i:i + len(h)]]
-            if seg == h: hit = h; break
+        r = run_at(toks[i]['s'])
+        hit = hl_at(toks, i)
         if hit and since >= 2 and (not chunks or not chunks[-1]['hl']):
             chunks.append(dict(toks=toks[i:i + len(hit)], hl=True)); i += len(hit); since = 0; continue
         cur = [toks[i]]; i += 1
         while i < len(toks) and len(cur) < 3:
             nt = toks[i]
             if cur[-1]['p']: break
-            if run_at(nt['s'] + J_LEAD) is not r: break
+            if run_at(nt['s']) is not r: break
+            if nt['line'] != cur[-1]['line']: break                 # a chunk never spans two cues
             if nt['s'] - cur[-1]['e'] > 0.32: break
-            if len(' '.join(t['d'] for t in cur + [nt])) > 20: break
-            if any([t['d'].lower() for t in toks[i:i + len(h)]] == h for h in HL) and since + 1 >= 2: break
+            if dummy.textlength(' '.join(t['d'] for t in cur + [nt]), font=CAP) > MAX_LINE: break
+            if hl_at(toks, i) and since + 1 >= 2: break
             cur.append(nt); i += 1
         chunks.append(dict(toks=cur, hl=False)); since += 1
     for k, c in enumerate(chunks):
@@ -94,7 +100,7 @@ def build_chunks():
     return chunks
 
 def caption_img(text, hl=False):
-    """a normal caption chunk: Figtree bold, white, a 10 px graphite stroke, wide word gaps (the stroke never swallows
+    """a normal caption chunk: Pretendard bold, white, a 10 px graphite stroke, wide word gaps (the stroke never swallows
     the spaces). Highlighted chunks are glass chips instead (chip_parts)."""
     font = CAP
     pad = 30
@@ -118,6 +124,7 @@ def caption_img(text, hl=False):
     return np.asarray(im)
 
 
+
 # ---------------------------------------------------------------- highlight chips (the long-form keyword pop, locked)
 # A graphite glass chip (stage-800, accent hairline + bloom, top highlight, the long panel shadow), the words in Figtree
 # 600 white at the title tracking, and the accent line drawn in beneath them. It pops in (0.18 s) and the line sweeps
@@ -139,7 +146,7 @@ def chip_parts(text, accent='azure'):
     acc = ACCENTS.get(accent, ACCENTS['azure'])
     size = CHIP_SIZE
     while True:                                                   # long phrases shrink to fit the 1080 frame
-        f = vfont('Figtree-VF.ttf', size, 600)
+        f = vfont(FONT, size, 600)
         tw = f.getlength(text) + CHIP_TRACK * f.size * (len(text) - 1)
         if tw + 2 * CHIP_PADX <= 980 or size <= 50: break
         size -= 2
@@ -201,40 +208,12 @@ def paste_rgba(dst, im, cx, cy, scale=1.0, alpha=1.0):
     src = a[ys0 - y0:ys1 - y0, xs0 - x0:xs1 - x0]; al = src[..., 3:4] / 255.0 * alpha
     sub = dst[ys0:ys1, xs0:xs1]; sub[:] = sub * (1 - al) + src[..., :3] * al
 
+
 def caption_center_y(r):
-    # outro (CTA): just above the CTA card (top 1344). A webcam face cover-fitted to 1080 wide fills the frame down to
-    # ~y 1150, so the old centre band (1037-1306) sat on the chin; centred at 1250 a 1-2 line caption clears both
-    if r['i'] == RUNS[-1]['i']: return 1250
-    return (941 + 1114) / 2 if r['layout'] == 'split' else (1290 + 1560) / 2
-
-# ---------------------------------------------------------------- shapes
-def squircle_mask(x0, y0, w, h, r, n=5.0, ss=2):
-    H2, W2 = Hc * ss, Wc * ss
-    yy, xx = np.mgrid[0:H2, 0:W2].astype(np.float32) / ss + 0.5 / ss
-    cx = np.clip(xx, x0 + r, x0 + w - r); cy = np.clip(yy, y0 + r, y0 + h - r)
-    dx = np.abs(xx - cx) / r; dy = np.abs(yy - cy) / r
-    inside = (dx ** n + dy ** n <= 1) & (xx >= x0) & (xx <= x0 + w) & (yy >= y0) & (yy <= y0 + h)
-    m = inside.astype(np.float32).reshape(Hc, ss, Wc, ss).mean((1, 3))
-    return m
-
-def shadow_from(mask):
-    sh = np.zeros_like(mask)
-    for dy, blur, a in [(60, 120, .16), (24, 48, .10), (4, 10, .06)]:
-        m = np.roll(mask, dy, 0); m[:dy] = 0
-        sh = 1 - (1 - sh) * (1 - a * cv2.GaussianBlur(m, (0, 0), blur / 2))
-    return sh
-
-CARD = dict(x=-65, y=1200, w=1210, h=864, r=200)
-CM = squircle_mask(CARD['x'], CARD['y'], CARD['w'], CARD['h'], CARD['r'])
-CSH = shadow_from(CM) * (1 - CM)
-# constants of the split blend, computed once (same float32 expressions as the per-frame form they replace)
-SHADE = 1 - CSH[..., None] * (1 - np.array([24, 24, 32], np.float32) / 255)      # card shadow multiplier
-CM3 = CM[..., None]; CM3I = 1 - CM3
-Y_CARD = int(np.argmax((CM.max(1) > 0) | (CSH.max(1) > 0)))                     # first row the card or its shadow touches
-SCALE_SPLIT = 1.35      # set per short by split_geometry(): webcam = whole face (hair ~1105 .. chin <= ~1895) fits the visible card;
-                        # 16:9 camera frame = the spec geometry (1890x1063 at x -405, y 1008)
-HAIR_Y, CHIN_Y = 1105, 1895
-RAMP = np.ones(Hc, np.float32); RAMP[1200:1240] = np.linspace(1, 0, 40); RAMP[1240:] = 0
+    """lower third (y 1290-1560) under every full visual; "caption": "top" on a run in shorts.json (or on its scene's
+    first line) moves it to y 365-634 for a visual whose content sits low"""
+    top = any(L.get('caption') == 'top' for L in S['lines'] if L['id'] in r['lines'])
+    return (365 + 634) / 2 if top else (1290 + 1560) / 2
 
 # ---------------------------------------------------------------- readers
 def reader(path, pix='rgb24', ch=3, size=None, start=None, count=None):
@@ -252,271 +231,14 @@ def reader(path, pix='rgb24', ch=3, size=None, start=None, count=None):
         if len(b) < n: break
         yield np.frombuffer(b, np.uint8).reshape(h, w, ch)
 
-def unsharp(img, amt=0.35, sig=1.2):
-    bl = cv2.GaussianBlur(img, (0, 0), sig)
-    return cv2.addWeighted(img, 1 + amt, bl, -amt, 0)
-
-def pip_fullcam(fr):
-    sc = Hc / fr.shape[0]; w = int(round(fr.shape[1] * sc))
-    big = cv2.resize(fr, (w, Hc), interpolation=cv2.INTER_LANCZOS4)
-    x0 = (w - Wc) // 2
-    return unsharp(big[:, x0:x0 + Wc])
-
-SIDE_W = None
-def matte_kind(i):
-    try: return json.load(open(f'{sk}/cam/r{i}_matte.json', encoding='utf-8')).get('model', 'u2net')
-    except (OSError, ValueError): return 'u2net'
-
-def split_frame(bg, fr, al, yf, rvm=False):
-    global SIDE_W
-    fw = int(round(fr.shape[1] * SCALE_SPLIT)); fh = int(round(fr.shape[0] * SCALE_SPLIT))
-    xf = int(round(540 - fw / 2))
-    big = unsharp(cv2.resize(fr, (fw, fh), interpolation=cv2.INTER_LANCZOS4)).astype(np.float32)
-    A = cv2.resize(al, (fw, fh), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255
-    if not rvm: A = cv2.erode(A, np.ones((3, 3), np.uint8), iterations=1)   # u2net's dark rim
-    A = cv2.GaussianBlur(A, (0, 0), 0.6 if rvm else 1.2)
-    # soft fill for the card strips the portrait webcam can't reach: same frame, enlarged + blurred, about the same centre
-    s2 = Wc * 1.12 / fr.shape[1]; fw2, fh2 = int(round(fr.shape[1] * s2)), int(round(fr.shape[0] * s2))
-    blur = cv2.GaussianBlur(cv2.resize(fr, (fw2 // 4, fh2 // 4), interpolation=cv2.INTER_AREA), (0, 0), 6)
-    blur = cv2.resize(blur, (fw2, fh2), interpolation=cv2.INTER_CUBIC).astype(np.float32)
-    cy = yf + fh / 2; xb, yb = int(round(540 - fw2 / 2)), int(round(cy - fh2 / 2))
-    foot = np.zeros((Hc, Wc, 3), np.float32); alpha = np.zeros((Hc, Wc), np.float32)
-    ys0, ys1 = max(0, yb), min(Hc, yb + fh2); xs0, xs1 = max(0, xb), min(Wc, xb + fw2)
-    foot[ys0:ys1, xs0:xs1] = blur[ys0 - yb:ys1 - yb, xs0 - xb:xs1 - xb]
-    if SIDE_W is None or SIDE_W.shape[0] != fw:
-        SIDE_W = np.clip(np.minimum(np.arange(fw), fw - 1 - np.arange(fw)) / 40.0, 0, 1).astype(np.float32)
-    ys0, ys1 = max(0, yf), min(Hc, yf + fh); xs0, xs1 = max(0, xf), min(Wc, xf + fw)
-    wgt = SIDE_W[xs0 - xf:xs1 - xf][None, :, None]
-    foot[ys0:ys1, xs0:xs1] = big[ys0 - yf:ys1 - yf, xs0 - xf:xs1 - xf] * wgt + foot[ys0:ys1, xs0:xs1] * (1 - wgt)
-    alpha[ys0:ys1, xs0:xs1] = A[ys0 - yf:ys1 - yf, xs0 - xf:xs1 - xf] * SIDE_W[xs0 - xf:xs1 - xf][None, :]
-    out = bg.astype(np.float32)
-    # above the card, its shadow and the head nothing changes (shade 1, card 0, alpha 0), so the blend runs on the rows below y only:
-    # the same three float32 expressions as before, on fewer pixels, identical output
-    y = max(0, min(Y_CARD, ys0))
-    o = out[y:]
-    o *= SHADE[y:]
-    o[:] = o * CM3I[y:] + foot[y:] * CM3[y:]
-    Ah = alpha[y:] * RAMP[y:, None]
-    o[:] = o * (1 - Ah[..., None]) + foot[y:] * Ah[..., None]
-    return out
-
-def hair_top(matte_path, size):
-    w, h = size; tops = []
-    for k, a in enumerate(reader(matte_path, 'rgba', 4, (w, h))):
-        if k % 6: continue
-        col = a[:, int(w * 0.3):int(w * 0.7), 3].max(1)
-        idx = np.where(col > 128)[0]
-        if len(idx): tops.append(idx[0])
-    return float(np.median(tops)), float(np.min(tops))
-
-def chin_max(clip, size):
-    import mediapipe as mp
-    from mediapipe.tasks import python as mpt
-    from mediapipe.tasks.python import vision
-    det = vision.FaceLandmarker.create_from_options(vision.FaceLandmarkerOptions(base_options=mpt.BaseOptions(model_asset_path='face_landmarker.task'), num_faces=1))
-    ch = []
-    for k, fr in enumerate(reader(clip, 'rgb24', 3, tuple(size))):
-        if k % 10: continue
-        res = det.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=np.ascontiguousarray(fr)))
-        if res.face_landmarks: ch.append(res.face_landmarks[0][152].y * size[1])
-    return float(np.max(ch)) if ch else size[1] * 0.7
-
-def split_geometry():
-    """one scale for every split run of the short (cached): whole face visible, hair popping ~95 px above the card"""
-    gf = f'{sk}/cam/split_geom.json'
-    runs = sorted(int(ri) for ri, p in CAM.items() if p['layout'] == 'split')
-    # the cache is keyed by the clips it was measured on (a re-cut that keeps the same run indices still re-measures)
-    src = {str(ri): [(f, os.path.getsize(f), int(os.path.getmtime(f) * 1000)) if os.path.exists(f) else (f, None, None)
-                     for f in (CAM[str(ri)]['file'], f'{sk}/cam/r{ri}_matte.mov')] for ri in runs}
-    if os.path.exists(gf):
-        g = json.load(open(gf, encoding='utf-8'))
-        if g.get('runs') == runs and g.get('src') == json.loads(json.dumps(src)): return g
-    g = dict(runs=runs, src=src, per_run={})
-    kinds = {CAM[str(ri)].get('kind', 'pip') for ri in runs}
-    if kinds == {'frame'}:
-        g.update(scale=1890 / 1920)
-        for ri in runs: g['per_run'][str(ri)] = dict(yf=1008)
-    else:
-        scales = []
-        for ri in runs:
-            p = CAM[str(ri)]; size = p.get('size', [680, 924])
-            try:
-                med, mn = hair_top(f'{sk}/cam/r{ri}_matte.mov', size); cm = chin_max(p['file'], size)
-            except ValueError:
-                raise SystemExit(f'{sk} run {ri} (split): no head found in its matte. The camera is probably hidden in that part of the '
-                                 f'source (check {sk}_eyes.png / gaze.py); a split run needs the speaker on camera. Fix shorts.json and re-cut.')
-            scales.append((CHIN_Y - HAIR_Y) / max(1, cm - med))
-            g['per_run'][str(ri)] = dict(hair_med=med, hair_min=mn, chin_max=cm)
-        g['scale'] = float(np.floor(min(min(scales), 2.2) * 100) / 100)
-        for ri in runs:
-            pr = g['per_run'][str(ri)]; pr['yf'] = int(round(HAIR_Y - g['scale'] * pr['hair_med']))
-    json.dump(g, open(gf, 'w'), indent=1)
-    return g
-
-# ---------------------------------------------------------------- CTA comment box
-CTA_BOX = (43, 1344, 994, 276)
-CTA_CACHE = {}
-def cta_render(t_rel, spec):
-    """returns RGBA (Hc x Wc) numpy or None. The drawing is a pure function of (landing progress, typed chars, posted,
-    caret blink, press squash, button colour); frames with the same state reuse the same canvas (the three shadow blurs at 2x
-    are the cost), so the outro renders ~60 distinct boxes instead of one per frame. Pixel-identical by construction."""
-    land = min(1, max(0, (t_rel - spec['land']) / 0.5))
-    if land <= 0: return None
-    n = int(max(0, min(len(spec['kw']), (t_rel - spec['type0']) * spec['cps'] + 1e-6))) if t_rel >= spec['type0'] else 0
-    posted = t_rel >= spec['press'] + 0.12
-    blink = (int((t_rel - spec['type0']) * 2.2) % 2 == 0) if t_rel > spec['type0'] + len(spec['kw']) / spec['cps'] else True
-    pp = (t_rel - spec['press']) / 0.24
-    sc = 1 - 0.08 * np.sin(np.pi * pp) if 0 <= pp <= 1 else 1
-    col = AZURE_INK if 0 <= pp <= 1 else AZURE
-    key = (land, n, posted, blink, float(sc), col)
-    draw = _cta_draw_full if spec.get('mode') == 'full_video' else _cta_draw
-    if key not in CTA_CACHE: CTA_CACHE[key] = draw(land, n, posted, blink, sc, col, spec)
-    return CTA_CACHE[key]
-
-
-def _glass_card(bw, bh, ss, pad):
-    """the CTA card's graphite glass: stage-800, white hairline + top highlight, the long panel shadow"""
-    im = Image.new('RGBA', (bw * ss + 2 * pad, bh * ss + 2 * pad), (0, 0, 0, 0))
-    ox, oy = pad, pad; R = 44 * ss
-    m = Image.new('L', im.size, 0)
-    ImageDraw.Draw(m).rounded_rectangle((ox + 40 * ss, oy + 90 * ss, ox + bw * ss - 40 * ss, oy + bh * ss + 50 * ss), R, fill=255)
-    m = m.filter(ImageFilter.GaussianBlur(50 * ss)); im.putalpha(m.point(lambda v: int(v * 0.8)))
-    d = ImageDraw.Draw(im)
-    d.rounded_rectangle((ox, oy, ox + bw * ss, oy + bh * ss), R, fill=STAGE800 + (246,))
-    d.rounded_rectangle((ox, oy, ox + bw * ss, oy + bh * ss), R, outline=(255, 255, 255, 34), width=3)
-    d.line((ox + R, oy + 3, ox + bw * ss - R, oy + 3), fill=(255, 255, 255, 26), width=2)
-    return im, ox, oy
-
-
-def _play_tile(size):
-    """the design system's glossy azure icon tile with a white play glyph (RGBA, size x size)"""
-    t = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    g = np.linspace(0, 1, size, dtype=np.float32)[:, None, None]
-    top, mid, bot = np.array([143, 203, 255], np.float32), np.array([59, 152, 255], np.float32), np.array([27, 99, 230], np.float32)
-    col = np.where(g < 0.45, top + (mid - top) * (g / 0.45), mid + (bot - mid) * ((g - 0.45) / 0.55))
-    grad = Image.fromarray(np.repeat(col, size, 1).clip(0, 255).astype(np.uint8), 'RGB').convert('RGBA')
-    mk = Image.new('L', (size, size), 0); ImageDraw.Draw(mk).rounded_rectangle((0, 0, size - 1, size - 1), int(size * 0.285), fill=255)
-    t.paste(grad, (0, 0), mk)
-    hl = Image.new('L', (size, size), 0)
-    ImageDraw.Draw(hl).ellipse((size * 0.1, size * 0.04, size * 0.9, size * 0.52), fill=95)
-    hl = hl.filter(ImageFilter.GaussianBlur(size * 0.04))
-    hl = Image.fromarray(np.minimum(np.asarray(hl), np.asarray(mk)))
-    white = Image.new('RGBA', (size, size), (255, 255, 255, 0)); white.putalpha(hl)
-    t = Image.alpha_composite(t, white)
-    c, r = size / 2, size * 0.2
-    ImageDraw.Draw(t).polygon([(c - r * 0.75, c - r), (c - r * 0.75, c + r), (c + r * 1.05, c)], fill=(255, 255, 255, 255))
-    return t
-
-
-def _cta_draw_full(land, n, posted, blink, sc, col, spec):
-    """the outro card every short ends on (Leon's rule, 2026-10-14): 'Watch the full video', pointing down at the
-    full-video link under the short. Graphite glass card, his glossy azure play tile, the line typed in white Figtree 600
-    with an azure caret, and an azure arrow button with a soft glow that presses (azure-ink) once the line is typed."""
-    x0, y0, bw, bh = CTA_BOX
-    e = 1 - (1 - land) ** 3
-    ss = 2; pad = 200
-    im, ox, oy = _glass_card(bw, bh, ss, pad)
-    cy = oy + bh * ss / 2
-    ts = 116 * ss; tx0 = ox + 40 * ss
-    tile = _play_tile(ts)
-    glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).rounded_rectangle((tx0, cy - ts / 2 + 26 * ss, tx0 + ts, cy + ts / 2 + 26 * ss), int(ts * 0.285), fill=255)
-    glow = glow.filter(ImageFilter.GaussianBlur(22 * ss))
-    gl = Image.new('RGBA', im.size, AZURE + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.5)))
-    im = Image.alpha_composite(im, gl); im.alpha_composite(tile, (int(tx0), int(cy - ts / 2)))
-    d = ImageDraw.Draw(im)
-    txt = spec['kw'][:n]
-    ft = vfont('Figtree-VF.ttf', 56 * ss, 600)
-    tx = tx0 + ts + 32 * ss; tw = d.textlength(txt, font=ft)
-    d.text((tx, cy), txt, font=ft, fill=(255, 255, 255, 255), anchor='lm')
-    if not posted and blink:
-        d.rounded_rectangle((tx + tw + 6 * ss, cy - 32 * ss, tx + tw + 12 * ss, cy + 32 * ss), 3 * ss, fill=AZURE + (255,))
-    # the arrow button: points down at the full-video link under the short
-    br = 56 * ss * sc; bxc = ox + bw * ss - 40 * ss - 56 * ss
-    glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).ellipse((bxc - br, cy - br, bxc + br, cy + br), fill=255)
-    glow = glow.filter(ImageFilter.GaussianBlur(16 * ss))
-    gl = Image.new('RGBA', im.size, AZURE + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.55)))
-    im = Image.alpha_composite(im, gl); d = ImageDraw.Draw(im)
-    d.ellipse((bxc - br, cy - br, bxc + br, cy + br), fill=col + (255,))
-    a = 22 * ss * sc; w = max(2, int(7 * ss * sc))
-    d.line((bxc, cy - a, bxc, cy + a), fill=(255, 255, 255, 255), width=w)
-    d.line((bxc - a * 0.75, cy + a * 0.2, bxc, cy + a), fill=(255, 255, 255, 255), width=w, joint='curve')
-    d.line((bxc + a * 0.75, cy + a * 0.2, bxc, cy + a), fill=(255, 255, 255, 255), width=w, joint='curve')
-    for px in (bxc, bxc - a * 0.75, bxc + a * 0.75):                      # round caps
-        py = cy + a if px == bxc else cy + a * 0.2
-        d.ellipse((px - w / 2, py - w / 2, px + w / 2, py + w / 2), fill=(255, 255, 255, 255))
-    d.ellipse((bxc - w / 2, cy - a - w / 2, bxc + w / 2, cy - a + w / 2), fill=(255, 255, 255, 255))
-    im = im.resize((im.size[0] // ss, im.size[1] // ss), Image.LANCZOS)
-    scl = 0.94 + 0.06 * e; W0, H0 = im.size
-    im = im.resize((max(1, int(W0 * scl)), max(1, int(H0 * scl))), Image.LANCZOS)
-    arr = np.asarray(im).astype(np.float32); arr[..., 3] *= min(1, land * 2.2)
-    canvas = np.zeros((Hc, Wc, 4), np.float32)
-    px = int(round(x0 + bw / 2 - im.size[0] / 2)); py = int(round(y0 + bh / 2 - im.size[1] / 2 + 40 * (1 - e)))
-    ys0, ys1 = max(0, py), min(Hc, py + im.size[1]); xs0, xs1 = max(0, px), min(Wc, px + im.size[0])
-    canvas[ys0:ys1, xs0:xs1] = arr[ys0 - py:ys1 - py, xs0 - px:xs1 - px]
-    return canvas
-
-def _cta_draw(land, n, posted, blink, sc, col, spec):
-    """the comment box in the channel's design system: graphite glass (stage-800), white hairline + top highlight, the
-    long panel shadow, a stage-700 avatar, the keyword in Figtree 600 white with an azure caret, an azure Post button
-    with a soft glow that darkens to azure-ink on the press"""
-    x0, y0, bw, bh = CTA_BOX
-    e = 1 - (1 - land) ** 3
-    ss = 2; pad = 200
-    im = Image.new('RGBA', (bw * ss + 2 * pad, bh * ss + 2 * pad), (0, 0, 0, 0))
-    ox, oy = pad, pad; R = 44 * ss
-    m = Image.new('L', im.size, 0)
-    ImageDraw.Draw(m).rounded_rectangle((ox + 40 * ss, oy + 90 * ss, ox + bw * ss - 40 * ss, oy + bh * ss + 50 * ss), R, fill=255)
-    m = m.filter(ImageFilter.GaussianBlur(50 * ss)); im.putalpha(m.point(lambda v: int(v * 0.8)))      # 0 50 120 -40 shadow
-    d = ImageDraw.Draw(im)
-    d.rounded_rectangle((ox, oy, ox + bw * ss, oy + bh * ss), R, fill=STAGE800 + (246,))
-    d.rounded_rectangle((ox, oy, ox + bw * ss, oy + bh * ss), R, outline=(255, 255, 255, 34), width=3)
-    d.line((ox + R, oy + 3, ox + bw * ss - R, oy + 3), fill=(255, 255, 255, 26), width=2)
-    # default avatar
-    cx, cy, rr = ox + 40 * ss + 58 * ss, oy + bh * ss / 2, 58 * ss
-    d.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=STAGE700 + (255,))
-    d.ellipse((cx - 22 * ss, cy - 36 * ss, cx + 22 * ss, cy + 8 * ss), fill=TEXT_MUTED + (255,))
-    d.pieslice((cx - 42 * ss, cy + 12 * ss, cx + 42 * ss, cy + 92 * ss), 180, 360, fill=TEXT_MUTED + (255,))
-    d.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), outline=(66, 67, 71, 255), width=3)
-    # input field: a lighter glass well. PIL replaces pixels instead of blending, so the 6% white lift over stage-800 is
-    # mixed here (a translucent fill would punch a see-through hole in the card)
-    fx0, fx1 = cx + rr + 26 * ss, ox + bw * ss - 250 * ss
-    fy0, fy1 = cy - 58 * ss, cy + 58 * ss
-    d.rounded_rectangle((fx0, fy0, fx1, fy1), 58 * ss, fill=(38, 39, 42, 248), outline=(58, 59, 63, 248), width=2)
-    txt = spec['kw'][:n]
-    ft = vfont('Figtree-VF.ttf', 52 * ss, 600)
-    tx = fx0 + 36 * ss; tw = d.textlength(txt, font=ft)
-    d.text((tx, cy), txt, font=ft, fill=(255, 255, 255, 255), anchor='lm')
-    if not posted and blink:
-        d.rounded_rectangle((tx + tw + 6 * ss, cy - 32 * ss, tx + tw + 12 * ss, cy + 32 * ss), 3 * ss, fill=AZURE + (255,))
-    # Post button (press = quick squash + azure-ink), with the accent glow
-    bxc, byc = ox + bw * ss - 40 * ss - 95 * ss, cy
-    hw, hh = 95 * ss * sc, 50 * ss * sc
-    glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).rounded_rectangle((bxc - hw, byc - hh, bxc + hw, byc + hh), hh, fill=255)
-    glow = glow.filter(ImageFilter.GaussianBlur(16 * ss))
-    gl = Image.new('RGBA', im.size, AZURE + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.55)))
-    im = Image.alpha_composite(im, gl); d = ImageDraw.Draw(im)
-    d.rounded_rectangle((bxc - hw, byc - hh, bxc + hw, byc + hh), hh, fill=col + (255,))
-    fb = vfont('Figtree-VF.ttf', 40 * ss * sc, 600)
-    d.text((bxc, byc), 'Post', font=fb, fill=(255, 255, 255, 255), anchor='mm')
-    im = im.resize((im.size[0] // ss, im.size[1] // ss), Image.LANCZOS)
-    # landing: scale .94->1, y +40->0, opacity
-    scl = 0.94 + 0.06 * e; W0, H0 = im.size
-    im = im.resize((max(1, int(W0 * scl)), max(1, int(H0 * scl))), Image.LANCZOS)
-    a = np.asarray(im).astype(np.float32); a[..., 3] *= min(1, land * 2.2)
-    canvas = np.zeros((Hc, Wc, 4), np.float32)
-    px = int(round(x0 + bw / 2 - im.size[0] / 2)); py = int(round(y0 + bh / 2 - im.size[1] / 2 + 40 * (1 - e)))
-    ys0, ys1 = max(0, py), min(Hc, py + im.size[1]); xs0, xs1 = max(0, px), min(Wc, px + im.size[0])
-    canvas[ys0:ys1, xs0:xs1] = a[ys0 - py:ys1 - py, xs0 - px:xs1 - px]
-    return canvas
-
 # ---------------------------------------------------------------- cover (frame 0 only)
 def cover_rgba(title_lines):
-    """frame 0's title in the design system: white Figtree 600 at the headline tracking on a graphite glass card (accent
+    """frame 0's title in the design system: white Pretendard 600 at the headline tracking on a graphite glass card (accent
     hairline + bloom, the long panel shadow) with the azure accent line drawn beneath the words - the keyword-pop chip at
     title size. Centred at y ~432 (the spec's 262-603 band for two lines); the graphic keeps everything below 620."""
     acc = ACCENTS['azure']; track = -0.03; size = 104
     while True:
-        ft = vfont('Figtree-VF.ttf', size, 600)
+        ft = vfont(FONT, size, 600)
         tws = [ft.getlength(l) + track * ft.size * (len(l) - 1) for l in title_lines]
         if max(tws) <= 900 or size <= 72: break
         size -= 4
@@ -553,7 +275,7 @@ def cover_rgba(title_lines):
 _BBOX = {}
 def over(dst, rgba, y=None):
     """alpha-over an RGBA float canvas onto dst, touching only the rows/cols where its alpha is non-zero (elsewhere the
-    blend is dst*1 + rgb*0 = dst exactly). The bounding box is cached per canvas object (the CTA canvases are memoised)."""
+    blend is dst*1 + rgb*0 = dst exactly). The bounding box is cached per canvas object."""
     key = id(rgba)
     box = _BBOX.get(key)
     if box is None or box[0] is not rgba:
@@ -565,145 +287,109 @@ def over(dst, rgba, y=None):
     sub = dst[y0:y1, x0:x1]
     sub[:] = sub * (1 - a) + rgba[y0:y1, x0:x1, :3] * a
 
+
 # ---------------------------------------------------------------- main loop
 chunks = build_chunks()
 cap_imgs = [chip_parts(c['text'], S.get('accent', 'azure')) if c['hl'] else caption_img(c['text']) for c in chunks]
-json.dump([dict(text=c['text'], hl=c['hl'], t0=round(c['t0'], 3), t1=round(c['t1'], 3)) for c in chunks], open(f'{sk}/captions.json', 'w'), indent=1)
-
-last = RUNS[-1]
-if S.get('cta_mode', 'full_video') == 'full_video':
-    # Leon's rule (2026-10-14): every short ends by sending viewers to the full video - the card reads "Watch the full
-    # video" and its arrow points down at the full-video link (YouTube's related video; "link in bio" on TikTok / IG)
-    kw = S.get('cta_text', 'Watch the full video')
-    spec = dict(kw=kw, land=0.12, type0=0.45, cps=16.0, mode='full_video')
-    spec['type0'] = max(0.3, min(spec['type0'], last['T1'] - last['T0'] - 0.3 - 0.45 - len(kw) / spec['cps']))
-    spec['press'] = spec['type0'] + len(kw) / spec['cps'] + 0.45
-else:                                              # "cta_mode": "comment": the comment box typing the CTA keyword
-    cta_line = [L for L in S['lines'] if L.get('cta')][0]
-    kw = S['cta_keyword']
-    tw = [w for w in C['words'] if w['line'] == cta_line['id'] and w['w'].lower().strip('.,') == kw.lower()]
-    t_kw = (tw[0]['s'] if tw else last['T0'] + 0.8) - last['T0']
-    spec = dict(kw=kw, land=0.12, type0=max(0.55, t_kw), cps=10.0)
-    # the Post press must finish on screen: when the keyword is the outro's last word, start typing earlier
-    spec['type0'] = max(0.55, min(spec['type0'], last['T1'] - last['T0'] - 0.3 - 0.55 - len(kw) / spec['cps']))
-    spec['press'] = spec['type0'] + len(kw) / spec['cps'] + 0.55
-extra = [dict(t=last['T0'] + spec['land'], type='pop')]
-extra += [dict(t=last['T0'] + spec['type0'] + k / spec['cps'], type='key') for k in range(len(kw)) if kw[k] != ' ']
-extra += [dict(t=last['T0'] + spec['press'], type='click')]
-json.dump(extra, open(f'{sk}/events_extra.json', 'w'), indent=1)
+json.dump([dict(text=c['text'], hl=c['hl'], t0=round(c['t0'], 3), t1=round(c['t1'], 3)) for c in chunks],
+          open(f'{sk}/captions.json', 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
 if '--events-only' in sys.argv:
-    print(f'{sk}: {len(chunks)} caption chunks -> {sk}/captions.json; {len(extra)} CTA events -> {sk}/events_extra.json'); sys.exit(0)
+    print(f'{sk}: {len(chunks)} caption chunks -> {sk}/captions.json'); sys.exit(0)
 
-yf = {}
-if any(p['layout'] == 'split' for p in CAM.values()) and not CONCAT:
-    GEO = split_geometry(); SCALE_SPLIT = GEO['scale']
-    for ri, pr in GEO['per_run'].items():
-        yf[int(ri)] = pr['yf']
-    print('split geometry: scale', SCALE_SPLIT, {ri: pr for ri, pr in GEO['per_run'].items()})
 title = S.get('cover', [S['title']])
 COVER = cover_rgba(title)
 
+def gfx_reader(i, start=None, count=None):
+    """the run's graphic as 60 fps frames: the full render, or the 10 fps draft with every frame held (scaled to the canvas)"""
+    path = f'{GFX_DIR}/{sk}_r{i}.mp4'
+    if not DRAFT:
+        yield from reader(path, start=start, count=count); return
+    rep = FPS // GFX_FPS                                      # each draft frame stands for 6 output frames
+    j = start or 0; d = j // rep
+    p = subprocess.Popen(['ffmpeg', '-v', 'error', '-ss', f'{d / GFX_FPS:.6f}', '-i', path, '-vf', f'scale={Wc}:{Hc}',
+                          '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], stdout=subprocess.PIPE)
+    n = Wc * Hc * 3
+    def nxt(prev):
+        b = p.stdout.read(n)
+        if len(b) == n: return np.frombuffer(b, np.uint8).reshape(Hc, Wc, 3)
+        if prev is None: raise SystemExit(f'{path}: no frame at {d / GFX_FPS:.2f} s')
+        return prev                                           # past the draft's last frame: hold it
+    cur = nxt(None); done = 0
+    while count is None or done < count:
+        while j // rep > d: cur = nxt(cur); d += 1
+        yield cur; j += 1; done += 1
+
 def frames():
-    """yields (n, run, image); image is None for frames a preview doesn't need (decoders still advance, nothing is composited)"""
+    """yields (n, run, image); image is None for frames a preview doesn't need"""
     for r in RUNS:
         if ONLY is not None and r['i'] not in ONLY: continue
         n0, n1 = round(r['T0'] * FPS), round(r['T1'] * FPS)
         need = lambda n: want is None or n in want
         if want is not None and not any(need(n) for n in range(n0, n1)): continue
         if want is not None:
-            # preview: seek each stream straight to the wanted frames instead of decoding the run from its start (same frame
-            # data, same composite); a spot-check takes seconds instead of the whole run's decode
-            gfx = f'gfx/out60/{sk}_r{r["i"]}.mp4'; cam = CAM.get(str(r['i']), {})
             for n in sorted(x for x in want if n0 <= x < n1):
-                k = n - n0
-                if r['layout'] == 'fv':
-                    yield n, r, next(reader(gfx, start=k, count=1)).astype(np.float32)
-                elif r['layout'] == 'fc':
-                    fr = next(reader(cam['file'], 'rgb24', 3, start=k, count=1))
-                    yield n, r, (fr if cam.get('kind', cam.get('cam')) in ('slice', 'cam4k') else pip_fullcam(fr)).astype(np.float32)
-                else:
-                    bg = next(reader(gfx, start=k, count=1)); fr = next(reader(cam['file'], 'rgb24', 3, start=k, count=1))
-                    ma = next(reader(f'{sk}/cam/r{r["i"]}_matte.mov', 'rgba', 4, tuple(cam.get('size', [680, 924])), start=k, count=1))
-                    yield n, r, split_frame(bg, fr, ma[..., 3], yf[r['i']], matte_kind(r['i']) == 'rvm')
+                yield n, r, next(gfx_reader(r['i'], start=n - n0, count=1)).astype(np.float32)
             continue
-        if r['layout'] == 'fv':
-            g = reader(f'gfx/out60/{sk}_r{r["i"]}.mp4')
-            for n in range(n0, n1):
-                fr = next(g); yield n, r, (fr.astype(np.float32) if need(n) else None)
-        elif r['layout'] == 'fc':
-            p = CAM[str(r['i'])]
-            g = reader(p['file'], 'rgb24', 3)
-            for n in range(n0, n1):
-                fr = next(g)
-                yield n, r, (((fr if p.get('kind', p.get('cam')) in ('slice', 'cam4k') else pip_fullcam(fr)).astype(np.float32)) if need(n) else None)
-        else:
-            g = reader(f'gfx/out60/{sk}_r{r["i"]}.mp4'); c = reader(CAM[str(r['i'])]['file'], 'rgb24', 3)
-            m = reader(f'{sk}/cam/r{r["i"]}_matte.mov', 'rgba', 4, tuple(CAM[str(r['i'])].get('size', [680, 924])))
-            rvm = matte_kind(r['i']) == 'rvm'
-            for n in range(n0, n1):
-                bg, fr, ma = next(g), next(c), next(m)
-                yield n, r, (split_frame(bg, fr, ma[..., 3], yf[r['i']], rvm) if need(n) else None)
+        g = gfx_reader(r['i'], count=n1 - n0)
+        for n in range(n0, n1):
+            fr = next(g); yield n, r, (fr.astype(np.float32) if need(n) else None)
 
 want = None if PREVIEW is None else {int(round(t * FPS)) for t in PREVIEW}
-VENC = ['-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p', '-c:v', 'libx264', '-preset', 'slow', '-crf', '14', '-profile:v', 'high',
-        '-r', str(FPS), '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709']
+VENC = ['-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p', '-c:v', 'libx264', '-preset', 'veryfast' if DRAFT else 'slow',
+        '-crf', '23' if DRAFT else '14', '-profile:v', 'high', '-r', str(FPS), '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709']
 
 def concat():
-    segs = [f'{sk}/seg/run{r["i"]:02d}.mp4' for r in RUNS]
-    open(f'{sk}/seg/list.txt', 'w').write(''.join("file '" + os.path.basename(p) + "'\n" for p in segs))
-    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', f'{sk}/seg/list.txt', '-i', f'{sk}/mix.wav', '-map', '0:v', '-map', '1:a',
-                    '-c:v', 'copy', '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', f'{sk}/final_video.mp4'], check=True)
-    print('concatenated', len(segs), 'segments ->', f'{sk}/final_video.mp4')
+    segs = [f'{SEG_DIR}/run{r["i"]:02d}.mp4' for r in RUNS]
+    open(f'{SEG_DIR}/list.txt', 'w').write(''.join("file '" + os.path.basename(p) + "'\n" for p in segs))
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', f'{SEG_DIR}/list.txt', '-i', f'{sk}/mix.wav', '-map', '0:v', '-map', '1:a',
+                    '-c:v', 'copy', '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', OUT_VIDEO], check=True)
+    print('concatenated', len(segs), 'segments ->', OUT_VIDEO)
 
 if CONCAT:
     concat(); sys.exit(0)
 
 # ---------------------------------------------------------------- parallel, cached segments
 def seg_inputs(r):
-    """everything a run's segment depends on: its inputs (path, size, mtime), its captions, the CTA/cover, this code"""
-    i = r['i']; files = []
-    if r['layout'] in ('fv', 'split'): files.append(f'gfx/out60/{sk}_r{i}.mp4')
-    if r['layout'] in ('fc', 'split'): files.append(CAM[str(i)]['file'])
-    if r['layout'] == 'split': files += [f'{sk}/cam/r{i}_matte.mov', f'{sk}/cam/split_geom.json']
+    """everything a run's segment depends on: its graphic (path, size, mtime), its captions, the cover, this code"""
+    i = r['i']; files = [f'{GFX_DIR}/{sk}_r{i}.mp4']
     fst = [(f, os.path.getsize(f), int(os.path.getmtime(f) * 1000)) if os.path.exists(f) else (f, None, None) for f in files]
     caps = [dict(text=c['text'], hl=c['hl'], t0=round(c['t0'], 4), t1=round(c['t1'], 4)) for c in chunks if c['t1'] > r['T0'] and c['t0'] < r['T1']]
-    key = dict(run=r, files=fst, caps=caps, matte=matte_kind(i) if r['layout'] == 'split' else None, cam=CAM[str(i)] if str(i) in CAM else None, scale=SCALE_SPLIT, yf=yf.get(i),
-               cta=spec if r is last else None, cover=title if i == 0 else None, code=CODE_HASH, venc=VENC)
-    return json.dumps(key, sort_keys=True, default=str), [f for f, s, m in fst if s is None]
+    key = dict(run=r, files=fst, caps=caps, cover=title if i == 0 else None, code=CODE_HASH, venc=VENC, draft=DRAFT)
+    return json.dumps(key, sort_keys=True, default=str, ensure_ascii=False), [f for f, s, m in fst if s is None]
 
 if SEGMENTS:
     import hashlib, time
     CODE_HASH = hashlib.md5(open(__file__, 'rb').read()).hexdigest()
     jobs = int(sys.argv[sys.argv.index('--jobs') + 1]) if '--jobs' in sys.argv else len(RUNS)
     force = '--force' in sys.argv
-    os.makedirs(f'{sk}/seg', exist_ok=True)
+    os.makedirs(SEG_DIR, exist_ok=True)
     todo, kept, missing = [], [], []
     for r in RUNS:
         key, miss = seg_inputs(r)
         if miss: missing += miss
-        out = f'{sk}/seg/run{r["i"]:02d}.mp4'; kf = out[:-4] + '.key'
-        if not force and os.path.exists(out) and os.path.getsize(out) > 0 and os.path.exists(kf) and open(kf).read() == key:
+        out = f'{SEG_DIR}/run{r["i"]:02d}.mp4'; kf = out[:-4] + '.key'
+        if not force and os.path.exists(out) and os.path.getsize(out) > 0 and os.path.exists(kf) and open(kf, encoding='utf-8').read() == key:
             kept.append(r['i']); continue
         todo.append((r, out, kf, key))
-    if missing: raise SystemExit('missing inputs: ' + ', '.join(sorted(set(missing))) + '  (render the graphics / cam_prep / matte first)')
+    if missing: raise SystemExit('missing inputs: ' + ', '.join(sorted(set(missing))) + ('  (render_draft.sh first)' if DRAFT else '  (render_full.sh first)'))
     print(f'{sk}: {len(todo)} segment(s) to render {[r["i"] for r, *_ in todo]}, {len(kept)} unchanged {kept}, {min(jobs, len(todo)) if todo else 0} at a time', flush=True)
     t0 = time.time(); procs = []; pending = list(todo); failed = []
     while pending or procs:
         while pending and len(procs) < jobs:
             r, out, kf, key = pending.pop(0)
             if os.path.exists(kf): os.remove(kf)
-            p = subprocess.Popen([sys.executable, __file__, sk, '--runs', str(r['i']), '--seg-out', out]); procs.append((p, r, out, kf, key))
+            p = subprocess.Popen([sys.executable, __file__, sk, '--runs', str(r['i']), '--seg-out', out] + (['--draft'] if DRAFT else [])); procs.append((p, r, out, kf, key))
         time.sleep(0.5)
         for item in procs[:]:
             p, r, out, kf, key = item
             if p.poll() is None: continue
             procs.remove(item)
             if p.returncode != 0: failed.append(r['i']); continue
-            open(kf, 'w').write(key)
+            open(kf, 'w', encoding='utf-8').write(key)
     # every segment must hold exactly its run's frames (a graphic re-rendering underneath a composite yields a short segment)
     bad = []
     for r in RUNS:
-        out = f'{sk}/seg/run{r["i"]:02d}.mp4'
+        out = f'{SEG_DIR}/run{r["i"]:02d}.mp4'
         n = subprocess.run(['ffprobe', '-v', 'error', '-count_frames', '-select_streams', 'v:0', '-show_entries', 'stream=nb_read_frames', '-of', 'csv=p=0', out],
                            capture_output=True, text=True).stdout.strip()
         want_n = round(r['T1'] * FPS) - round(r['T0'] * FPS)
@@ -717,7 +403,7 @@ if PREVIEW is None:
         enc = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{Wc}x{Hc}', '-r', str(FPS), '-i', '-'] + VENC + [SEG_OUT], stdin=subprocess.PIPE)
     else:
         enc = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{Wc}x{Hc}', '-r', str(FPS), '-i', '-',
-                                '-i', f'{sk}/mix.wav', '-map', '0:v', '-map', '1:a'] + VENC + ['-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', f'{sk}/final_video.mp4'], stdin=subprocess.PIPE)
+                                '-i', f'{sk}/mix.wav', '-map', '0:v', '-map', '1:a'] + VENC + ['-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', OUT_VIDEO], stdin=subprocess.PIPE)
 PDIR = f'{sk}/thumb' if CLEAN else f'{sk}/preview'
 os.makedirs(PDIR, exist_ok=True)
 count = 0
@@ -738,9 +424,6 @@ for n, r, img in frames():
                 sub = img[y0:y0 + h, x0:x0 + w]; a = ci[..., 3:4] / 255.0
                 sub[:] = sub * (1 - a) + ci[..., :3] * a
                 break
-    if r is last and not CLEAN:
-        ov = cta_render(t - r['T0'], spec)
-        if ov is not None: over(img, ov)
     if n == 0 and not CLEAN: over(img, COVER)
     np.add(img, 0.5, out=img); np.clip(img, 0, 255, out=img); out = img.astype(np.uint8)   # in place: same values, no temporaries
     if want is not None:

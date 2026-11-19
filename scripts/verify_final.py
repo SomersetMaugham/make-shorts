@@ -9,7 +9,7 @@ p=subprocess.run(['ffprobe','-v','error','-show_entries','stream=codec_name,prof
 print(p)
 dur=float(json.loads(p)['streams'][0]['duration'])
 ts=[i*2.0 for i in range(int(dur//2)+1)]+[dur-0.05]
-os.makedirs('chk/final',exist_ok=True); font=ImageFont.truetype('arial.ttf',24)
+os.makedirs('chk/final',exist_ok=True); font=ImageFont.load_default(24)
 def loudness():
     ln=subprocess.run(['ffmpeg','-hide_banner','-i',f,'-af','ebur128=peak=true','-f','null','-'],capture_output=True,text=True).stderr
     return '\n'.join(l for l in ln.splitlines()[-12:] if 'I:' in l or 'Peak:' in l or 'LRA:' in l)

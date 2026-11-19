@@ -1,5 +1,7 @@
-"""Generate one HyperFrames composition per graphic run (split / full-visual) from compact configs.
-Each page = shared engine.js + a CFG object. Times are run-relative seconds; W(...) looks up a word start."""
+"""Generate one HyperFrames composition per run (every run is a full visual) from compact configs.
+Each page = shared engine.js + a CFG object. Times are run-relative seconds; W(ws, '<phrase>') looks up when a phrase
+starts, from cut.json - so a composition anchored on phrases follows the narration when it is recorded or re-timed:
+re-run timeline.py, then build_gfx.py, and every time moves with its words (graphics.md "Timing")."""
 import json, os, re
 import os as _os
 _os.chdir(_os.path.dirname(_os.path.abspath(__file__))+'/..')
@@ -8,22 +10,31 @@ import glob as _glob
 D = {}   # asset_dims.json plus one asset_dims_<tag>.json per graphics subagent (so parallel asset preps never race)
 for _f in sorted(_glob.glob('gfx/asset_dims*.json')): D.update(json.load(open(_f, encoding='utf-8')))
 OUT = 'gfx'
-SFX = {}  # run id -> list of events (run-relative)
 THUMBS = {}  # run id -> thumbnail candidates (run-relative): [a, b] = a window where the hero is landed and the camera at rest, or a time
 
 def words(sk, ri):
+    """the run and its words with run-relative start times (est: the time is a character-position estimate)"""
     r = C[sk]['runs'][ri]
-    return r, [dict(w=w['w'], t=round(w['s'] - r['T0'], 3)) for w in C[sk]['words'] if r['T0'] - 0.06 <= w['s'] < r['T1'] - 0.03]
+    return r, [dict(w=w['w'], t=round(w['s'] - r['T0'], 3), est=w.get('est', True)) for w in C[sk]['words']
+               if r['T0'] - 1e-6 <= w['s'] < r['T1'] - 1e-6]
 
-def W(ws, text, n=1):
+_P = re.compile(r'[\s.,!?·…"\'“”‘’()\[\]-]')
+def W(ws, phrase, n=1):
+    """run-relative time at which the n-th occurrence of a phrase starts. The phrase is written as in the cue text, one or
+    more words; its last word may stop before a particle ('하네스' finds '하네스가'). Set the phrase's time in the cue's
+    "at" (references/narration.md) for anything that must land exactly on the word."""
+    want = [_P.sub('', x).lower() for x in phrase.split()]
+    toks = [_P.sub('', w['w']).lower() for w in ws]
     k = 0
-    for w in ws:
-        if re.sub(r'[^a-z0-9$.]', '', w['w'].lower()) == text.lower():
+    for i in range(len(ws) - len(want) + 1):
+        seg = toks[i:i + len(want)]
+        if seg[:-1] == want[:-1] and seg[-1].startswith(want[-1]):
             k += 1
-            if k == n: return w['t']
-    raise KeyError(text)
+            if k == n: return ws[i]['t']
+    raise KeyError(f'phrase "{phrase}" not in this run: ' + ' '.join(w['w'] for w in ws))
 
 CSS = """
+@font-face{font-family:Pretendard;src:url(assets/PretendardVariable.ttf);font-weight:45 920}
 @font-face{font-family:Figtree;src:url(assets/Figtree-VF.ttf);font-weight:300 900}
 @font-face{font-family:'Geist Mono';src:url(assets/GeistMono-VF.ttf);font-weight:100 900}
 @font-face{font-family:Poppins;src:url(assets/Poppins-Regular.ttf);font-weight:400}
@@ -39,7 +50,7 @@ CSS = """
 --code-comment:#6E717A;--accent:var(--azure);--accent-ink:var(--azure-ink);--accent-wash:var(--azure-wash)}
 #root.acc-ember{--accent:var(--ember);--accent-ink:var(--ember-ink);--accent-wash:var(--ember-wash)}
 html,body{width:1080px;height:1920px;overflow:hidden;background:#111214}
-#root{position:relative;width:1080px;height:1920px;overflow:hidden;font-family:Figtree,sans-serif;color:#fff;font-variant-numeric:tabular-nums}
+#root{position:relative;width:1080px;height:1920px;overflow:hidden;font-family:Pretendard,sans-serif;word-break:keep-all;color:#fff;font-variant-numeric:tabular-nums}
 #ground{position:absolute;inset:0;background:radial-gradient(ellipse 90% 40% at 50% -6%,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 70%),
  linear-gradient(180deg,#18191C 0%,#111214 52%,#0B0C0E 100%)}
 .beam{position:absolute;top:-300px;filter:blur(46px);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,0))}
@@ -57,16 +68,17 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#111214}
 #bd-wash{position:absolute;inset:0;background:#111214;opacity:0;z-index:1}#root.paper #bd-wash{background:#fff}
 video.fg{position:absolute;left:0;top:0;transform-origin:0 0;z-index:3}
 .caret{display:inline-block;width:4px;height:1.05em;background:var(--accent);vertical-align:-0.15em;margin-left:3px;border-radius:2px}
-/* type, from the design system: Figtree 500/600 (display -0.035em, headline -0.03em, title -0.025em), Geist Mono labels.
-   Shorts sizes: nothing under 30 px. */
-.display{font:600 128px/1 Figtree;letter-spacing:-.035em}.h1{font:600 96px/1.02 Figtree;letter-spacing:-.03em}
-.h2{font:600 54px/1.1 Figtree;letter-spacing:-.025em}.sub{font:500 46px/1.15 Figtree;letter-spacing:-.01em;color:var(--accent)}
-.body{font:400 32px/1.4 Figtree;color:var(--text-secondary)}.caption{font:400 30px/1.45 Figtree;color:var(--text-muted)}
-.label{font:500 30px/1.2 'Geist Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)}
+/* type (references/theme.md): Pretendard 500/600 for every word (Korean first; display -0.035em, headline -0.03em,
+   title -0.025em; Hangul reads better a little looser: -0.02em is the floor for Korean lines), Geist Mono labels with
+   Pretendard for their Hangul. Shorts sizes: nothing under 30 px. */
+.display{font:600 128px/1.08 Pretendard;letter-spacing:-.035em}.h1{font:600 96px/1.1 Pretendard;letter-spacing:-.03em}
+.h2{font:600 54px/1.2 Pretendard;letter-spacing:-.025em}.sub{font:500 46px/1.25 Pretendard;letter-spacing:-.01em;color:var(--accent)}
+.body{font:400 32px/1.5 Pretendard;color:var(--text-secondary)}.caption{font:400 30px/1.5 Pretendard;color:var(--text-muted)}
+.label{font:500 30px/1.2 'Geist Mono',Pretendard;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)}
 .label.accent{color:var(--accent)}.label.white{color:#fff}.accent{color:var(--accent)}.secondary{color:var(--text-secondary)}.muted{color:var(--text-muted)}
-.mono{font:500 32px/1.55 'Geist Mono';color:var(--code-text)}.code-k{color:var(--code-keyword)}.code-s{color:var(--code-string)}.code-n{color:var(--code-number)}.code-c{color:var(--code-comment)}
+.mono{font:500 32px/1.55 'Geist Mono',Pretendard;color:var(--code-text)}.code-k{color:var(--code-keyword)}.code-s{color:var(--code-string)}.code-n{color:var(--code-number)}.code-c{color:var(--code-comment)}
 .ink{color:var(--ink)}.ink2{color:var(--ink-2)}
-.pill{display:inline-block;font:500 30px/1.2 'Geist Mono';letter-spacing:.08em;text-transform:uppercase;padding:8px 18px;border-radius:999px;background:var(--accent-wash);color:var(--accent-ink)}
+.pill{display:inline-block;font:500 30px/1.2 'Geist Mono',Pretendard;letter-spacing:.08em;text-transform:uppercase;padding:8px 18px;border-radius:999px;background:var(--accent-wash);color:var(--accent-ink)}
 .pill.mint{background:var(--mint-wash);color:var(--mint-ink)}.pill.ember{background:var(--ember-wash);color:var(--ember-ink)}.pill.neutral{background:var(--paper-2);color:var(--ink-2)}
 .hair{height:1px;background:var(--hairline)}
 /* highlight band on a captured page: under a mix-blend-mode:multiply screenshot (light pages), an azure wash */
@@ -119,9 +131,11 @@ def still(rid, cfg, marks, pad=0.05):
 def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_js=''):
     dur = cfg['dur']
     THUMBS[rid] = still(rid, cfg, cfg.pop('thumb', []))
+    if cfg.get('mode', 'fv') != 'fv':
+        raise SystemExit(f'{rid}: mode {cfg["mode"]!r} - every run is a full visual (mode "fv"); there is no camera to split with')
+    if cfg.get('sfx'):
+        print(f'{rid}: "sfx" ignored - the shorts have no sound effects, only the narration (references/narration.md)')
     split_mask = ''
-    if cfg['mode'] == 'split':
-        split_mask = '#viewport{-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 900px,transparent 1060px);mask-image:linear-gradient(to bottom,#000 0,#000 900px,transparent 1060px)}'
     vid_html = ''
     filters = ['<filter id="mb-world" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur id="mbg-world" stdDeviation="0 0"/></filter>']
     for c in cfg['cards']:
@@ -138,7 +152,7 @@ def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_
             bd_html = f'<img id="bd-img" class="bd" src="{src}" style="width:{fw}px;height:{fh}px;opacity:0">'
         bd_html += '<div id="bd-wash"></div>'
     html = f"""<!doctype html>
-<html lang="en" data-resolution="portrait"><head><meta charset="UTF-8"/><meta name="viewport" content="width=1080, height=1920"/>
+<html lang="ko" data-resolution="portrait"><head><meta charset="UTF-8"/><meta name="viewport" content="width=1080, height=1920"/>
 <script src="gsap.min.js"></script>
 <style>{CSS}{split_mask}{extra_css}</style></head>
 <body>
@@ -155,7 +169,6 @@ def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_
 <script src="engine.js"></script>
 </body></html>"""
     open(f'{OUT}/{rid}.html', 'w', encoding='utf8').write(html)
-    SFX[rid] = cfg.get('sfx', [])
 
 def capture_card(cid, fw, fh, x=540, y=720, inner0=None, inner=(), backdrop=True, land=None, **kw):
     c = dict(id=cid, kind='capture', x=x, y=y, w=1032, h=1040, fw=fw, fh=fh, inner=list(inner), backdrop={'tIn': -1} if backdrop is True else backdrop, bg='#fff', **kw)
@@ -163,14 +176,11 @@ def capture_card(cid, fw, fh, x=540, y=720, inner0=None, inner=(), backdrop=True
     if land: c['land'] = land
     return c
 
-LOGO_HTML = '<img src="assets/claude-logo.svg" style="width:100%;height:100%;display:block">'
-
-
 def logo_html(src):
     return f'<img src="{src}" style="width:100%;height:100%;object-fit:contain;display:block">'
 
 
-# ---- the design system's glossy icon tiles (IconTile) and their glyphs (white, on a 24-unit grid)
+# ---- glossy icon tiles and their glyphs (white, on a 24-unit grid)
 GLYPHS = {
     'code': dict(stroke='M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.2 5.5l-2.4 13'),
     'arrow': dict(stroke='M5 12h13M13 6.5l5.5 5.5-5.5 5.5'),
@@ -184,7 +194,7 @@ GLYPHS = {
 
 
 def tile_html(color='azure', glyph='code', size=140, tilt=-8, svg=None):
-    """a glossy 3D icon tile (Leon YouTube design system): color azure|iris|ember|mint, glyph from GLYPHS, or your own
+    """a glossy 3D icon tile: color azure|iris|ember|mint, glyph from GLYPHS, or your own
     <svg> markup for the glyph (white). Use it inside a card's html or as a 'plain' card's html."""
     g = GLYPHS.get(glyph, GLYPHS['code']); icon = round(size * 0.5)
     paths = ''

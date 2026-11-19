@@ -3,3 +3,6 @@ __pycache__/
 .env
 scripts/narration/node_modules/
 .DS_Store
+assets/fonts/PretendardVariable.ttf
+assets/fonts/Pretendard-OFL.txt
+*.part
