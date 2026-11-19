@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.env
+scripts/narration/node_modules/
+.DS_Store
