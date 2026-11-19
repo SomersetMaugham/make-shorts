@@ -333,7 +333,7 @@ async function sendNote() {
   const text = $('rvText').value.trim(); if (!text) { toast('메모가 비어 있어요', 1200); return; }
   const c = cueAt(noteT), r = D.runs[runAt(noteT)];
   const body = { sk, t: noteT, run: `${sk}_r${r.i}`, rt: noteT - r.T0, cue: c ? c.id : null, line: c ? c.text : '', caption: capsAt(noteT),
-    text, box: noteBox && noteBox.map(Math.round), via: noteVia, mode: $('rvNow').checked ? 'now' : 'batch' };
+    ct: c ? noteT - c.start : null, text, box: noteBox && noteBox.map(Math.round), via: noteVia, mode: $('rvNow').checked ? 'now' : 'batch' };
   closePanel(); if (wasPlaying) play();                // sent while watching: carry on watching
   try { const n = await (await fetch('/api/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
     toast(n.status === 'queued' ? `${n.id} 모아 둠 · 다 보신 뒤 L 목록에서 일괄 수정 요청` : `${n.id} 바로 보냄`, 1800); } catch (e) { toast('보내지 못했어요: 검수 서버가 꺼져 있어요', 2500); }
@@ -375,15 +375,17 @@ async function answer(id, status, text) {
   await fetch('/api/note/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ who: 'user', status, text }) });
   loadNotes();
 }
+// where a note is now: its cue's start + its place in the cue (a re-recording moves the cues; n.t is the old clock)
+const noteAt = (n) => { const c = n.cue && n.ct != null && D.cues.find((q) => q.id === n.cue); return c ? Math.min(c.start + n.ct, c.end) : n.t; };
 function tourNext() {
   // after a batch: each fixed moment once, in time order, then the list for 확인 / 다시
   const n = tour.shift();
   if (!n) { tour = null; loopA = loopB = null; showBox(null); pause(); $('rvList').classList.add('vp-on'); toast('다 봤어요 · 목록에서 확인 / 다시', 2500); return; }
-  loopA = Math.max(0, n.t - 1); loopB = Math.min(duration, n.t + 2); showBox(n.box); seek(loopA);
+  loopA = Math.max(0, noteAt(n) - 1); loopB = Math.min(duration, noteAt(n) + 2); showBox(n.box); seek(loopA);
   toast(`${n.id} · ${n.text.slice(0, 40)}` + (n.replies.length ? ' → ' + n.replies[n.replies.length - 1].text.slice(0, 40) : ''), 2800);
 }
 function startTour() {
-  tour = notesList.filter((n) => n.status === 'done').sort((x, y) => x.t - y.t);
+  tour = notesList.filter((n) => n.status === 'done').sort((x, y) => noteAt(x) - noteAt(y));
   if (!tour.length) { tour = null; return; }
   $('rvList').classList.remove('vp-on'); tourNext(); play();
 }
@@ -392,7 +394,7 @@ async function sendBatch() {
   toast(`메모 ${r.n}개를 한 번에 보냈어요 · 다 고치면 알려 드려요`, 2500); loadNotes();
 }
 function loopNote(n) {
-  loopA = Math.max(0, n.t - 1); loopB = Math.min(duration, n.t + 2); showBox(n.box); seek(loopA); play();
+  loopA = Math.max(0, noteAt(n) - 1); loopB = Math.min(duration, noteAt(n) + 2); showBox(n.box); seek(loopA); play();
   toast(`${n.id} 구간 반복 · Esc로 끝`, 1500);
 }
 function drawList() {
@@ -405,7 +407,7 @@ function drawList() {
   for (const n of [...notesList].reverse()) {
     const [label, col] = ST[n.status] || [n.status, '#aaa'];
     const el = document.createElement('div'); el.className = 'rv-card'; el.style.setProperty('--c', col);
-    el.innerHTML = `<div class="hd"><span>${n.id} · ${fmt(n.t)} · ${esc(n.cue || '')} ${esc(n.run)}</span><span class="st">${label}</span></div>
+    el.innerHTML = `<div class="hd"><span>${n.id} · ${fmt(noteAt(n))} · ${esc(n.cue || '')} ${esc(n.run)}</span><span class="st">${label}</span></div>
       <div style="margin-top:4px">${esc(n.text)}</div>` + n.replies.map((r) => `<div class="rp ${r.who}">${r.who === 'user' ? '나' : '에이전트'}: ${esc(r.text)}</div>`).join('');
     el.querySelector('.hd').onclick = () => loopNote(n);
     if (n.status === 'queued') {                        // still the user's: change or drop it before the batch
@@ -439,7 +441,7 @@ function drawList() {
 function drawPins() {
   $('bar').querySelectorAll('.rv-pin').forEach((p) => p.remove());
   for (const n of notesList) { const p = document.createElement('div'); p.className = 'rv-pin';
-    p.style.left = (n.t / duration) * 100 + '%'; p.style.setProperty('--c', (ST[n.status] || ['', '#aaa'])[1]); p.title = `${n.id}: ${n.text}`; $('bar').appendChild(p); }
+    p.style.left = (noteAt(n) / duration) * 100 + '%'; p.style.setProperty('--c', (ST[n.status] || ['', '#aaa'])[1]); p.title = `${n.id}: ${n.text}`; $('bar').appendChild(p); }
 }
 function badge() {
   const open = notesList.filter((n) => ['open', 'fixing'].includes(n.status)).length;

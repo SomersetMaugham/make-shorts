@@ -75,7 +75,7 @@ def new_note(d):
     with lock:
         notes = load()
         nid = 'n%03d' % (1 + max([int(x['id'][1:]) for x in notes] or [0]))
-        n = dict(id=nid, sk=d['sk'], t=float(d['t']), run=d.get('run', ''), rt=float(d.get('rt', 0)), cue=d.get('cue'),
+        n = dict(id=nid, sk=d['sk'], t=float(d['t']), ct=d.get('ct'), run=d.get('run', ''), rt=float(d.get('rt', 0)), cue=d.get('cue'),
                  line=d.get('line', ''), caption=d.get('caption', ''), text=d['text'].strip(), box=d.get('box'),
                  via=d.get('via', 'text'), status='open' if d.get('mode') == 'now' else 'queued', created=time.strftime('%H:%M:%S'), replies=[], shot=None)
         notes.append(n); save(notes)
