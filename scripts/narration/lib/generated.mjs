@@ -25,7 +25,8 @@ export function projectOf(p) {
   let d = path.resolve(p);
   try { if (!fs.statSync(d).isDirectory()) d = path.dirname(d); } catch { d = path.dirname(d); }
   for (;;) {
-    if (fs.existsSync(path.join(d, 'index.html')) && fs.existsSync(path.join(d, 'script.json'))) return d;
+    // [create-video-shorts] a shorts narration folder has no index.html: script.json + .tts-cache/ make it a project too
+    if (fs.existsSync(path.join(d, 'script.json')) && (fs.existsSync(path.join(d, 'index.html')) || fs.existsSync(path.join(d, '.tts-cache')))) return d;
     const up = path.dirname(d);
     if (up === d) return null;
     d = up;

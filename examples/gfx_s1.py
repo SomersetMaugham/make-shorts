@@ -15,7 +15,7 @@ def build():
              dict(t=t_push, dur=1.2, kind='push', to=dict(x=540, y=880, s=1.1))]   # the 960-wide card must stay inside 1080
     cfg = dict(id='s1_r0', dur=r['dur'], mode='fv', cam0=dict(x=540, y=720, s=1.0), cards=cards,
                moves=moves, heroes=[dict(t=0, id='num')], pushRef=1.02,
-               thumb=[[t_push + 0.4, r['dur']]])
+               thumb=[[0.4, t_push]])            # the landed card before the push (after it the run may already be over once recorded)
     page('s1_r0', cfg)
 
     # R1 [capture]: real page in capture_card; inner camera steps to row, highlight band sweeps in

@@ -15,6 +15,10 @@ Messages in these scripts still name script-to-motion's files (`check.mjs`, `ref
   `lib/browser.mjs` (Playwright) is not copied.
 - `lib/env.mjs`: `SKILL_ENV` goes one folder further up, so the skill's own `.env` is still the skill root's `.env`
   (git-ignored; where a Fish Audio key lives if the user ever asks for Fish).
+- `lib/generated.mjs`: `projectOf` also accepts a folder with `script.json` and `.tts-cache/` (a shorts narration folder
+  has no `index.html`). Without it, tts.mjs never recorded new takes in `generated.json` and then warned that they were
+  "cached before the tools kept it", telling the agent to ask the user about `--record-cache` (found on the first real
+  recording, 2026-11-19).
 
 ## Upstream sha256 at copy time
 - `tts.mjs`  1942000ee5ad2acad8582a82f3973aed00ed9da53613c77e655d574cc7dd50d0
