@@ -72,8 +72,10 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    yourself (`python3 render.py --screenshot …`), then hand the user `work/index.html` and `narration/<sk>/script.txt`,
    list the lines to listen to first once recorded, and **ask whether to record**.
 
-   **The review loop, on the review desk:** start `python3 scripts/review_server.py` (in work/) under a watcher (Claude
-   Code: Monitor on its output; it binds 127.0.0.1 only) and hand the user the `REVIEW http://127.0.0.1:…` link it prints,
+   **The review loop, on the review desk:** start `python3 -u scripts/review_server.py > review/server.log 2>&1` (in work/,
+   in the background, binds 127.0.0.1 only) and watch the log apart from it (Claude Code: Monitor on
+   `tail -n 0 -F review/server.log | grep --line-buffered -E 'NOTE|USER|Error|Traceback'`, re-armed when it expires;
+   a watcher that runs the server itself kills it on expiry) and hand the user the `REVIEW http://127.0.0.1:…` link it prints,
    not the file. On the page the user presses Space while it plays (pause and write; drag on the picture to mark the spot; Enter sends and plays on) or holds V (say it) at
    what needs fixing; each note prints one `NOTE n003 s1 12.34s [c05 · s1_r6 +1.20s] text | box … | shot review/n003.png`
    line, which wakes you. For each: look at the shot, `python3 scripts/review.py status n003 fixing`, fix and rebuild
