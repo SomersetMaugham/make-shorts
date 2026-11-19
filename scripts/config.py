@@ -28,7 +28,7 @@ def ndir(sk):
 
 # The frame's zones (1080x1920), shared by the graphics, the captions, the preview and the thumbnail check:
 # - content: every graphic's content, the main element's bottom edge at about 1360-1400 (y 620 at frame 0 of *_r0: the cover)
-# - caption: the caption band (centre 1520); caption_top: the band for a picture whose content sits low ("caption": "top")
-# - the bottom 310 px (from y 1610) stays empty: YouTube Shorts, TikTok and Reels draw the title, description and music
+# - caption: the caption band (centre 1480; a chip's bottom edge ~1545); caption_top: the band for a picture whose content sits low ("caption": "top")
+# - the bottom 360 px (from y 1560) stays empty: YouTube Shorts, TikTok and Reels draw the title, description and music
 #   over it. No decoration fills it either (the old horizon wave of dots sat there and only took room).
-LAYOUT = dict(content=(140, 1400), caption=(1430, 1610), caption_top=(180, 360), safe_bottom=1610)
+LAYOUT = dict(content=(140, 1395), caption=(1410, 1550), caption_top=(180, 360), safe_bottom=1560)   # caption centre 1480

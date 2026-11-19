@@ -62,7 +62,7 @@ def disp_tokens():
 
 _norm = lambda s: _PUNCT.sub('', s)
 HL = [[_norm(x) for x in h.split()] for h in S.get('highlights', [])]
-MAX_LINE = 900                                # a normal chunk stays on one line inside the 1080 frame
+MAX_LINE = 880                                # a normal chunk stays on one line inside the 1080 frame (with ~100 px margins)
 
 USED_HL = set()
 def hl_at(toks, i):
@@ -75,32 +75,55 @@ def hl_at(toks, i):
         if len(seg) == len(h) and seg[:-1] == h[:-1] and seg[-1].startswith(h[-1]): return k, h
     return None
 
+# Korean words that must not end a chunk when the next word belongs to them: numerals, demonstratives and determiners
+# before a counter or bound noun ("열여섯 개씩", "몇 점쯤", "그 답이", "한 문제에"), and bound nouns that must not start one
+GLUE_BEFORE = set('한 두 세 네 다섯 여섯 일곱 여덟 아홉 열 열한 열두 열여섯 스무 몇 여러 그 이 저 각 모든 어느 무슨 어떤 첫 새 온갖'.split())
+BOUND = re.compile(r'^(개|점|건|번|명|살|줄|것|때|배|초|분|쯤)(씩|만|가|를|의|은|는|과|을|이|쯤|에|지|입니다|이에요)?$')
+CHIP_MIN = 0.9                                 # a keyword chip stays at least this long (its pop takes 0.4 s)
+
+def glued(a, b):
+    """True when a chunk must not break between words a and b ("열여섯 개씩", "몇 점쯤", "그 답이", "잘한 건지")"""
+    return a['d'] in GLUE_BEFORE or BOUND.match(b['d']) is not None
+
+def width(toks):
+    """the drawn width of a chunk: words plus the wider word gaps caption_img uses"""
+    dummy = ImageDraw.Draw(Image.new('L', (1, 1)))
+    gap = dummy.textlength(' ', font=CAP) + 16
+    return sum(dummy.textlength(t['d'], font=CAP) for t in toks) + gap * (len(toks) - 1)
+
 def build_chunks():
     toks = disp_tokens(); chunks = []; i = 0; since = 3
-    dummy = ImageDraw.Draw(Image.new('L', (1, 1)))
     while i < len(toks):
         r = run_at(toks[i]['s'])
         hit = hl_at(toks, i)
         if hit and since >= 2 and (not chunks or not chunks[-1]['hl']):
             USED_HL.add(hit[0]); n = len(hit[1])
-            chunks.append(dict(toks=toks[i:i + n], hl=True)); i += n; since = 0; continue
+            # the chip shows the keyword as written in "highlights" (the noun, no particle: "GRPO", not "GRPO인데")
+            chunks.append(dict(toks=toks[i:i + n], hl=True, label=' '.join(S['highlights'][hit[0]].split()))); i += n; since = 0; continue
         cur = [toks[i]]; i += 1
-        while i < len(toks) and len(cur) < 3:
+        while i < len(toks):
             nt = toks[i]
-            if cur[-1]['p']: break
-            if run_at(nt['s']) is not r: break
-            if nt['line'] != cur[-1]['line']: break                 # a chunk never spans two cues
-            if nt['s'] - cur[-1]['e'] > 0.32: break
-            if dummy.textlength(' '.join(t['d'] for t in cur + [nt]), font=CAP) > MAX_LINE: break
-            if hl_at(toks, i) and since + 1 >= 2: break
+            must = glued(cur[-1], nt)
+            if cur[-1]['p'] or run_at(nt['s']) is not r or nt['line'] != cur[-1]['line']: break   # never across a cue or a cut
+            if not must:
+                if len(cur) >= 3 or nt['s'] - cur[-1]['e'] > 0.32: break
+                if hl_at(toks, i) and since + 1 >= 2: break
+            if width(cur + [nt]) > MAX_LINE: break
             cur.append(nt); i += 1
+        # never leave a numeral or demonstrative at a chunk's end with its noun in the next chunk: move it over
+        while len(cur) > 1 and i < len(toks) and toks[i]['line'] == cur[-1]['line'] and glued(cur[-1], toks[i]):
+            cur.pop(); i -= 1
         chunks.append(dict(toks=cur, hl=False)); since += 1
     for k, c in enumerate(chunks):
-        c['text'] = ' '.join(t['d'] for t in c['toks'])
+        c['text'] = c.get('label') or ' '.join(t['d'] for t in c['toks'])
         c['t0'] = max(1 / FPS, c['toks'][0]['s'])
+        if k and chunks[k - 1]['hl']: c['t0'] = max(c['t0'], chunks[k - 1]['t0'] + CHIP_MIN)   # the chip before it holds
         nxt = chunks[k + 1]['toks'][0]['s'] if k + 1 < len(chunks) else END
         last_e = c['toks'][-1]['e']
         c['t1'] = min(END, nxt if nxt - last_e < 0.5 else last_e + 0.3)
+        if c['hl']: c['t1'] = min(END, max(c['t1'], c['t0'] + CHIP_MIN))
+    for k in range(len(chunks) - 1):                 # a chunk pushed later by a chip still ends before the next starts
+        chunks[k]['t1'] = min(chunks[k]['t1'], max(chunks[k + 1]['t0'], chunks[k]['t0'] + 0.2))
     return chunks
 
 def caption_img(text, hl=False):

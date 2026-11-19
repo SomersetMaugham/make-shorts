@@ -5,7 +5,11 @@ import build_gfx_common as G
 # own module like s1a / s1b). With no tag every scripts/gfx_*.py is built.
 which = sys.argv[1:] or sorted(os.path.basename(f)[4:-3] for f in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gfx_*.py')))
 for w in which:
-    __import__('gfx_' + w).build()
+    mod = __import__('gfx_' + w)
+    try:
+        mod.build()
+    except LookupError as e:                     # a builder that calls words() on a run retired in gfx/runmap.json
+        print(f'gfx_{w}: {e}')
 # several graphics subagents build at once: serialise the read-modify-write of the shared thumbs file with a lock dir
 lock = 'gfx/.thumbs.lock'
 for _ in range(600):

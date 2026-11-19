@@ -14,9 +14,27 @@ for _f in sorted(_glob.glob('gfx/asset_dims*.json')): D.update(json.load(open(_f
 OUT = 'gfx'
 THUMBS = {}  # run id -> thumbnail candidates (run-relative): [a, b] = a window where the hero is landed and the camera at rest, or a time
 
-def words(sk, ri):
-    """the run and its words with run-relative start times (est: the time is a character-position estimate)"""
-    r = C[sk]['runs'][ri]
+# gfx/runmap.json, when a script edit moved the runs: {"s1": {"<number the composition code uses>": <run it is now> | null}}.
+# The code keeps its numbers (words('s1', 4), page('s1_r4', ...)); words() reads the mapped run and page() writes the
+# mapped id; a null skips that composition (its line is gone). Numbers not listed stay as they are.
+RUNMAP = json.load(open('gfx/runmap.json', encoding='utf-8')) if os.path.exists('gfx/runmap.json') else {}
+
+def _mapped(sk, ri):
+    m = RUNMAP.get(sk, {})
+    return m.get(str(ri), ri) if str(ri) in m else ri
+
+def _mapped_id(rid):
+    m = re.match(r'^(.+)_r(\d+)$', rid)
+    if not m: return rid
+    to = _mapped(m.group(1), int(m.group(2)))
+    return None if to is None else f'{m.group(1)}_r{to}'
+
+def words(sk, ri, mapped=True):
+    """the run and its words with run-relative start times (est: the time is a character-position estimate).
+    mapped=False: ri is the run's number now (code written after gfx/runmap.json, which must not be re-mapped)"""
+    to = _mapped(sk, ri) if mapped else ri
+    if to is None: raise LookupError(f'{sk}_r{ri} is retired in gfx/runmap.json')
+    r = C[sk]['runs'][to]
     return r, [dict(w=w['w'], t=round(w['s'] - r['T0'], 3), est=w.get('est', True)) for w in C[sk]['words']
                if r['T0'] - 1e-6 <= w['s'] < r['T1'] - 1e-6]
 
@@ -130,7 +148,10 @@ def still(rid, cfg, marks, pad=0.05):
             else: print(f'{rid}: thumb {m} is all movement; dropped')
     return out
 
-def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_js=''):
+def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_js='', mapped=True):
+    rid = _mapped_id(rid) if mapped else rid
+    if rid is None: return                       # retired by gfx/runmap.json
+    cfg['id'] = rid
     dur = cfg['dur']
     THUMBS[rid] = still(rid, cfg, cfg.pop('thumb', []))
     if cfg.get('mode', 'fv') != 'fv':
