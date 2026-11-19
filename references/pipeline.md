@@ -105,23 +105,27 @@ Graphics rules ([references/graphics.md](graphics.md)):
 
 ---
 
-## 4. Review Copy (The Single User Gate)
+## 4. Browser Preview (The Single User Gate)
 
 ```bash
-bash scripts/finish.sh s1 --draft
+$PY scripts/preview.py            # -> work/index.html (every short; ?s=s2 picks one)
 ```
 
-What `finish.sh --draft` does:
-1. `check_text.py`: verifies that all text is valid UTF-8 without mojibake.
-2. `check_narration.py s1 --draft`: verifies narration state, permitting silent placeholder cues.
-3. `mix.py s1`: outputs silent `<sk>/mix.wav`.
-4. `compose.py s1 --segments --draft`: renders segments using 10 fps draft graphics held to 60 fps with captions and cover.
-5. `compose.py s1 --concat --draft`: produces `chk/s1_draft.mp4`.
+`index.html` stacks each run's live composition (`gfx/<sk>_r<i>.html`) as an iframe and drives it by the narration's
+clock (`narration/<sk>/audio/narration.mp3`, silent before recording), with the captions, keyword chips and cover drawn
+where `compose.py` puts them. It opens from `file://` (the page sends each composition its time by `postMessage`; the
+listener is in every page `build_gfx_common.page()` writes). Keys: space, ←/→ 1 s, shift 5 s, `[`/`]` previous/next run,
+`0` start. The corner shows `<sk>_r<i>` and the time inside the run. No motion blur (that comes from the 240 fps render);
+otherwise it is the short. A graphics fix shows after `build_gfx.py` and a reload.
 
-**User Gate**: Hand over `chk/s1_draft.mp4` and `narration/s1/script.txt` to the user and ask:
-> "Draft review copy and script are ready. Shall I proceed with recording the voiceover?"
+Check it yourself before handing it over (headless Chrome, no extra install):
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=560,1164 \
+  --virtual-time-budget=4000 --screenshot="$PWD/chk/pv_<t>.png" "file://$PWD/index.html?t=<t>&still"
+```
 
-This is the **only question** the skill asks the user.
+**User Gate**: hand over `work/index.html` and `narration/s1/script.txt` and ask whether to record. This is the **only
+question** the skill asks. (`finish.sh s1 --draft` still makes a silent MP4 from the 10 fps drafts when a file is wanted.)
 
 ---
 
@@ -169,7 +173,14 @@ Once the user approves recording:
 
 ---
 
-## 6. Final Assembly and Delivery
+## 6. Final Assembly and Delivery (the user runs render.py)
+
+After recording: `prep.sh`, `build_gfx.py`, `preview.py`; hand over `work/index.html` again. The user renders:
+```bash
+python3 work/render.py s1 01 slug-name     # = render_full.sh for every stale composition, then finish.sh s1 01 slug-name
+python3 work/render.py --list              # which shorts are ready
+```
+The two steps it runs, for reference (run them yourself only when the user asks):
 
 1. **Render full graphics (240 fps)**:
    ```bash

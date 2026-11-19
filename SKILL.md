@@ -65,24 +65,30 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    with a tag. Each follows `references/graphics.md` and `examples/gfx_s1.py`, anchors every time on a phrase
    (`W(ws, '구절')`), marks `thumb` windows, and renders 10 fps drafts with `render_draft.sh` (draft + contact sheet).
    No full renders yet: the recording will re-time everything.
-5. **Review copy:** `bash scripts/finish.sh s1 --draft` → `chk/s1_draft.mp4` (silent, captions and cover on). Look at
-   it, then hand the user every short's review copy and `narration/<sk>/script.txt`, list the lines to listen to first
-   once recorded, and **ask whether to record**.
+5. **Preview in the browser:** `$PY scripts/preview.py` writes `work/index.html`: every short playing in Chrome with
+   its live compositions, captions, chips and cover on the narration's clock (silent before recording). No render is
+   needed, so a graphics fix shows after `build_gfx.py` and a reload. Check it yourself (headless Chrome with `?t=` and
+   `&still`, pipeline.md), then hand the user `work/index.html` and `narration/<sk>/script.txt`, list the lines to listen
+   to first once recorded, and **ask whether to record**.
 6. **Record (on the user's word):** `node scripts/narration/tts.mjs narration/<sk> --approved`; then the after-recording
    pass (`references/narration.md`): read every take (`wave.mjs narration/<sk> --unreviewed`; `autocut.py` drafts a cut
    you correct), set each `cut` (in `narration/<sk>/script.json`), run `phrasing-check.mjs` and fix wrong breaks with
    `[pause short]` in the line's `say` **in shorts.json** (prep.sh copies it over) and `--only` re-takes, set `at` for every keyword chip and every phrase a graphic lands on, read the whole sound for dead air.
-   Then `bash scripts/prep.sh <sk>` and `$PY scripts/build_gfx.py <tags>`: the runs and every graphic follow the takes.
-7. **Finish:** `render_full.sh` (240 fps with motion blur, throttled machine-wide), then
-   `bash scripts/finish.sh s1 NN slug`: check_text, check_narration (no placeholder, no unread take, sync up to date),
-   mix and segments in parallel, concat, `verify_final.py`, thumbnail candidates. Look at `chk/s1_final.png` and
-   `chk/s1_thumbs.png`, pick with `$PY scripts/thumbnail.py s1 --pick <t> NN slug`.
-8. **Deliver:** `edit/short-NN_<slug>/` holds `final.mp4`, `thumbnail.jpg`, `stems/voice.wav`, `script.txt` and
-   `report.md` (spec 7; numbers from `report_data.py <sk>`). `edit/PUBLISH.md` holds the Korean copy for every short
-   (spec 8b); `$PY scripts/check_publish.py` must pass before you hand it over. Tell the user which lines to listen to.
+   Then `bash scripts/prep.sh <sk>`, `$PY scripts/build_gfx.py <tags>` and `$PY scripts/preview.py`: the runs, every
+   graphic and the preview follow the takes. Hand over `work/index.html` again, now with the voice.
+7. **The MP4 is the user's to render:** `python3 work/render.py s1 NN slug` (a copy of `scripts/render.py`): every
+   composition at 240 fps with motion blur (`render_full.sh`, only those newer than their render), then `finish.sh`
+   (check_text, check_narration, the master and the segments, concat, `verify_final.py`, thumbnail candidates, the copy
+   into `edit/short-NN_<slug>/`). Don't run it yourself unless the user asks; prepare everything it needs and say the
+   command. `finish.sh <sk> --draft` (a silent MP4 from the 10 fps drafts) is still there for when a file is wanted.
+8. **Deliver (before the render):** `edit/PUBLISH.md` with the Korean copy for every short (spec 8b;
+   `$PY scripts/check_publish.py` must pass) and the report's narration, script and graphics parts. **After the user's
+   render:** look at `chk/<sk>_final.png` and `chk/<sk>_thumbs.png`, pick the thumbnail
+   (`$PY scripts/thumbnail.py <sk> --pick <t> NN slug`) and finish `report.md` with the numbers of `report_data.py <sk>`.
+   Tell the user which lines to listen to.
 9. **Edits** are incremental: a wording change → `prep.sh` (the cue becomes a placeholder until the user OKs a re-take);
-   a cut or `at` → `prep.sh`; a graphic → `build_gfx.py` + `render_full.sh` for that run; then `finish.sh`, which
-   re-renders only the segments whose inputs changed (pipeline.md "Edits").
+   a cut or `at` → `prep.sh`; a graphic → `build_gfx.py`; then `preview.py` and a reload. The next `render.py`
+   re-renders only the compositions and segments whose inputs changed (pipeline.md "Edits").
 
 ## Things that are easy to get wrong
 Read `references/lessons.md` before improvising. The biggest ones:
@@ -91,7 +97,8 @@ Read `references/lessons.md` before improvising. The biggest ones:
 - **Deciding silence in code.** Cuts and phrase times are yours, read off `wave.mjs`; `autocut.py` is only a draft.
 - **Hard-coded seconds in graphics.** They break the moment the narration is recorded. Anchor on phrases.
 - **Chips at estimated times.** In a recorded short every chip's phrase needs an `at` (check_narration.py warns).
-- **Full renders before the recording.** 240 fps renders wait until the takes fix the timeline.
+- **Rendering the MP4 yourself.** The user checks `index.html` and renders with `render.py`; full renders by the agent
+  only when asked, and never before the recording fixes the timeline.
 - **Korean in a Latin-only font.** Figtree, Geist Mono and Poppins have no Hangul; everything on screen is Pretendard.
 - **Frame 0:** the hero is already on screen when a run cuts in; only supporting cards land later. `*_r0` keeps the top
   620 px clear for the cover.
@@ -101,7 +108,8 @@ Read `references/lessons.md` before improvising. The biggest ones:
 
 ## Files
 - `scripts/`: the pipeline, run inside `work/`. Stage scripts: `setup.sh`, `prep.sh`, `render_draft.sh`,
-  `render_full.sh`, `finish.sh`. Python: `narration_init.py` (shorts.json → narration folders), `timeline.py` (cues →
+  `render_full.sh`, `finish.sh`, and `render.py` (the user's MP4 render; setup.sh copies it into `work/`). Python:
+  `preview.py` (`work/index.html`, the browser preview), `narration_init.py` (shorts.json → narration folders), `timeline.py` (cues →
   cut.json + voice.wav), `brief_runs.py`, `build_gfx.py` / `build_gfx_common.py` (compositions, `W()` phrase anchors),
   `compose.py` (captions, chips, cover, segments, `--draft`), `check_text.py`, `check_narration.py`, `mix.py`,
   `verify_final.py`, `thumbnail.py`, `report_data.py`, `check_publish.py`, `draftsheet.py`, `sheet.py`, `config.py`,

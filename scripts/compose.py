@@ -64,12 +64,15 @@ _norm = lambda s: _PUNCT.sub('', s)
 HL = [[_norm(x) for x in h.split()] for h in S.get('highlights', [])]
 MAX_LINE = 900                                # a normal chunk stays on one line inside the 1080 frame
 
+USED_HL = set()
 def hl_at(toks, i):
     """the highlight that starts at word i: its words as written in "highlights" match the cue words; the last one may
-    carry a particle (하네스 matches 하네스가)"""
-    for h in HL:
+    carry a particle (하네스 matches 하네스가). Each highlight becomes a chip once per short: its first occurrence that the
+    spacing rules allow (a term said six times is not six chips)"""
+    for k, h in enumerate(HL):
+        if k in USED_HL: continue
         seg = [t['d'] for t in toks[i:i + len(h)]]
-        if len(seg) == len(h) and seg[:-1] == h[:-1] and seg[-1].startswith(h[-1]): return h
+        if len(seg) == len(h) and seg[:-1] == h[:-1] and seg[-1].startswith(h[-1]): return k, h
     return None
 
 def build_chunks():
@@ -79,7 +82,8 @@ def build_chunks():
         r = run_at(toks[i]['s'])
         hit = hl_at(toks, i)
         if hit and since >= 2 and (not chunks or not chunks[-1]['hl']):
-            chunks.append(dict(toks=toks[i:i + len(hit)], hl=True)); i += len(hit); since = 0; continue
+            USED_HL.add(hit[0]); n = len(hit[1])
+            chunks.append(dict(toks=toks[i:i + n], hl=True)); i += n; since = 0; continue
         cur = [toks[i]]; i += 1
         while i < len(toks) and len(cur) < 3:
             nt = toks[i]

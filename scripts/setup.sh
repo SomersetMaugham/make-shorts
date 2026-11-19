@@ -43,6 +43,7 @@ cp "$SKILL"/scripts/*.py "$SKILL"/scripts/*.sh "$W/scripts/"
 rm -rf "$W/scripts/narration"; cp -R "$SKILL/scripts/narration" "$W/scripts/narration"
 cp "$SKILL"/assets/gfx/* "$W/gfx/"
 cp "$SKILL"/assets/fonts/*.ttf "$W/fonts/"; cp "$SKILL"/assets/fonts/*.ttf "$W/gfx/assets/"
+cp "$SKILL/scripts/render.py" "$W/render.py"      # the MP4 render the user runs by hand, after checking index.html
 (cd "$W" && "../$PY" scripts/init_project.py "$SKILL_ABS")
 
 # the narration sign-in, as tts.mjs will find it (Google by default: gcloud, no key)

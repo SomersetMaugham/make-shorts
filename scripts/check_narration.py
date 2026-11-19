@@ -77,17 +77,13 @@ else:
     if a != b: errs.append(f'cut.json was built from other cue timings — run: python scripts/timeline.py {sk}')
     else:
         recorded = {c['id'] for c in D['cues'] if c.get('take')}
-        sh = json.load(open('shorts.json', encoding='utf-8'))[sk]
-        toks = cut['words']
-        norm = lambda s: re.sub(r'[\s.,!?·…"\'“”‘’()\[\]-]', '', s)
-        for h in sh.get('highlights', []):
-            first = norm(h.split()[0])
-            hits = [w for w in toks if norm(w['w']).startswith(first)]
-            for w in hits:
-                if w['line'] in recorded and w['est']:
-                    warns.append(f'keyword chip "{h}" ({w["line"]}) lands at an estimated time — set its "at" '
-                                 f'(wave.mjs {nd} --cue {w["line"]} --step 0.01), then sync.mjs and timeline.py')
-                    break
+        # the chips compose.py actually draws (captions.json, written by prep.sh): each starts on a word of the timeline
+        caps = json.load(open(f'{sk}/captions.json', encoding='utf-8')) if os.path.exists(f'{sk}/captions.json') else []
+        for ch in (c for c in caps if c.get('hl')):
+            w = min(cut['words'], key=lambda w: abs(w['s'] - ch['t0']), default=None)
+            if w and abs(w['s'] - ch['t0']) < 0.05 and w['line'] in recorded and w['est']:
+                warns.append(f'keyword chip "{ch["text"]}" ({w["line"]}) lands at an estimated time — set its "at" '
+                             f'(wave.mjs {nd} --cue {w["line"]} --step 0.01), then sync.mjs and timeline.py')
 
 for w in warns: print(f'⚠ {sk}: {w}')
 for e in errs: print(f'✖ {sk}: {e}')

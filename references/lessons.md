@@ -2,6 +2,14 @@
 
 ## Timeline and Narration (Rework Lessons)
 
+- **Spell acronyms as one word in `say`.** "지 알 피 오", "피 피 오", "에이 아이 엠 이" with spaces made Chirp 3 HD break
+  inside them ("지 ‖ 알피오", "에이 아이 엠 ‖ 이"); "지알피오", "피피오", "에이아이엠이" read as one name, and the take
+  got shorter (14.6 s -> 10.0 s). Check with phrasing-check.mjs either way (GRPO short, 2026-11-19).
+- **A highlight is a chip once.** A term repeated in many lines ("GRPO", "평균") became a chip every time (18 chips in
+  2.5 min). compose.py now uses each highlight once; list one entry per moment, written as it appears there.
+- **Read with phrasing-check before trusting your own reading of a pause.** A 0.35 s pause read off wave.mjs as the comma
+  break was, by phrasing-check, after the topic word instead.
+
 - **Run boundaries snap DOWN to the frame**:
   In `scripts/timeline.py`, run boundary cuts snap to the video frame using floor rounding:
   ```python
@@ -19,6 +27,10 @@
 ---
 
 ## HyperFrames and Rendering
+
+- **engine.js must not assume the HyperFrames runtime.** It wrote `window.__timelines[id]` and threw in a plain browser,
+  where that object doesn't exist, so `__render` was never set and the preview froze every composition at t = 0. It now
+  creates the object when missing.
 
 - **Standalone compositions**:
   Render compositions with `hyperframes render -c file.html`. HyperFrames `snapshot` only inspects `index.html`. Always use 10 fps draft renders (`render_draft.sh`) and contact sheets (`chk/<rid>_sheet.png`) for rapid development and inspection.

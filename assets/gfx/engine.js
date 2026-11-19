@@ -288,6 +288,7 @@
   Object.defineProperty(st, 't', { get() { return this._t; }, set(v) { this._t = v; render(v); } });
   const tl = gsap.timeline({ paused: true });
   tl.fromTo(st, { t: 0 }, { t: cfg.dur, duration: cfg.dur, ease: 'none' }, 0);
+  window.__timelines = window.__timelines || {};   // HyperFrames provides it; a plain browser (index.html preview) does not
   window.__timelines[cfg.id] = tl;
   window.__render = render; window.__camAt = camAt;
   render(0);

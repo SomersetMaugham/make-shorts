@@ -167,6 +167,9 @@ def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_
 <script>window.CFG={json.dumps(cfg)};</script>
 <script>{extra_js}</script>
 <script src="engine.js"></script>
+<script>/* the browser preview (index.html, preview.py) drives this page by message: works from file://, where a parent
+   page may not touch an iframe's window; HyperFrames renders never send it */
+window.addEventListener('message', function (e) {{ var d = e.data; if (d && typeof d.hfT === 'number' && window.__render) window.__render(d.hfT); }});</script>
 </body></html>"""
     open(f'{OUT}/{rid}.html', 'w', encoding='utf8').write(html)
 

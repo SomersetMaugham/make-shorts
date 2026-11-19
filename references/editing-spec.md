@@ -17,9 +17,11 @@ WORK AUTONOMOUSLY — WITH ONE QUESTION
 - Every judgement call (which facts, which moments, scenes, a source that disagrees, a UI behind a login) is yours: make
   the best call, keep going, and log it in the report.
 - The one decision that is not yours is **recording the narration**: it is the user's decision and their quota
-  (script-to-motion's rule). Build every short completely on silent placeholders, hand over the review copy
-  (`finish.sh <sk> --draft`) with the script (`narration/<sk>/script.txt`), and ask whether to record. Don't ask anything
-  else, and don't stop earlier to get lines approved.
+  (script-to-motion's rule). Build every short completely on silent placeholders, hand over the browser preview
+  (`work/index.html`, written by `preview.py`) with the script (`narration/<sk>/script.txt`), and ask whether to record.
+  Don't ask anything else, and don't stop earlier to get lines approved.
+- **The MP4 is rendered by the user**, with `work/render.py`, after checking the preview in Chrome (script-to-motion's
+  shape: the page first, the file on request). The agent prepares everything the render needs and says the command.
 - If something fails, try another way (a different tool, method or fallback) rather than stopping. A missing tool is not
   a reason to stop: install it locally or use an alternative.
 - If a real product UI is behind a login, rebuild it from public screenshots or docs and note it in the report.
@@ -118,7 +120,8 @@ that moves through it.
   never across two cues, Pretendard 700 74 px, white, a 10 px graphite stroke, no box, one line. After every 2-3 normal
   chunks, one meaningful word or phrase (a product name, a number, the answer) becomes a keyword chip (shorts.json
   `highlights`, written as in the text; the last word may stop before a particle). Never two chips in a row, never
-  particles or connectives alone. In a recorded short every chip's phrase has an `at` (check_narration.py warns).
+  particles or connectives alone. Each highlight is a chip once per short (its first occurrence the spacing allows): list
+  one entry per moment, written as it appears there (e.g. "가치 모델이라고"), not a term that recurs in every line. In a recorded short every chip's phrase has an `at` (check_narration.py warns).
 - Position: the lower third, y 1290-1560; `"caption": "top"` on a line moves its run's captions to y 365-634 for a
   picture whose content sits low. A caption never covers the visual's main element.
 - No CTA card. The short ends on its payoff line and the end hold; there is no "watch the full video", no comment box,
