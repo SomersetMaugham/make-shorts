@@ -6,3 +6,4 @@ scripts/narration/node_modules/
 assets/fonts/PretendardVariable.ttf
 assets/fonts/Pretendard-OFL.txt
 *.part
+test-output/
