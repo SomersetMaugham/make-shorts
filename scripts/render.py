@@ -50,7 +50,7 @@ if '--screenshot' in flags_all:
     def shoot(t):
         f = os.path.abspath(os.path.join(out_dir, f'{t:08.3f}.png'))
         subprocess.run([chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', f'--window-size={w},{h}',
-                        '--virtual-time-budget=4000', f'--screenshot={f}', f'{url}?s={sk}&t={t}&still'],
+                        '--virtual-time-budget=8000', f'--screenshot={f}', f'{url}?s={sk}&t={t}&still'],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return f
     with ThreadPoolExecutor(max(1, jobs)) as ex: files = list(ex.map(shoot, ts))

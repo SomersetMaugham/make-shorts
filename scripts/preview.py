@@ -155,8 +155,10 @@ function tick() {
   if (playing) {
     t = D.audio && !aud.paused ? aud.currentTime : anchorT + (now() - anchorPerf) * rate;
     if (t >= duration) { t = duration; pause(); }
-    render();
   }
+  // every frame, playing or not: a composition that finished loading late (or a headless screenshot) still gets the
+  // current time, so a paused frame is never stale
+  if (loaded >= D.runs.length) render();
   requestAnimationFrame(tick);
 }
 const runAt = (x) => { for (let k = 0; k < D.runs.length; k++) if (x < D.runs[k].T1 - 1e-6) return k; return D.runs.length - 1; };
