@@ -215,5 +215,5 @@ P3·P4(timeline.py, compose.py)와 사양 재작성은 판단이 많아 직접 �
 | P3 신규 스크립트 | 완료 | timeline.py 추정 = player.js about() (500건, 최대 0.5 ms) |
 | P4 하류 수정 | 완료 | 빈 폴더 종단 시험: setup → prep → draft → (합성 톤 테이크) cut·at·sync → 재빌드 → 240 fps → finish → 썸네일 → 리포트 → check_publish. 버그 2건 수정(런 경계 내림, 리미터 후 음량 보정) |
 | P5 문서 | 완료 | 참고 문서 4개 + 템플릿 + 예시는 agy 초안(Gemini 3.8 Flash) → 검수·수정. 예시 그래픽은 빌드·드래프트 렌더로 확인 |
-| P6 실녹음 시험 | **대기: 사용자 승인 필요** (Google TTS 쿼터) |
-| P7 설치 교체 | **대기: 사용자 확인 필요** |
+| P6 실녹음 시험 | 완료 | Google Chirp 3 HD 4줄 녹음 → wave 판독·컷·phrasing-check(c04 끊어 읽기 오류 → [pause short] 재녹음) → at 5개 → 무음 판독 → 240 fps → finish (−14.3 LUFS, −1.5 dBTP). 버그 1건 수정(generated.json 미기록) |
+| P7 설치 교체 | 완료 | 기존 설치본 → ~/.claude/skill-backups/create-video-shorts-20261119 (스킬 폴더 안에 두면 같은 이름 스킬이 둘로 잡혀서 밖으로 옮김). ~/.claude/skills/create-video-shorts → 이 저장소(main) 심볼릭 링크. 설치 경로로 setup.sh 통과 |
