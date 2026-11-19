@@ -11,6 +11,8 @@ How to read them here:
 - "the storyboard", "scenes.js", "cue(id).when()" are script-to-motion's: here the plan is `shorts.json`, the scenes are
   the graphics compositions, and phrase anchors are `W(ws, '<phrase>')` (references/graphics.md).
 - References to other script-to-motion files (sound.md, google-tts.md, fish-audio.md) are in references/narration.md.
+- Other script-to-motion files it names (claude-roles.md, player-api.md, footage.md, sponsored.md, `<skill>/scripts/…`)
+  are not part of this skill; the narration tools are in `scripts/narration/`.
 - The cold-listener review is a subagent that has never seen the project: give it only `narration/<sk>/script.txt`.
 
 ---
