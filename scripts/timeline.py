@@ -41,7 +41,8 @@ def js_data(path, var):
 
 
 def fr(t):
-    return round(t * FPS) / FPS
+    """the frame a picture cut lands on: at or just before t, so a line's first word is never heard before its run starts"""
+    return math.floor(t * FPS + 1e-6) / FPS
 
 
 def cue_words(c, sync):

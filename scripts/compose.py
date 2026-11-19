@@ -306,8 +306,9 @@ def gfx_reader(i, start=None, count=None):
         yield from reader(path, start=start, count=count); return
     rep = FPS // GFX_FPS                                      # each draft frame stands for 6 output frames
     j = start or 0; d = j // rep
-    p = subprocess.Popen(['ffmpeg', '-v', 'error', '-ss', f'{d / GFX_FPS:.6f}', '-i', path, '-vf', f'scale={Wc}:{Hc}',
-                          '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], stdout=subprocess.PIPE)
+    lim = ['-frames:v', str((j + count - 1) // rep - d + 1)] if count else []   # stop ffmpeg after the frames needed
+    p = subprocess.Popen(['ffmpeg', '-v', 'error', '-ss', f'{d / GFX_FPS:.6f}', '-i', path, '-vf', f'scale={Wc}:{Hc}'] + lim +
+                         ['-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], stdout=subprocess.PIPE)
     n = Wc * Hc * 3
     def nxt(prev):
         b = p.stdout.read(n)
