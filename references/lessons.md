@@ -38,6 +38,12 @@
 
 - **Headless Chrome keeps the window at least ~500 px wide.** A 360 px screenshot of index.html laid the page out at
   500 px and cropped it; render.py --screenshot shoots at 540 px or wider.
+- **Stopping render.py used to leave the renders running.** render.py ran render_full.sh as a plain child; Ctrl-C
+  stopped render.py, while each composition's subshell, npx, hyperframes and Chrome kept capturing and writing the same
+  gfx/png240 and gfx/out60 files as the next run, so two runs mixed 240 fps and 60 fps output (PN short, 2026-11-20).
+  render.py now runs each step in its own process group and, on Ctrl-C, a closed terminal or TERM, stops the group and
+  every descendant (Chrome may sit in a group of its own), KILL after 8 s. A composition is marked `pending` before the
+  step and gets its fps mark only after it, so a stopped run's half-written MP4s render again.
 - **The 240 fps capture is inherited, not measured.** It came from the original spec ("240 fps, blend 3 of every 4"); it
   quadruples capture time. render_full.sh takes RENDER_FPS=240|120|60 (render.py --fps); engine.js's own viewport blur
   is computed from the camera's time derivative, so it is the same at every capture rate. Compare before changing the

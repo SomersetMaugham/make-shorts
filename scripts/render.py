@@ -100,10 +100,65 @@ if '--list' in flags or not args:
 sk = args[0]; rest = args[1:3]
 if sk not in C: raise SystemExit(f'no short {sk} in cut.json (have: {", ".join(C)})')
 t0 = time.time()
+def _tree(root):
+    """root and every process below it (POSIX: from ps), children first in the walk"""
+    try: rows = subprocess.run(['ps', '-A', '-o', 'pid=,ppid='], capture_output=True, text=True).stdout.split('\n')
+    except OSError: return [root]
+    kids = {}
+    for row in rows:
+        f = row.split()
+        if len(f) == 2: kids.setdefault(int(f[1]), []).append(int(f[0]))
+    out, todo = [], [root]
+    while todo:
+        p = todo.pop(); out.append(p); todo += kids.get(p, [])
+    return out
+
+
+def _stop(proc):
+    """Stop a step and everything it started. render_full.sh runs one subshell per composition, each with npx, the
+    hyperframes node process and Chrome; when only render.py was stopped they kept capturing and writing the same
+    files as the next run (PN short, 2026-11-20). The step runs in its own process group: TERM the group and every
+    descendant found by ps (Chrome may sit in a group of its own), give them 8 s to close, then KILL what is left."""
+    if proc.poll() is not None: return
+    if os.name == 'nt':
+        subprocess.run(['taskkill', '/T', '/F', '/PID', str(proc.pid)], capture_output=True); return
+    import signal
+    pids = _tree(proc.pid)
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try: os.killpg(proc.pid, sig)
+        except OSError: pass
+        for p in pids:
+            try: os.kill(p, sig)
+            except OSError: pass
+        if sig == signal.SIGTERM:
+            for _ in range(80):
+                if not any(_alive(p) for p in pids): return
+                time.sleep(0.1)
+
+
+def _alive(pid):
+    try: os.kill(pid, 0); return True
+    except OSError: return False
+
+
 def step(name, cmd, env=None):
     print(f'\n== {name}', flush=True)
-    r = subprocess.run(cmd, env=dict(env or os.environ, CVS_RENDER='1'))   # the MP4 steps run only from here
-    if r.returncode: raise SystemExit(f'{name} failed (exit {r.returncode}); nothing after it ran')
+    kw = dict(creationflags=subprocess.CREATE_NEW_PROCESS_GROUP) if os.name == 'nt' else dict(start_new_session=True)
+    proc = subprocess.Popen(cmd, env=dict(env or os.environ, CVS_RENDER='1'), **kw)   # the MP4 steps run only from here
+    try:
+        rc = proc.wait()
+    except BaseException:          # Ctrl-C, a closed terminal (SIGHUP is turned into this below), any error
+        print(f'\n== stopping {name} and everything it started ...', flush=True)
+        _stop(proc)
+        raise SystemExit(f'{name} stopped; nothing after it ran. Run render.py again: unfinished compositions render again')
+    if rc: raise SystemExit(f'{name} failed (exit {rc}); nothing after it ran')
+
+
+if os.name != 'nt':                # closing the terminal sends SIGHUP: stop the step like Ctrl-C instead of leaving it
+    import signal
+    def _hup(*_): raise KeyboardInterrupt
+    signal.signal(signal.SIGHUP, _hup)
+    signal.signal(signal.SIGTERM, _hup)
 
 ids = [f'{sk}_r{r["i"]}' for r in C[sk]['runs']]
 if '--skip-graphics' not in flags:
@@ -113,6 +168,8 @@ if '--skip-graphics' not in flags:
                 or (open(mark).read().strip() if os.path.exists(mark) else '240') != fps)
     todo = [i for i in ids if stale(i)]
     if todo:
+        for i in todo:             # 'pending' until the whole step has finished: a stopped run leaves its half-written
+            open(f'gfx/out60/{i}.fps', 'w').write('pending')   # MP4s marked pending, and the next run renders them again
         step(f'graphics: {len(todo)} of {len(ids)} compositions at {fps} fps', ['bash', 'scripts/render_full.sh', *todo],
              env=dict(os.environ, RENDER_FPS=fps))
         for i in todo: open(f'gfx/out60/{i}.fps', 'w').write(fps)
