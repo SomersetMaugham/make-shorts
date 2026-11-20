@@ -3,12 +3,16 @@ tts.mjs reads. One shorts.json line = one cue (≈ one sentence).
 usage: python scripts/narration_init.py [s1 s2 ...]        (every short in shorts.json when none is given)
 
 What comes from shorts.json, per line: id, text (shown: captions), say (spoken: numbers, units and English terms in
-spoken Hangul, [pause short] where Chirp 3 HD breaks wrongly; defaults to text), gapAfter (optional).
+spoken Hangul, [pause short] where Chirp 3 HD breaks wrongly; defaults to text), gapAfter and noPause (optional).
+Every comma in say gets a [pause short] after it here, before any recording (Chirp 3 HD ran on through 16 of 19 commas
+on the PN short and the user had to find them by ear; references/narration.md §3). A comma already followed by a tag
+keeps it, and so does a line already in script.json with the same untagged say (a take recorded before this rule
+stays valid). Off for one line: "noPause": true on the shorts.json line; off for a short: "autoPause": false in script.json.
 What is never touched once it is in script.json: every cue's "cut" and "at" (the agent read them off the takes; they
 belong to a take) and the top-level narration settings ("tts", "voice", "narration", "leadIn", "gap", "tail" ...),
 so a re-run after a wording change keeps everything the takes already have. A cue whose say changed gets a new take
 on the next recording and tts.mjs reports its cut as not applied (references/narration.md)."""
-import json, os, sys
+import json, os, re, sys
 
 sys.path.insert(0, 'scripts'); import config as C
 
@@ -23,6 +27,13 @@ DEFAULTS = {
     'tail': 1.5,      # the end hold after the last line (not dead air)
 }
 
+COMMA = re.compile(r'(?<!\d),(?!\d)(?!\s*\[pause)\s*(?=\S)')   # not 1,000; not one already tagged; not at the end
+
+
+def auto_pause(say):
+    return COMMA.sub(', [pause short] ', say)
+
+
 for sk in sys.argv[1:] or list(S):
     sh = S[sk]
     d = C.ndir(sk); os.makedirs(d, exist_ok=True)
@@ -36,9 +47,13 @@ for sk in sys.argv[1:] or list(S):
     for L in sh['lines']:
         c = dict(prev.get(L['id'], {}))
         say = L.get('say') or L['text']
+        # new or reworded lines only: a line whose say is already in script.json untagged keeps it (its take stays good)
+        if out.get('autoPause', True) and not L.get('noPause') and c.get('say') != say: say = auto_pause(say)
         if c and (c.get('say') != say or c.get('text') != L['text']): changed.append(L['id'])
         c.update(id=L['id'], text=L['text'], say=say)
         if 'gapAfter' in L: c['gapAfter'] = L['gapAfter']
+        if L.get('noPause'): c['noPause'] = True
+        else: c.pop('noPause', None)
         cues.append(c)
     gone = [i for i in prev if i not in {c['id'] for c in cues}]
     out['cues'] = cues

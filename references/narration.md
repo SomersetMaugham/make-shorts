@@ -354,6 +354,11 @@ cues had it. Extra commas do not help, a plain re-take is a coin flip, and "..."
   no tag.
 - **A break where there is no comma** ("바다 ‖ 바닥에"): join the words in `say` only (`바다바닥에`).
 - **A pause the user asks for** ("'양도 강이' 사이에 쉼표"): `"양도, [pause short] 강이"` in `say`, and the comma in `text`.
+- **Done before recording** (2026-11-20): `narration_init.py` puts `[pause short]` after every comma in a new or reworded
+  line's `say`. On the PN short Chirp ran on through 16 of 19 commas, and the breaks found after recording cost the user
+  more review notes than anything else (11 of 19 notes over three shorts were pauses). So tag first and record once.
+  A line whose commas should not pause: `"noPause": true` on its shorts.json line; a whole short: `"autoPause": false`
+  in script.json. A line already recorded with an untagged `say` keeps it.
 - The user confirmed the result: "다른 부분은 거의 완벽할 정도로 고쳐졌어요."
 
 ## 4. Checking the breaks (you can't hear)
@@ -362,7 +367,14 @@ cues had it. Extra commas do not help, a plain re-take is a coin flip, and "..."
 
 It cuts each audio/cues/<id>.wav at its silences (−42 dB, ≥ 0.15 s) and has Speech-to-Text v2, model chirp_2
 (us-central1), read each piece, printing `piece ‖pause‖ piece` under the cue's `say`. A comma with no ‖ after it, or a
-‖ inside a phrase, is a wrong break. Needs `gcloud services enable speech.googleapis.com` once (60 min a month free).
+‖ inside a phrase, is a wrong break. Under each cue it prints a **verdict** (`판정: ok` or
+`판정: MISSING "걸면," 쉼 없음`): it lines the heard text up with `say` and checks for a silence at every comma, tag and
+sentence end (≥ 0.15 s; `[pause]` ≥ 0.4 s, `[pause long]` ≥ 0.7 s). It exits 1 when one is missing and writes the
+verdicts to `<dir>/phrasing.json`; `check_narration.py` refuses the hand-off while a recorded cue's current take and cut
+has no verdict or a MISSING one. Do not read the printout instead of the verdict: reading it by eye, three missing
+pauses were passed over on the PN short and the user found them. A ‖ inside a phrase is still yours to read (a natural
+breath before a long phrase is fine; "지 ‖ 알피오" is not). A pause the user heard and accepted: `"phrasingOk": true` on
+the cue in script.json. Needs `gcloud services enable speech.googleapis.com` once (60 min a month free).
 This is the one speech-to-text use the user allowed: only where the pauses fall, never to judge words or delivery.
 Do not read the STT word timestamps instead: in v1 and v2 they shift by about a word around a pause.
 
@@ -372,9 +384,10 @@ Do not read the STT word timestamps instead: in v1 and v2 they shift by about a 
 2. `node <skill>/scripts/tts.mjs <dir> --approved --only <ids>` (the user's report or OK is the decision).
 3. Cuts for the new takes: `python3 <skill>/scripts/autocut.py <dir> <id,id,…>` writes a first draft of each cut
    (lead to 0.06 s before speech, 0.10 s tail, interior −50 dB runs over 0.35 s down to ~0.27 s; it matched hand cuts
-   within 0.1 s). The cut is still yours (SKILL.md: no code decides where silence is): read each take with
+   within 0.1 s). A `[pause]` / `[pause long]` in `say` keeps the line's longest silence(s) at 0.55 s / 0.8 s: cut to
+   0.27 s, the asked-for pause was heard as none (PN a03). The cut is still yours (SKILL.md: no code decides where silence is): read each take with
    `wave.mjs <dir> --cue <id>` and correct the numbers before keeping them.
-4. `tts.mjs <dir> --approved` (applies the cuts), then `phrasing-check.mjs` on those cues; repeat for what is left.
+4. `tts.mjs <dir> --approved` (applies the cuts), then `phrasing-check.mjs` on those cues; repeat until it exits 0.
 5. Dead-air scan, `check.mjs`, then ask the user to listen — intonation and speed are not checked by any of this.
 
 ---

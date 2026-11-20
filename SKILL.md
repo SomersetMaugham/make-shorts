@@ -107,7 +107,8 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    The loop runs until the user says the review is complete. Only then is an MP4 made, and the user makes it.
 6. **Record (on the user's word):** `node scripts/narration/tts.mjs narration/<sk> --approved`; then the after-recording
    pass (`references/narration.md`): read every take (`wave.mjs narration/<sk> --unreviewed`; `autocut.py` drafts a cut
-   you correct), set each `cut` (in `narration/<sk>/script.json`), run `phrasing-check.mjs` and fix wrong breaks with
+   you correct), set each `cut` (in `narration/<sk>/script.json`), run `phrasing-check.mjs` until its verdict is ok
+   for every cue (commas are tagged before recording; check_narration.py refuses a MISSING) and fix wrong breaks with
    `[pause short]` in the line's `say` **in shorts.json** (prep.sh copies it over) and `--only` re-takes, set `at` for every keyword chip and every phrase a graphic lands on, read the whole sound for dead air.
    Then `bash scripts/prep.sh <sk>`, `$PY scripts/build_gfx.py <tags>` and `$PY scripts/preview.py`: the runs, every
    graphic and the preview follow the takes. Hand over `work/index.html` again, now with the voice, and run the review

@@ -20,6 +20,12 @@ Messages in these scripts still name script-to-motion's files (`check.mjs`, `ref
   "cached before the tools kept it", telling the agent to ask the user about `--record-cache` (found on the first real
   recording, 2026-11-19).
 
+- `phrasing-check.mjs`: prints a verdict per cue (`lib/breaks.mjs`, local: lines the heard text up with `say` and
+  checks every comma, pause tag and sentence end for a silence), writes `<dir>/phrasing.json` and exits 1 on a missing
+  pause (2026-11-20). It also reads `js/cues.js` for each cue's take, so the verdict goes stale when the take changes.
+- `autocut.py`: a `[pause]` / `[pause long]` in `say` keeps the longest silence(s) at 0.55 / 0.8 s instead of 0.27 s
+  (2026-11-20, PN a03). Lines without those tags are cut exactly as upstream cuts them.
+
 ## Upstream sha256 at copy time
 - `tts.mjs`  1942000ee5ad2acad8582a82f3973aed00ed9da53613c77e655d574cc7dd50d0
 - `wave.mjs`  7c87578787812a023f953c68d1341c47b452b52fd19f94d425ad4c4ed2b77039

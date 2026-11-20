@@ -8,6 +8,9 @@ Errors (exit 1):
 - a recorded take has no cut yet (unreviewed: true): read it with wave.mjs and set its "cut" ("ranges": [] when nothing goes)
 - js/sync.js does not say what script.json "at" sets (sync.mjs was not re-run), or an "at" belongs to an older take
 - cut.json[sk] was built from other cue timings (timeline.py was not re-run)
+- Google voice: a recorded cue whose pauses were not checked on its current take and cut, or whose last check found a
+  comma, tag or sentence end with no pause (narration/<sk>/phrasing.json, written by phrasing-check.mjs). The user
+  heard it and accepted it: "phrasingOk": true on the cue in script.json.
 Warnings: a keyword chip (shorts.json "highlights") whose first word sits in a recorded cue at an estimated time — chips
 land on the word, so set the phrase's time in "at" (wave.mjs --cue <id> --step 0.01) and run sync.mjs + timeline.py."""
 import json, os, re, subprocess, sys
@@ -67,6 +70,27 @@ sync = js_data(f'{nd}/js/sync.js', 'SYNC') if os.path.exists(f'{nd}/js/sync.js')
 have = {i: v.get('phrases', {}) for i, v in sync.items()}
 if have != now['phrases']:
     errs.append(f'js/sync.js does not say what script.json "at" sets — run: {C.NODE} {C.NARRATION}/sync.mjs {nd}')
+
+# pauses: phrasing-check.mjs's verdict on each recorded cue's current take and cut (Chirp skips most commas)
+if script.get('tts', {}).get('provider', 'google') == 'google':
+    pj = f'{nd}/phrasing.json'
+    PJ = json.load(open(pj, encoding='utf-8')) if os.path.exists(pj) else {}
+    sc = {c['id']: c for c in script['cues']}
+    stale, missing = [], []
+    for c in D['cues']:
+        s_ = sc.get(c['id'], {})
+        if not c.get('take') or s_.get('phrasingOk'): continue
+        v = PJ.get(c['id'])
+        if not v or v.get('take') != c['take'] or v.get('cut') != s_.get('cut') or v.get('say') != s_.get('say'):
+            stale.append(c['id'])
+        elif v.get('missing') or v.get('unknown'):
+            missing.append(f"{c['id']} " + (v['unknown'] or ', '.join(f'"{m["word"]}"' for m in v['missing'])))
+    if stale:
+        errs.append(f'pauses not checked on the current take/cut: {", ".join(stale)} — run: {C.NODE} '
+                    f'{C.NARRATION}/phrasing-check.mjs {nd} {" ".join(stale)}')
+    if missing:
+        errs.append('missing pause (phrasing-check): ' + '; '.join(missing) + ' — tag it in say ([pause short]), re-take '
+                    '--only, recut; or "phrasingOk": true on the cue if the user heard it and accepted it')
 
 cut = json.load(open('cut.json', encoding='utf-8')).get(sk) if os.path.exists('cut.json') else None
 if not cut:
