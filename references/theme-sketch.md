@@ -23,7 +23,8 @@ step by step; every run, the captions, the chips and the cover follow. One look 
 - **Type**: Gaegu Bold for every Korean word and running text; Architects Daughter for the schematic's labels (pin
   names, CONTROL, OUT, +3V, R, C, E), uppercase like the textbook. Sizes on 1080x1920: title 92–116, annotation 52–64,
   labels 54–70, payoff word 80–96, nothing under 44 (the handwriting is thinner than Pretendard: 44 is the floor here,
-  not 30). A slight rotation (−1° to −5°) on handwritten text; labels straight.
+  not 30). Gaegu reads smaller than its px size (the director read 52 px annotations as ~40 px on the PN short):
+  annotations 60 px or more, key words 64–84. A slight rotation (−1° to −5°) on handwritten text; labels straight.
 - **Captions, chips, cover** (compose.py and preview.py when the theme is sketch): captions in Gaegu 78 ink on a
   highlighter stroke (no outline); a keyword chip is the word in red Gaegu 88 on a stronger highlighter with a red pen
   line drawn in beneath; the cover is the title in Gaegu (up to 120, fitted to 880 px) in ink, each line on a

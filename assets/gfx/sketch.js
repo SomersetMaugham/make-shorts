@@ -15,12 +15,15 @@
      S.res(x1,y1,x2,y2,{s})  S.cap(x1,y1,x2,y2)  S.gnd(x,y,s)  S.vcc(x,y,label)  S.port(x,y,dir,fill)  S.diode(x1,y1,x2,y2)
      S.npn(cx,cy,s,{emit}) -> {B,C,E,bar}   S.pnp(cx,cy,s) -> {B,C,E}   S.chip(x,y,w,h,{name,left:[...],right:[...]}) -> pins
      S.arrow(pts,col,w)  S.strike(x,y,w,h)  S.marker(x,y,str,size,maxW)  S.note(x,y,w,h,lines)
+   Matter: S.atom(cx,cy,label) S.lattice(x0,y0,cols,rows,pitch,{cell}) S.electron S.hole S.ion(x,y,'+'|'-') S.band S.hill
+     S.battery(x,y,dir) S.led(x1,y1,x2,y2,{on}) S.glow S.chair(x,y,{empty}) S.person(x,y)
+   Motion: S.layer(() => {...}, ox, oy) -> layer; S.move(layer, [[t, dx, dy, scale], ...])
    Colours: S.INK S.RED S.BLUE S.ORANGE S.GRAY S.HL; S.o({...}) gives rough options with the theme's defaults. */
 (function () {
   const NS = 'http://www.w3.org/2000/svg';
   const INK = '#22201c', RED = '#d4382c', BLUE = '#2a5db0', ORANGE = '#f08a2c', GRAY = '#8a857b', HL = 'rgba(255,208,0,.55)';
   const S = { INK, RED, BLUE, ORANGE, GRAY, HL };
-  let svg, g, rc, seed, ITEMS, CUR, built = false;
+  let svg, g, rc, seed, ITEMS, CUR, MOVES, built = false;
 
   function reset() {
     const world = document.getElementById('world');
@@ -30,7 +33,7 @@
     svg.style.cssText = 'position:absolute;left:0;top:0;overflow:visible';
     svg.innerHTML = '<defs></defs><g></g>';
     world.appendChild(svg);
-    g = svg.lastChild; rc = rough.svg(svg); seed = 11; ITEMS = []; CUR = { t0: 0, d: 0.5, kind: 'draw' };
+    g = svg.lastChild; rc = rough.svg(svg); seed = 11; ITEMS = []; MOVES = []; CUR = { t0: 0, d: 0.5, kind: 'draw' };
   }
   const o = S.o = (x = {}) => ({ roughness: 1.1, bowing: 1.2, strokeWidth: 5, stroke: INK, seed: seed++, ...x });
   const add = S.add = (n) => { g.appendChild(n); ITEMS.push({ n, ...CUR }); return n; };
@@ -131,6 +134,86 @@
     lines.forEach(([s, size = 54, fill = INK], i) => S.text(x + 30, y + 70 + i * (size + 16), s, size, { fill, rot: -2 }));
   };
 
+  /* ---- layers that move: S.layer(() => {...}) groups what is drawn inside; S.move(layer, [[t, dx, dy, s], ...])
+     slides (and scales about its origin) the whole group through the keyframes, eased in and out between them ---- */
+  S.layer = (fn, ox = 0, oy = 0) => {
+    const lg = document.createElementNS(NS, 'g'), parent = g; parent.appendChild(lg); g = lg;
+    try { fn(); } finally { g = parent; }
+    return { g: lg, ox, oy };
+  };
+  S.move = (layer, keys) => { MOVES.push({ layer, keys: keys.map((k) => [k[0], k[1] || 0, k[2] || 0, k[3] == null ? 1 : k[3]]) }); return layer; };
+  function moveAt(m, t) {
+    const K = m.keys; let k = K[0];
+    if (t <= K[0][0]) k = K[0]; else if (t >= K[K.length - 1][0]) k = K[K.length - 1];
+    else { const i = K.findIndex((q) => q[0] > t), a = K[i - 1], b = K[i], p = (t - a[0]) / (b[0] - a[0]), e = p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2;
+      k = [t, a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e, a[3] + (b[3] - a[3]) * e]; }
+    const { ox, oy } = m.layer;
+    m.layer.g.setAttribute('transform', `translate(${k[1] + ox} ${k[2] + oy}) scale(${k[3]}) translate(${-ox} ${-oy})`);
+  }
+
+  /* ---- matter: atoms, bonds, carriers, ions, junction ---- */
+  S.electron = (x, y, r = 11) => add(rc.circle(x, y, r * 2, o({ fill: BLUE, fillStyle: 'solid', stroke: '#173a78', strokeWidth: 2, roughness: 0.6 })));
+  S.hole = (x, y, r = 14) => add(rc.circle(x, y, r * 2, o({ stroke: RED, strokeWidth: 4, strokeLineDash: [7, 6], roughness: 0.8 })));
+  S.ion = (x, y, sign = '+', r = 26) => {   // a fixed ion: ⊕ red, ⊖ blue
+    const c = sign === '+' ? RED : BLUE;
+    S.circle(x, y, r * 2, { stroke: c, strokeWidth: 4 }); S.line(x - r * 0.5, y, x + r * 0.5, y, { stroke: c, strokeWidth: 5, roughness: 0.5 });
+    if (sign === '+') S.line(x, y - r * 0.5, x, y + r * 0.5, { stroke: c, strokeWidth: 5, roughness: 0.5 });
+  };
+  S.atom = (cx, cy, label = 'Si', { r = 52, hands = 4, color = INK, size = 50 } = {}) => {   // a nucleus with its outer 'hands'
+    S.circle(cx, cy, r * 2, { stroke: color, strokeWidth: 5, fill: 'rgba(255,255,255,.55)', fillStyle: 'solid' });
+    S.text(cx, cy + size * 0.35, label, size, { font: 'l', anchor: 'middle', fill: color, rot: 0 });
+    const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0], [0.7, -0.7]].slice(0, hands);
+    return dirs.map(([dx, dy]) => [cx + dx * r, cy + dy * r]);
+  };
+  // a lattice of atoms joined by bonds; each bond holds two electrons (the shared pair). cell(i, j) may return
+  // {label, color, skipBond: ['r'|'d'], extra: true} to make a dopant; returns {at(i,j), bond(i,j,dir)} positions
+  S.lattice = (x0, y0, cols, rows, pitch, { cell = () => ({}), r = 46, size = 44, electrons = true } = {}) => {
+    const P = (i, j) => [x0 + i * pitch, y0 + j * pitch], out = { at: P, bonds: {} };
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const c = cell(i, j) || {}, [x, y] = P(i, j);
+      for (const [dir, di, dj] of [['r', 1, 0], ['d', 0, 1]]) {
+        if (i + di >= cols || j + dj >= rows) continue;
+        const [x2, y2] = P(i + di, j + dj), miss = (c.skipBond || []).includes(dir) || ((cell(i + di, j + dj) || {}).skipFrom || []).includes(dir);
+        S.line(x + di * r, y + dj * r, x2 - di * r, y2 - dj * r, { strokeWidth: 4 });
+        const mx = (x + x2) / 2, my = (y + y2) / 2; out.bonds[`${i},${j},${dir}`] = [mx, my];
+        if (electrons) {
+          const ox = dj * 13, oy = di * 13;
+          S.electron(mx - ox, my - oy, 9);
+          if (miss) S.hole(mx + ox, my + oy, 11); else S.electron(mx + ox, my + oy, 9);
+        }
+      }
+    }
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { const c = cell(i, j) || {}, [x, y] = P(i, j); S.atom(x, y, c.label || 'Si', { r, size, color: c.color || INK }); }
+    return out;
+  };
+  S.band = (x, y, w, h, c = 'rgba(120,112,98,.55)') => add(rc.rectangle(x, y, w, h, o({ stroke: GRAY, strokeWidth: 3, strokeLineDash: [10, 8], fill: c, fillStyle: 'hachure', hachureGap: 14, fillWeight: 2.5, hachureAngle: 60 })));
+  S.hill = (x0, yb, w, h, c = RED) => {   // the potential barrier drawn as a hill
+    const pts = []; for (let k = 0; k <= 24; k++) { const u = k / 24; pts.push([x0 + w * u, yb - h * Math.exp(-Math.pow((u - 0.5) / 0.2, 2))]); }
+    return add(rc.curve(pts, o({ stroke: c, strokeWidth: 6, roughness: 0.8 })));
+  };
+  S.battery = (x, y, dir = 1, s = 1) => {   // horizontal cell at (x, y): the long plate (+) on the left when dir = 1
+    const g2 = 18 * s, L = 64 * s, Sh = 36 * s, a = x - g2 * dir, b = x + g2 * dir;
+    S.line(a, y - L, a, y + L, { strokeWidth: 7 }); S.line(b, y - Sh, b, y + Sh, { strokeWidth: 9 });
+    S.text(a - 46 * dir, y - L - 6, '+', 64 * s, { font: 'l', anchor: 'middle', fill: RED, rot: 0 });
+    S.text(b + 46 * dir, y - L - 6, '−', 64 * s, { font: 'l', anchor: 'middle', fill: BLUE, rot: 0 });
+    return { L: [x - g2 - 4, y], R: [x + g2 + 4, y] };
+  };
+  S.led = (x1, y1, x2, y2, { on = false, s = 1 } = {}) => {   // a diode with two little arrows; on: a highlighter glow
+    S.diode(x1, y1, x2, y2, { s, fill: on ? 'rgba(255,208,0,.9)' : 'none' });
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    [[10, -48], [42, -40]].forEach(([dx, dy]) => S.arrow([[mx + dx * s, my + dy * s], [mx + (dx + 34) * s, my + (dy - 34) * s]], on ? RED : GRAY, 4));
+  };
+  S.glow = (x, y, r = 90) => add(rc.circle(x, y, r * 2, o({ stroke: 'none', fill: 'rgba(255,208,0,.55)', fillStyle: 'hachure', hachureGap: 8, fillWeight: 10, roughness: 2 })));
+  S.chair = (x, y, { s = 1, empty = false } = {}) => {   // a theatre seat seen from the front; empty: red dashed
+    const st = empty ? { stroke: RED, strokeLineDash: [8, 7] } : {};
+    S.rect(x - 46 * s, y - 70 * s, 92 * s, 80 * s, { strokeWidth: 4.5, ...st }); S.rect(x - 56 * s, y + 10 * s, 112 * s, 30 * s, { strokeWidth: 4.5, ...st });
+    S.line(x - 46 * s, y + 40 * s, x - 46 * s, y + 80 * s, { strokeWidth: 4, ...st }); S.line(x + 46 * s, y + 40 * s, x + 46 * s, y + 80 * s, { strokeWidth: 4, ...st });
+  };
+  S.person = (x, y, s = 1, c = INK) => {   // a seated stick figure whose seat is at (x, y)
+    S.circle(x, y - 118 * s, 44 * s, { stroke: c, strokeWidth: 4.5 }); S.line(x, y - 96 * s, x, y - 10 * s, { stroke: c });
+    S.path([[x - 32 * s, y - 70 * s], [x, y - 56 * s], [x + 32 * s, y - 70 * s]], { stroke: c, strokeWidth: 4.5 });
+  };
+
   /* ---- build and draw ---- */
   function prep() {
     const defs = svg.firstChild;
@@ -156,6 +239,7 @@
   const ease = (p) => 1 - Math.pow(1 - p, 3);
   function draw(t) {
     if (!built) build();
+    for (const m of MOVES) moveAt(m, t);
     for (const it of ITEMS) {
       const p = Math.min(1, Math.max(0, (t - it.t0) / it.d)), e = ease(p);
       const gone = it.outT != null ? Math.min(1, Math.max(0, (t - it.outT) / it.outD)) : 0, vis = 1 - gone;
