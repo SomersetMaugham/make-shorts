@@ -97,7 +97,8 @@ that moves through it.
 - Depth of field: the card being read is in focus; neighbours blur up to 14 px and dim 30 % as the camera pushes. A new
   hero sends the old one back to a 9 px blur at 40 % opacity. Never blur a word the viewer needs to read.
 - Motion blur: the viewport blurs along its screen velocity every frame (sigma = 0.29 x speed x 0.75/60, capped at
-  24 px); renders run at 240 fps and blend 3 of every 4 frames to 60 fps. A blurred frame at rest is a bug.
+  24 px); renders capture at 60 fps by default (project.json `"render_fps"`: 120 or 240 blend 2 or 3 captures per frame for a
+  stronger blur). A blurred frame at rest is a bug.
 - Animate the action, never label it: no label pills or word rows restating the narration. A named product is its real
   UI (captured live or rebuilt from public screenshots) doing the action: typing, streaming, clicking. While a product
   window is the subject only a camera INSIDE it moves (1.15-1.4x, 0.4-0.7 s power2.inOut). Named-product intro: its

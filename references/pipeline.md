@@ -189,17 +189,17 @@ Once the user approves recording:
 After recording: `prep.sh`, `build_gfx.py`, `preview.py`; hand over `work/index.html` again. The user renders:
 ```bash
 python3 work/render.py s1 01 slug-name     # = render_full.sh for every stale composition, then finish.sh s1 01 slug-name
-python3 work/render.py s1 --fps 60         # graphics capture rate: 240 (default; 4 per frame, 3 blended), 120 (2, blended), 60 (no blend)
+python3 work/render.py s1 --fps 60         # graphics capture rate: 60 (default; no blend), 120 (2 per frame, blended), 240 (4, 3 blended)
                                            # a project's default can be set in project.json "render_fps"
 python3 work/render.py --list              # which shorts are ready
 ```
 The two steps it runs, for reference (run them yourself only when the user asks):
 
-1. **Render full graphics (240 fps)**:
+1. **Render full graphics (60 fps capture by default)**:
    ```bash
    bash scripts/render_full.sh s1_r0 s1_r1 ...
    ```
-   Renders lossless 240 fps PNG sequences and blends them to 60 fps motion-blurred video in `gfx/out60/<rid>.mp4`. Throttled by `RENDER_SLOTS` (3) × `HF_WORKERS` (8) browsers.
+   Renders lossless PNG sequences at the capture rate (60 by default; 120 or 240 are blended down to 60 fps) into `gfx/out60/<rid>.mp4`. Throttled by `RENDER_SLOTS` (3) × `HF_WORKERS` (8) browsers.
 
 2. **Assemble and package**:
    ```bash

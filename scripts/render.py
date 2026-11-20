@@ -4,8 +4,8 @@ A copy sits in work/ (setup.sh puts it there); run it from work/ or the project 
 
     python3 render.py s1 01 my-slug        every graphic with motion blur, then the composite -> ../edit/short-01_my-slug/
     python3 render.py s1                   the same, without copying into edit/ (the MP4 is work/s1/final_video.mp4)
-    python3 render.py s1 --fps 60          capture rate of the graphics: 240 (default, or project.json "render_fps"; 4 captures per frame, 3 blended),
-                                           120 (2, both blended) or 60 (no blend; engine.js's own viewport blur only)
+    python3 render.py s1 --fps 60          capture rate of the graphics: 60 (default, or project.json "render_fps"; one capture per frame), 240 (4 captures, 3 blended),
+                                           or 120 (2, both blended); at 60 only engine.js's own viewport blur
     python3 render.py s1 --skip-graphics   only the composite (the graphics are already rendered and unchanged)
     python3 render.py --list               the shorts and whether each is ready (recorded, gates)
     python3 render.py --screenshot --short s1 --from 12.0 --to 14.0 [--gapframe 10] [--fast] [--jobs 1]
@@ -84,7 +84,7 @@ if '--screenshot' in flags_all:
     sys.exit(0)
 
 PROJ = json.load(open('project.json', encoding='utf-8')) if os.path.exists('project.json') else {}
-fps = str(opt('--fps', os.environ.get('RENDER_FPS', PROJ.get('render_fps', 240))))   # project.json "render_fps" sets a project's default
+fps = str(opt('--fps', os.environ.get('RENDER_FPS', PROJ.get('render_fps', 60))))   # project.json "render_fps" sets a project's default (60 since 2026-11-20)
 if fps not in ('240', '120', '60'): raise SystemExit('--fps must be 240, 120 or 60')
 args = [x for x in argv if not x.startswith('--')]
 flags = {x for x in argv if x.startswith('--')}

@@ -9,7 +9,7 @@ usage: python compose.py s1 --events-only            captions.json only
                                                     graphic, captions and code are unchanged is skipped), frame counts verified,
                                                     then --concat
        python compose.py s1 --concat                stream-copy the segments + the mix -> <sk>/final_video.mp4
-  add --draft to any of these: the 10 fps draft graphics (gfx/draft/, each frame held for 6) instead of the 240->60 fps
+  add --draft to any of these: the 10 fps draft graphics (gfx/draft/, each frame held for 6) instead of the full 60 fps
   renders, into <sk>/seg_draft/ and <sk>/draft_video.mp4 - the review copy the user watches before deciding to record."""
 import json, sys, os, subprocess, re, numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont, ImageFilter

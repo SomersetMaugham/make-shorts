@@ -15,7 +15,7 @@ copied unchanged on 2026-11-19: its SKILL.md steps 3 and 4, then `references/sou
 | `check.mjs` refuses the hand-off | `scripts/check_narration.py` (finish.sh runs it) refuses the final assembly |
 | `cue(id).when('phrase')`, the scenes follow the cues | `timeline.py` turns the cues into the runs, the words and the captions; graphics anchor on `W(ws, '<phrase>')` |
 | "build and verify the whole video on silent placeholders", "hand it off and ask whether to record" | `preview.py` → `work/index.html` (open in Chrome) + `narration/<sk>/script.txt`; then ask. This is the only question the skill asks. |
-| "`render.py` films the page into an MP4 — the user runs it" | `work/render.py <sk> [NN slug]`: the 240 fps graphics and the composite. The user runs it after checking `index.html`. |
+| "`render.py` films the page into an MP4 — the user runs it" | `work/render.py <sk> [NN slug]`: the full graphics (60 fps capture by default) and the composite. The user runs it after checking `index.html`. |
 | `smoke.mjs`, `errscan.mjs`, `render.py`, clips, footage, dubs, `MEDIA_SRC` | not part of this skill: ignore those sentences |
 | "Fish takes come out around −22 LUFS; that is the reference" | the takes stay as recorded; `mix.py` only masters the finished narration to −14 LUFS / −1 dBTP (gain and limiter, never speed) |
 

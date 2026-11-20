@@ -142,7 +142,7 @@ dict(
 
 ## Motion Blur
 
-Motion blur is computed per-frame based on screen velocity. Full renders are captured at 240 fps and temporally blended to 60 fps via FFmpeg `tmix` in `render_full.sh`. A frame at rest is completely sharp.
+Motion blur is computed per-frame based on screen velocity. Full renders are captured at 60 fps by default; with `"render_fps": 240` (or 120) in project.json they are captured faster and temporally blended to 60 fps via FFmpeg `tmix` in `render_full.sh`. A frame at rest is completely sharp.
 
 ---
 

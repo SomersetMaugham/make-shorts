@@ -41,7 +41,9 @@
 - **The 240 fps capture is inherited, not measured.** It came from the original spec ("240 fps, blend 3 of every 4"); it
   quadruples capture time. render_full.sh takes RENDER_FPS=240|120|60 (render.py --fps); engine.js's own viewport blur
   is computed from the camera's time derivative, so it is the same at every capture rate. Compare before changing the
-  default (the GRPO short has a 60 fps twin for that, 2026-11-19).
+  default (the GRPO short has a 60 fps twin for that, 2026-11-19). **The user set the default to 60 on 2026-11-20**
+  (PN shorts, sketch theme: pen strokes drawn on, few fast pans); 240 or 120 is now opt-in per project
+  (`"render_fps"` in project.json, or `render.py --fps`) when a push or pan looks stepped.
 
 - **engine.js must not assume the HyperFrames runtime.** It wrote `window.__timelines[id]` and threw in a plain browser,
   where that object doesn't exist, so `__render` was never set and the preview froze every composition at t = 0. It now

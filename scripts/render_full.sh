@@ -1,8 +1,9 @@
 #!/bin/bash
-# Full renders: 240 fps with per-frame viewport motion blur, then blend 3 of every 4 frames down to 60 fps.
+# Full renders at RENDER_FPS (60 by default since 2026-11-20: one capture per frame, engine.js's viewport blur only;
+# 240 or 120 capture more frames and blend them down to 60 fps for a stronger motion blur).
 #   bash scripts/render_full.sh s1_r0 s1_r2 ...
 # Per composition:
-#   1. hyperframes render --format png-sequence --fps 240 --quality high   -> gfx/png240/<r>/frame_%06d.png
+#   1. hyperframes render --format png-sequence --fps $RENDER_FPS --quality high   -> gfx/png240/<r>/frame_%06d.png
 #      Lossless PNG capture of every frame (the MP4 path captures JPEG and leaves an 8 px black strip at x 1072-1079;
 #      the MOV/ProRes path forces a slow alpha capture: ~3x slower for the same pixels).
 #   2. ffmpeg: tmix=frames=3,fps=60 on the RGB frames -> BT.709 yuv420p -> gfx/out60/<r>.mp4 (libx264 crf 10, tagged bt709)
@@ -23,9 +24,9 @@ export PRODUCER_ENABLE_BROWSER_POOL=false
 cd "$(dirname "$0")/../gfx"
 mkdir -p png240 out60 .render_slots
 RENDER_SLOTS=${RENDER_SLOTS:-3}
-# capture rate and frame blend (the motion blur): 240 = 4 captures per output frame, 3 blended (a 270° shutter; the
-# default); 120 = 2 captures, both blended (180°); 60 = one capture per frame, no blend (only engine.js's own viewport blur)
-RENDER_FPS=${RENDER_FPS:-240}
+# capture rate and frame blend (the motion blur): 240 = 4 captures per output frame, 3 blended (a 270° shutter);
+# 120 = 2 captures, both blended (180°); 60 = one capture per frame, no blend (only engine.js's own viewport blur; the default)
+RENDER_FPS=${RENDER_FPS:-60}
 case "$RENDER_FPS" in
   240) BLEND="tmix=frames=3,fps=60," ;;
   120) BLEND="tmix=frames=2,fps=60," ;;

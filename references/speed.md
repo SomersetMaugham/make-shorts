@@ -19,13 +19,13 @@ Speed in this skill comes from architecture, not raw hardware:
 ## 2. Two-Phase Execution: Drafts First, Heavy Renders Once
 
 ### Phase 1: Silent Placeholders and 10 fps Drafts
-- Never call the TTS API or render 240 fps during initial planning and visual development.
+- Never call the TTS API or make a full render during initial planning and visual development.
 - `prep.sh` creates silent placeholder cues with estimated lengths based on character position.
 - Graphics subagents write compositions, rebuild the preview (`preview.py`) and check PNG contact sheets of it
   (`python3 render.py --screenshot --run <rid> …`, seconds per run). No MP4 of any kind.
 - Hand over `work/index.html` and `narration/s1/script.txt` to the user to decide whether to record.
 
-### Phase 2: Recording, Re-timing, and 240 fps Rendering
+### Phase 2: Recording, Re-timing, and the Full Render
 - Once the user approves recording, run `node scripts/narration/tts.mjs narration/s1 --approved`.
 - Read take numbers with `wave.mjs --unreviewed`, set `"cut"` and phrase `"at"` times, then run `prep.sh`.
 - Re-run `$PY scripts/build_gfx.py`. Because all graphics timing is anchored on phrases using `W(ws, '<phrase>')`, every move and landing re-times automatically to the real voiceover.
