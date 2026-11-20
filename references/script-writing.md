@@ -6,8 +6,8 @@ SKILL.md, then its `references/script-writing.md` in full. A script the user giv
 gets spoken forms (references/narration.md).
 
 How to read them here:
-- "the video" is one short; a short answers ONE question (**Short videos: one question, one answer** below), so most
-  shorts have no topic change at all, and a recap line is never added.
+- "the video" is one short; a short answers ONE question with the story spine (**Short videos: the story spine**
+  below), so most shorts have no topic change at all, and a recap line is never added.
 - "the storyboard", "scenes.js", "cue(id).when()" are script-to-motion's: here the plan is `shorts.json`, the scenes are
   the graphics compositions, and phrase anchors are `W(ws, '<phrase>')` (references/graphics.md).
 - References to other script-to-motion files (sound.md, google-tts.md, fish-audio.md) are in references/narration.md.
@@ -105,7 +105,7 @@ reword, a batch edit, or a seam that looks smooth in the script.
 
 **One difference by kind of video (the user's decision, 2026-11-13):** in a **short video that answers one question**
 the listener still holds the whole talk in mind, so a seam is carried by **one move** instead of the three-part
-cushion — **Short videos: one question, one answer** (below). Everything in this section applies in full to a video
+cushion — **Short videos: the story spine** (below). Everything in this section applies in full to a video
 with several topics or chapters, and to anything long enough that the listener has to be brought back.
 
 **Why you miss it (read this; it is how you catch yourself):**
@@ -205,30 +205,75 @@ what is said.**
 
 Every brief you give a subagent that writes or edits narration carries this section word for word.
 
-## Short videos: one question, one answer (the user's decision, 2026-11-13)
+## Short videos: the story spine (the user's decisions, 2026-11-13 and 2026-11-20)
 
 The cushion, the recap and the map were written for long videos with several topics, where a listener loses the thread.
 Applied to a two-minute video that answers one question they produced bridges, repeated summaries and a three-line
-ending: about a fifth of the narration carried nothing new, and the user felt it as padding. So:
+ending: about a fifth of the narration carried nothing new, and the user felt it as padding (2026-11-13). The rule that
+fixed it ("end on the one-sentence answer") then made every short open on a textbook question and stop as if cut off
+mid-explanation: no line to remember, no reason to watch the next part (GRPO and both PN shorts; the user, 2026-11-20:
+"설명하다가 중간에 멈춘듯한 느낌", "앞으로 나올 내용에 기대감을 갖게 만들지 않아요"). So padding stays out, and the
+story gets a shape. Plan: `docs/plans/2026-11-20-storytelling.md`.
 
 **Which videos:** one question or one premise, answered once — about two minutes or less, or any Shorts / Reels /
 TikTok piece. A video with chapters, several topics or several examples of different kinds is not this kind, however
 short each part is.
 
-**In these videos:**
-- **A seam is one move, never a three-part cushion.** The talk turns with a contrast or consequence word that grows out
-  of the line before (그런데, 하지만, 그래서), with the next question asked directly, or with the picture (a match cut,
-  the camera returning to the object). The line before is not named again and not closed with a sentence of its own.
-  What still holds: the turn must follow from the line before — a new step that could follow any line at all is still
-  a cold start.
-- **No recap inside the video.** Never say the previous line again in other words to end a part.
+**The spine (in order):**
+1. **Hook — the first one or two lines open a gap.** Curiosity comes when attention falls on a gap between what the
+   viewer knows and what they don't (Loewenstein 1994), so start from something they know and show the gap. Use one of:
+   a surprising fact or a belief turned over ("완벽하게 정제한 실리콘에 일부러 불순물을 넣습니다"); what is at stake for
+   the viewer (their phone, their charger); or a question whose answer is held back. Write **at least two hooks with
+   different devices**, check each against the facts (the hook is where exaggeration creeps in: two of three hooks a
+   co-writer offered for the PN short were wrong), and pick one. **Decide the first frame with it**: what the viewer
+   sees in the first seconds carries the hook as much as the words (theme-sketch.md "The hook frame").
+2. **Tension — the talk turns, it does not list.** At least two places where the logic turns with 그런데 / 그래서 /
+   반대로 (And-But-Therefore: a problem, then what it forces), never a run of "and then". Voice one misconception a
+   first-time listener would have and turn it over ("전자가 남았으니 N형은 마이너스일까요? 아닙니다").
+3. **The half-seen moment** — just before the answer, a question or a picture that lets the viewer guess it
+   ("건전지를 반대로 물리면 이 언덕은 낮아질까요, 높아질까요?"). Never a progress line ("여기까지 보면 답이 반쯤 보입니다").
+4. **The answer** closes the gap the hook opened, exactly; you can point at the sentence that answers it.
+5. **The ending — at most three sentences:** the answer → **one line with a new angle** → when a next part exists, the
+   question that next part really answers; when none does, a line that turns back to the hook.
+   - *A new angle, not a recap:* it uses at most one of the key terms of the line before and says the point as a
+     paradox or an everyday principle. Recap: "이처럼 빈자리인 정공이 플러스처럼 움직여 전기를 나르는 게 P형입니다."
+     New angle: "아무것도 없는 빈자리가 전기를 나르는 주인공이 됩니다."
+   - *The next question is a question, not an announcement:* "그런데 왜 하필 0.7볼트부터 열릴까요?" — never
+     "다음 편에서 확인해 보겠습니다".
+6. **A series** (one topic split into parts): write the series flow in the storyboard first — each part one answer and
+   one next question. The next part opens by taking up that question in one line, so a viewer who missed the part
+   before can follow. A protagonist that runs through the parts (one free electron left behind by a phosphorus atom)
+   can turn a list of materials into a journey; use it where it fits the material.
+
+**Bait check (the hook and the next-part question):** (1) the answer sentence is in that part's script; (2) with every
+"충격·비밀·절대·모든" taken out, the plain fact is still worth waiting for; (3) the everyday case in the hook reaches the
+mechanism in one or two sentences, with no leap; (4) every number, ratio and part's job in it is checked.
+
+**What still holds:**
+- **No recap inside the video.** Never say the previous line again in other words to end a part; the new-angle line is
+  not a recap (above).
 - **No announcements.** No line that says what the video is about to do (돌아가 보겠습니다, 정리해 보겠습니다, 알아볼까요
-  as a stand-alone line). Do it.
-- **End on the answer.** When the video opened with a question, its last line is the one-sentence answer to that
-  question, and the video ends there (plus the creator's sign-off when the user gave one). No "not because … "
-  set-up line before it, no second telling of the mechanism.
+  as a stand-alone line, 다음 편에서 확인해 보겠습니다). Do it.
+- **A seam is one move, never a three-part cushion.** The talk turns with a contrast or consequence word that grows out
+  of the line before, with the next question asked directly, or with the picture (a match cut, the camera returning to
+  the object). A new step that could follow any line at all is still a cold start.
 - **The first-time-listener gates all still apply** — every term explained, every anchor inside its line. Only the
   remedy for an "abrupt" flag differs: fix it with the one move above, not by adding a cushion sentence.
+- **Nothing is added for length.** The spine adds a hook, turns and an ending of at most three sentences, never a
+  bridge or a second telling of the mechanism.
+
+**The pull checklist** (yes / no, on the draft, after the cold-listener review; every "no" is fixed before recording):
+1. Hook: the first lines open a gap, the first frame is decided, and nothing in it is exaggerated?
+2. Turns: two or more places where the logic turns (그런데 / 그래서 / 반대로)?
+3. Misconception: one belief a first-time listener would hold is voiced and turned over?
+4. Half-seen moment: just before the answer, a question or picture (no progress line) lets the viewer guess it?
+5. Closed: the gap the hook opened is closed exactly?
+6. Ending: at most three sentences (answer, new angle, next question or turn back), no recap, no announcement?
+7. Facts: every comparison, ratio and part's job, not only the hook's, is right?
+No item is tied to a time ("by 40 s"): the length is the result (Content first, never time).
+
+The Korean shapes for hooks, turns and endings (sentence patterns, register): `references/story-ko.md`. Another
+language gets its own file when the user first asks for one; the spine above holds for every language.
 
 Every brief you give a subagent that writes or edits narration carries this section word for word.
 
@@ -307,7 +352,10 @@ that waits is recording their voice. They review the finished video and decide.
 
 **The plan (top of `storyboard.md`, before the beat table)**
 - **Audience** and what they already know. **Message**: one sentence the viewer should remember.
-- **Angle and hook**: why this topic is worth the viewer's attention. Open on it.
+- **Angle and hook**: why this topic is worth the viewer's attention. Open on it. For a short: two or more hooks
+  with different devices, each fact-checked, the one chosen and its **first frame** (Short videos: the story spine;
+  story-ko.md), the half-seen moment, and the ending's three sentences. For a series: the series flow (each part's
+  answer and next question) before any part is written.
 - **Aspect.** Use what the user said. **No length is planned** (SKILL.md → Content first, never time): the plan lists
   what has to be said, and the length is the result.
 - **Spine**: the sections in order with their cue ranges (§1). Decide the visual concept that will carry the piece
@@ -467,14 +515,18 @@ voice** (when the user wrote or dictated lines, their sentence shape and endings
      - the talk moves to a new topic abruptly: what came before was not closed, nothing marked the turn, or you
        cannot tell why the new topic comes now (judge how it moves, not only what it means: a line can be clear and
        still arrive out of nowhere).
+     - you would stop listening here: the line brings nothing new, or gives you no reason to wait for the next one.
    For each, one row:  <line number> · <the exact words> · <what you could not tell> · <type: anchor / name / term /
-   connective / heading / picture / abrupt / other>
-   Report nothing else: no praise, no summary, no rewrites. If every line is clear, answer only "clear". Answer in
-   Korean.
+   connective / heading / picture / abrupt / drag / other>
+   Then two more rows, always: "opening · <the question the first lines made you want answered, or 'none'>" and
+   "ending · <whether the last lines answered it, and what they made you want to know next, or 'nothing'>".
+   Report nothing else: no praise, no summary, no rewrites. If every line is clear, answer only "clear" plus the two
+   rows. Answer in Korean.
    ```
    Fix every flagged line you wrote (an "abrupt" flag with a cushion, never with clearer wording; in a short
    one-question video with the one-move turn of SKILL.md → Short videos, never with an added bridge sentence) and run the review
-   again on the changed stretch until it answers "clear". A
+   again on the changed stretch until it answers "clear". An "opening · none" or an "ending · nothing" is a failed
+   hook or ending (Short videos: the story spine): fix it, then run the pull checklist. A
    flagged line the user wrote or dictated is not reworded: tell the user in one line and propose a fix. Run it on the
    first draft, and again on every stretch you rewrite before it is recorded. If no subagent can be started, do it
    yourself as a separate written step from `script.txt` alone, reading as a stranger, and say so in the hand-off.
@@ -558,7 +610,7 @@ in plain words the first time it is heard.
   remove a line because it leads into what comes next.
 - **In a short video that answers one question** (about two minutes or less, one premise) the seam is carried by one
   move — a contrast or consequence word that grows out of the line before, the next question asked directly, or the
-  picture — and not by a close–turn–open cushion (SKILL.md → Short videos: one question, one answer; the user's
+  picture — and not by a close–turn–open cushion (SKILL.md → Short videos: the story spine; the user's
   decision, 2026-11-13). The rest of this section is for videos with several topics or chapters.
 - **A word that only marks a boundary is not a bridge.** Spoken alone at a seam, it is a document's section mark read
   aloud, and the listener hears the jump it was meant to cover.
@@ -568,7 +620,7 @@ in plain words the first time it is heard.
 
 - **Give the map first.** Put the conclusion before the reasons. Say how many are coming ("이유는 세 가지입니다.
   첫째, …"). Go from what the viewer knows to what is new. In a video of about three minutes or more, or with three or more topics, close a section with a one-line recap: in writing that
-  would be repetition, but in speech it brings back whoever drifted. In a short video that answers one question, and right after an example that already made the point, there is no recap: never say the previous line again in other words (SKILL.md → Short videos: one question, one answer).
+  would be repetition, but in speech it brings back whoever drifted. In a short video that answers one question, and right after an example that already made the point, there is no recap: never say the previous line again in other words (SKILL.md → Short videos: the story spine).
 - **One idea per sentence.** Keep the subject close to its predicate.
   - No stacked modifiers before a noun. Split "어제 발표된 새 모델이 한 번에 처리할 수 있는 최대 분량은 …" into two
     sentences.
@@ -727,9 +779,9 @@ for you.
   name, a thank-you. If the user gives one, use it verbatim (fix only obvious spelling) and build a
   channel end card from their logo asset. Don't invent a question-to-the-audience ending when a sign-off
   is expected. If the channel is unknown, ask once, or end on a resolved title frame.
-- **A video that opens with one question ends on its one-sentence answer** (SKILL.md → Short videos: one question, one
-  answer). No line announcing the summary, no set-up line before the answer, and the mechanism is not told a second
-  time in the ending.
+- **A short ends on its answer, one new-angle line and the next part's question** (at most three sentences; **Short
+  videos: the story spine**). No line announcing the summary, no set-up line before the answer, and the mechanism is
+  not told a second time in the ending. A short opens on a hook that opens a gap, never on a bare textbook question.
 
 ## 8. Revising with the user
 

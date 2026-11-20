@@ -41,7 +41,7 @@ Don't show the draft and wait; carry on to the finished video. The essentials:
 - **A script you write is speech for a listener who hears it once** (script-writing.md). The first rule is that the
   listener understands it the first time they hear it, and accuracy always comes before convenience:
   - **Order:** conclusion and count first; a one-line recap at the end of a section only in a long or multi-topic
-    video (script-writing.md §5) — never in a short one-question video (**Short videos: one question, one answer**).
+    video (script-writing.md §5) — never in a short one-question video (**Short videos: the story spine**).
   - **Sentences:** one idea per sentence, no stacked modifiers or noun chains, one number per sentence, and the screen
     showing what is being said (§5).
   - **Terms:** every technical term is said exactly and explained in plain words when it is first heard (§3).

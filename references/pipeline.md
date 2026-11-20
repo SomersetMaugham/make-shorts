@@ -41,7 +41,7 @@ Setup creates:
    - Captures source web pages, docs, pricing tables, and dashboards as 2x PNGs into `work/captures/` (`captures/index.json`, `captures/facts.json`).
    - Downloads official product/project logos into `work/captures/logos/`.
 3. **Plan in `shorts.json`**:
-   - 1–5 shorts, each structured around "one question, one answer".
+   - 1–5 shorts, each structured around one question answered with the story spine (hook, turns, answer, a three-sentence ending; script-writing.md).
    - Per short:
      - `title`: short title.
      - `cover`: 1–2 title lines for the frame-0 glass card (centred at y ~432).

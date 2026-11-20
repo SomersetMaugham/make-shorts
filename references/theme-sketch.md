@@ -62,6 +62,18 @@ Times are run-relative and come from the words: build the JS in Python with `W(w
   strike it out in red and write the new value (`0V로 뚝!`). A changed state is drawn as a correction on the page.
 - Something keeps moving while words go on (the charges flow until the run ends); the drawing never redraws itself.
 
+## The hook frame (the first seconds of a sketch short)
+The hook's words open a gap (script-writing.md → Short videos: the story spine); the first frame should open it too,
+with the same pen marks the theme already uses. Draw fast here (a circuit in about 1.5 s): the viewer decides in
+seconds.
+- **The correction:** draw the battery–LED circuit, then a red X where the light should be and a red flip arrow over
+  the battery, while the hook asks why. The page itself says "something is wrong here".
+- **The break:** start on a finished, perfect thing (a lattice of four-handed silicon atoms), then erase one atom and
+  dot in a different colour, while the hook says it has to be spoiled to work.
+- **The result first:** draw the end state (the LED lit, the current flowing), then strike it out and go back to the
+  blank page the explanation starts from.
+Decide the hook frame with the hook (both go in the storyboard), and keep it inside the zones like every other frame.
+
 ## Checking a sketch run
 The graphics checks (graphics.md "Checking") and the visual review (visual-review.md) apply; `render.py --screenshot`
 films the preview the same way. Specific to the sketch theme:

@@ -20,8 +20,10 @@ report, publishing copy). Another language only when the user asks.
 > A viewer hears each line once, in order, at speaking pace, and knows nothing you know: not the research, not the
 > files, not the cue ids, not the chat. For every line — first draft, one-word fix, batch edit — check who / what /
 > when / which is inside the line, that every name and term was told, that every connective points at the line before,
-> that it stands on sound alone, and that every claim is in the record. A short answers **one question**: no recap, no
-> second topic. Then the seam pass, the internal-name list and the **cold-listener review** by a subagent that sees only
+> that it stands on sound alone, and that every claim is in the record. A short answers **one question** as a story:
+> a hook that opens a gap (two hooks tried, facts checked, first frame decided), turns instead of a list, the answer,
+> and an ending of at most three sentences (answer, a new-angle line, the next part's question); no recap, no
+> announcement, no second topic. Then the seam pass, the internal-name list and the **cold-listener review** by a subagent that sees only
 > `script.txt`. Never trust your own reading of your own line. The full rules: `references/script-writing.md`.
 
 ## The narration is script-to-motion's (read `references/narration.md` before step 3)
@@ -56,7 +58,9 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    ffmpeg, Node 22+ and uv.
 2. **Research and the script, in parallel:** brief the **research subagent** (fact-check every figure against 2+ sources,
    capture the real source pages into `captures/` with an index and the fact check). Meanwhile pick the shorts and write
-   their narration (`references/script-writing.md`; the gates and the cold-listener review before any line is final).
+   their narration (`references/script-writing.md`, **Short videos: the story spine**; the gates, the cold-listener
+   review and the pull checklist before any line is final). Shorts that split one topic are a series: write the series
+   flow first (each part one answer and one next question).
    Write `shorts.json`: per short `title`, `cover`, `highlights`, `accent`, and `lines` (`id`, `text`, `say`, `scene`,
    optional `switches`, `gapAfter`, `caption`). Example: `examples/shorts_example.json`.
 3. **Timeline on placeholders:** `bash scripts/prep.sh` runs `narration_init.py` → `tts.mjs` (records nothing: silent
@@ -166,5 +170,6 @@ Read `references/lessons.md` before improvising. The biggest ones:
 - `examples/`: `shorts_example.json` (a plan), `GFX_BRIEF_template.md`, `gfx_s1.py` (full-visual compositions with
   phrase anchors), `gfx_sketch.py` (a sketch-theme run: the transistor switch).
 - `references/`: `editing-spec.md` (the contract), `narration.md` (script-to-motion's narration rules),
-  `script-writing.md` (script-to-motion's writing rules), `pipeline.md` (the commands), `graphics.md` (the engine API),
+  `script-writing.md` (script-to-motion's writing rules, and the story spine for shorts), `story-ko.md` (the Korean
+  shapes of hooks, turns and endings), `pipeline.md` (the commands), `graphics.md` (the engine API),
   `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `speed.md` (parallelism), `lessons.md`.
