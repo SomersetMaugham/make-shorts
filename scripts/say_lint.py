@@ -17,7 +17,7 @@ sys.path.insert(0, 'scripts'); import config as C
 # one-syllable words that sound like a particle or an ending: after a word with no pause they are heard as part of it
 # ("엔쪽 인 원자" -> "엔쪽인", -인 the ending). Other one-syllable words (손, 빈, 맨) were heard fine on the PN short.
 # A word before it that already ends in a particle ("실리콘에 인 원자") was heard apart, so it is not flagged.
-ENDING = set('인 은 는 을 를 의 도 로 와 과 에 요 고 게 지 만 며 면 서 야 여 랑 나 든 엔'.split())
+ENDING = set('인 은 는 을 를 의 도 로 와 과 에 요 고 지 만 며 면 서 야 여 랑 나 든 엔'.split())
 LETTERS = set('에이 비 씨 디 이 에프 지 에이치 아이 제이 케이 엘 엠 엔 오 피 큐 알 에스 티 유 브이 더블유 엑스 와이 제트'.split())
 TAG = re.compile(r'\[[^\]]*\]')
 
