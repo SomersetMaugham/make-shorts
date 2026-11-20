@@ -43,7 +43,7 @@ for sk in want:
                  ok=os.path.exists(f'gfx/{sk}_r{r["i"]}.html')) for r in c['runs']]
     cues = [dict(id=q['id'], start=q['start'], end=q['end'], text=q.get('text', '')) for q in c.get('cues', [])]
     audio = f'narration/{sk}/audio/narration.mp3'
-    data[sk] = dict(title=sh.get('title', ''), cover=sh.get('cover', [sh.get('title', '')]), accent=sh.get('accent', 'azure'),
+    data[sk] = dict(title=sh.get('title', ''), cover=sh.get('cover', [sh.get('title', '')]), accent=sh.get('accent', 'azure'), theme=Cfg.THEME,
                     END=c['END'], fps=Cfg.FPS, runs=runs, caps=caps, cues=cues, audio=audio if os.path.exists(audio) else None,
                     placeholder=bool(c.get('narration', {}).get('placeholder')))
 missing = [f'{sk}_r{r["i"]}' for sk, d in data.items() for r in d['runs'] if not r['ok']]
@@ -53,6 +53,7 @@ HTML = r"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 @font-face{font-family:Pretendard;src:url(fonts/PretendardVariable.ttf);font-weight:45 920;font-display:block}
+@font-face{font-family:Gaegu;src:url(fonts/Gaegu-Bold.ttf);font-weight:700;font-display:block}
 /* the player: script-to-motion's css/player.css (start screen, debug bar, speed toast), carried over */
 html,body{margin:0;height:100%;background:#000;overflow:hidden}
 body{font-family:Pretendard,sans-serif;-webkit-font-smoothing:antialiased}
@@ -94,6 +95,15 @@ body.vp-playing:not(.vp-cursor){cursor:none}
   border:2px solid var(--acc-line);box-shadow:0 50px 120px -40px rgba(0,0,0,.82),0 0 70px -10px var(--acc-glow);text-align:center;
   font:600 104px/1.08 Pretendard;letter-spacing:-.03em;color:#fff;white-space:nowrap;display:none}
 #cover .ln{height:6px;margin-top:26px;border-radius:3px;background:var(--acc);box-shadow:0 0 16px var(--acc)}
+/* the sketch theme (theme-sketch.md): handwriting in ink on a highlighter stroke, keywords in red pen */
+#stage.sk{background:#f3efe6}
+#stage.sk .cap{font:700 78px/88px Gaegu;color:#22201c;-webkit-text-stroke:0;word-spacing:6px}
+#stage.sk .cap span{background:rgba(255,208,0,.59);padding:2px 18px;border-radius:6px 16px 8px 14px;-webkit-box-decoration-break:clone}
+#stage.sk .chip{background:rgba(255,208,0,.75);border:0;box-shadow:none;border-radius:8px 18px 10px 16px;padding:14px 26px 12px;font:700 88px/1 Gaegu;letter-spacing:0;color:#d4382c}
+#stage.sk .chip .ln{height:7px;margin-top:12px;background:#d4382c;box-shadow:none;border-radius:4px}
+#stage.sk #cover{background:transparent;border:0;box-shadow:none;font:700 120px/1.2 Gaegu;letter-spacing:0;color:#22201c}
+#stage.sk #cover div:not(.ln){display:table;margin:0 auto;background:rgba(255,208,0,.59);padding:0 26px}
+#stage.sk #cover .ln{height:9px;background:#d4382c;box-shadow:none;margin-top:22px}
 /* review desk (served by review_server.py): the marked box, notes, the list, the pins */
 #box{position:absolute;display:none;z-index:6;border:6px solid #FFD23F;border-radius:10px;box-shadow:0 0 0 3000px rgba(0,0,0,.18),0 0 30px rgba(255,210,63,.6);pointer-events:none}
 #draw{position:absolute;inset:0;z-index:7;display:none;cursor:crosshair}
@@ -157,14 +167,16 @@ const frames = D.runs.map((r) => {
   if (r.ok) f.src = r.src; else loaded++;
   stage.insertBefore(f, caps); return f;
 });
+if (D.theme === 'sketch') stage.classList.add('sk');
 const chunkEls = D.caps.map((c) => {
   const el = document.createElement('div');
   if (c.hl) { el.className = 'chip'; el.innerHTML = '<span class="tx"></span><span class="ln"></span>'; el.querySelector('.tx').textContent = c.text; }
-  else { el.className = 'cap'; el.textContent = c.text; }
+  else { el.className = 'cap'; el.innerHTML = '<span></span>'; el.firstChild.textContent = c.text; }
   el.style.display = 'none'; caps.appendChild(el); return el;
 });
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 $('cover').innerHTML = D.cover.map((l) => `<div>${esc(l)}</div>`).join('') + '<div class="ln"></div>';
+if (D.theme === 'sketch') $('cover').style.fontSize = Math.max(76, Math.min(120, 880 / Math.max(...D.cover.map((l) => l.length)))) + 'px';   // compose.py's fit: lines within 880 px
 for (const c of D.cues) {
   const m = document.createElement('div'); m.className = 'vp-debug-mark';
   m.style.left = (c.start / duration) * 100 + '%'; m.style.width = ((c.end - c.start) / duration) * 100 + '%'; m.title = `${c.id}: ${c.text}`;
@@ -485,7 +497,8 @@ if (REVIEW) {
 const saved = params.has('t') ? parseFloat(params.get('t')) : parseFloat(store.get(POS_KEY));
 if (Number.isFinite(saved)) t = clamp(saved, 0, duration);
 let hot = false; try { hot = sessionStorage.getItem('vp-hot') === '1'; sessionStorage.removeItem('vp-hot'); } catch (e) {}
-if (params.has('still') || hot) { start.classList.add('vp-hidden'); }   // hot: reloaded by the review server, stay at the moment
+if (params.has('still')) start.style.display = 'none';   // no fade: a screenshot must not catch the start screen half gone
+else if (hot) start.classList.add('vp-hidden');   // hot: reloaded by the review server, stay at the moment
 const notes = [];
 if (D.placeholder) notes.push('녹음 전: 무음, 길이는 추정치');
 if (!D.audio) notes.push('내레이션 오디오 없음: prep.sh 먼저');

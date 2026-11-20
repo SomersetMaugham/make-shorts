@@ -11,7 +11,8 @@ You build HyperFrames compositions for <N> standalone vertical shorts (1080x1920
 - Python: `../.venv/Scripts/python.exe` (Windows) or `../.venv/bin/python` (`$PY`).
 - Skill references (READ FIRST):
   - [references/graphics.md](../references/graphics.md) (Theme, Timing & Phrase Anchors, CFG)
-  - [references/theme.md](../references/theme.md) (Tokens, surfaces, Pretendard typography)
+  - [references/theme.md](../references/theme.md) (Tokens, surfaces, Pretendard typography), or for a sketch short
+    [references/theme-sketch.md](../references/theme-sketch.md) (paper, pens, the drawing kit, the approved motion)
   - [references/lessons.md](../references/lessons.md) (HyperFrames, text encoding, craft)
   - [examples/gfx_s1.py](gfx_s1.py) (Reference implementation)
   - `scripts/build_gfx_common.py` and `gfx/engine.js` in the work folder.

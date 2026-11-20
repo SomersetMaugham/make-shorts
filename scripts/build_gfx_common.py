@@ -7,6 +7,7 @@ import os as _os
 _os.chdir(_os.path.dirname(_os.path.abspath(__file__))+'/..')
 C = json.load(open('cut.json', encoding='utf-8'))
 sys.path.insert(0, 'scripts'); import config as _cfg
+THEME = _cfg.THEME     # the project's look: 'stage' (theme.md) or 'sketch' (theme-sketch.md); a run's cfg['theme'] overrides it
 LAYOUT = _cfg.LAYOUT   # the frame's zones: content y 140-1395, captions 1410-1550, nothing below 1560, the button column x>960 y1000-1700 (config.py)
 import glob as _glob
 D = {}   # asset_dims.json plus one asset_dims_<tag>.json per graphics subagent (so parallel asset preps never race)
@@ -114,6 +115,19 @@ video.fg{position:absolute;left:0;top:0;transform-origin:0 0;z-index:3}
 #root.paper .h1,#root.paper .h2{font-family:Poppins;font-weight:700}#root.paper .caret{background:#D97757}#root.paper .band{background:#FBEEE8}
 """
 
+# The sketch theme (references/theme-sketch.md): paper with a faint grid and grain, ink drawn by assets/gfx/sketch.js
+SKETCH_CSS = """
+@font-face{font-family:Gaegu;src:url(assets/Gaegu-Bold.ttf);font-weight:700;font-display:block}
+@font-face{font-family:'Architects Daughter';src:url(assets/ArchitectsDaughter-Regular.ttf);font-display:block}
+#root.sketch{color:#22201c;font-family:Gaegu,sans-serif}
+#root.sketch #ground{background:#f3efe6}
+#root.sketch #ground::before{content:'';position:absolute;inset:-1080px;background-image:linear-gradient(rgba(143,179,201,.22) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(143,179,201,.22) 1.5px,transparent 1.5px);background-size:54px 54px}
+#root.sketch .beam{display:none}
+#root.sketch #vignette{z-index:3;pointer-events:none;background:radial-gradient(75% 75% at 50% 42%,rgba(90,74,48,0) 60%,rgba(90,74,48,.16) 100%)}
+#root.sketch #grain{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.55;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .22 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")}
+.sk-k{font-family:Gaegu,sans-serif;font-weight:700}.sk-l{font-family:'Architects Daughter',sans-serif}
+"""
+
 def still(rid, cfg, marks, pad=0.05):
     """thumbnail marks clipped to where nothing moves: camera moves (glides excepted), focus changes, inner-camera moves,
     landings, exits and reveals. A window keeps its longest still stretch; a time moves to the end of the move it falls in."""
@@ -176,6 +190,11 @@ def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_
     if rid is None: return                       # retired by gfx/runmap.json
     cfg['id'] = rid
     dur = cfg['dur']
+    theme = cfg['theme'] = cfg.get('theme') or THEME
+    if theme == 'sketch':                        # one SVG drawn by sketch.js; the camera's rest frame is the frame itself
+        cfg.setdefault('cards', []); cfg.setdefault('cam0', {'x': 540, 'y': 720, 's': 1.0})
+        if not cfg.get('sketch'): raise SystemExit(f'{rid}: theme "sketch" needs cfg["sketch"], the JS that draws the run (theme-sketch.md)')
+        extra_css = SKETCH_CSS + extra_css
     THUMBS[rid] = still(rid, cfg, cfg.pop('thumb', []))
     if cfg.get('mode', 'fv') != 'fv':
         raise SystemExit(f'{rid}: mode {cfg["mode"]!r} - every run is a full visual (mode "fv"); there is no camera to split with')
@@ -203,8 +222,8 @@ def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_
 <script src="gsap.min.js"></script>
 <style>{CSS}{split_mask}{extra_css}</style></head>
 <body>
-<div id="root" class="{'paper' if cfg.get('theme') == 'paper' else 'stage'}{' acc-' + cfg['accent'] if cfg.get('accent') and cfg.get('accent') != 'azure' else ''}" data-composition-id="{rid}" data-start="0" data-duration="{dur}" data-width="1080" data-height="1920">
-<div id="ground"></div><div class="beam" id="beam-a"></div><div class="beam" id="beam-b"></div><div id="vignette"></div>
+<div id="root" class="{theme if theme in ('paper', 'sketch') else 'stage'}{' acc-' + cfg['accent'] if cfg.get('accent') and cfg.get('accent') != 'azure' else ''}" data-composition-id="{rid}" data-start="0" data-duration="{dur}" data-width="1080" data-height="1920">
+<div id="ground"></div><div class="beam" id="beam-a"></div><div class="beam" id="beam-b"></div><div id="vignette"></div>{'<div id="grain"></div>' if theme == 'sketch' else ''}
 {bd_html}
 <div id="viewport"><div id="world"></div></div>
 {vid_html}
@@ -213,6 +232,7 @@ def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_
 </div>
 <script>window.CFG={json.dumps(cfg)};</script>
 <script>{extra_js}</script>
+{'<script src="rough.js"></script><script src="sketch.js"></script>' if theme == 'sketch' else ''}
 <script src="engine.js"></script>
 <script>/* the browser preview (index.html, preview.py) drives this page by message: works from file://, where a parent
    page may not touch an iframe's window; HyperFrames renders never send it */

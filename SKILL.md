@@ -1,6 +1,6 @@
 ---
 name: create-video-shorts
-description: Make finished, ready-to-post 9:16 shorts (YouTube Shorts, Instagram Reels, TikTok) from a topic, material or a script, with no recording needed - researches and fact-checks, writes spoken-Korean narration by script-to-motion's rules, narrates it with script-to-motion's TTS tools (Google Chirp 3 HD Enceladus; recorded only when the user says so, after reviewing a silent draft), lays every run as a full-frame HyperFrames graphic in the stage theme (glass cards, real source captures, camera moves, motion blur) timed to the narration's phrases, burns in Korean captions with glass keyword chips and a cover, masters the narration to -14 LUFS, and delivers 1080x1920 60 fps MP4s with a thumbnail, a report and a Korean publishing package for YouTube Shorts, TikTok and Instagram Reels. Use it whenever the user wants shorts, reels, TikToks or vertical videos about a topic, an article, notes or a script ("이 내용으로 쇼츠 만들어줘", "릴스 몇 개 뽑아줘"), or wants to fix or re-edit a short made this way, even if they never mention a skill.
+description: Make finished, ready-to-post 9:16 shorts (YouTube Shorts, Instagram Reels, TikTok) from a topic, material or a script, with no recording needed - researches and fact-checks, writes spoken-Korean narration by script-to-motion's rules, narrates it with script-to-motion's TTS tools (Google Chirp 3 HD Enceladus; recorded only when the user says so, after reviewing a silent draft), lays every run as a full-frame HyperFrames graphic in the stage theme (glass cards, real source captures, camera moves, motion blur) or the sketch theme (hand-drawn schematics on paper, drawn on with flowing current, for circuits and diagrams) timed to the narration's phrases, burns in Korean captions with glass keyword chips and a cover, masters the narration to -14 LUFS, and delivers 1080x1920 60 fps MP4s with a thumbnail, a report and a Korean publishing package for YouTube Shorts, TikTok and Instagram Reels. Use it whenever the user wants shorts, reels, TikToks or vertical videos about a topic, an article, notes or a script ("이 내용으로 쇼츠 만들어줘", "릴스 몇 개 뽑아줘"), or wants to fix or re-edit a short made this way, even if they never mention a skill.
 ---
 
 # create-video-shorts
@@ -36,6 +36,9 @@ report, publishing copy). Another language only when the user asks.
 - No music, no sound effects. `mix.py` only masters the narration to -14 LUFS / -1 dBTP.
 
 ## Inputs and defaults
+- **The look:** the stage theme (theme.md) by default; the sketch theme (theme-sketch.md: hand-drawn schematics on
+  paper) when the user asks for a hand-drawn look or the subject is a circuit or diagram explained step by step. Set
+  `"theme"` in `project.json` before the first build; captions, chips and cover follow it.
 - **The material:** a topic, an article, notes, links, a planning doc or a finished script. The user's script is used
   word for word (only `say` gets spoken forms). Files they give (logos, screenshots) go to `work/gfx/assets/`.
 - **The folder:** the user's, otherwise the current folder. It may be empty.
@@ -152,11 +155,11 @@ Read `references/lessons.md` before improvising. The biggest ones:
   `init_project.py`.
 - `scripts/narration/`: script-to-motion's TTS tools (`tts.mjs`, `wave.mjs`, `sync.mjs`, `phrasing-check.mjs`,
   `autocut.py`, `lib/`), with `SOURCE.md` (provenance, local changes) and `sync_upstream.sh` (reports upstream changes).
-- `assets/gfx/`: `engine.js` (world camera, depth of field, motion blur, captures, the stage theme), GSAP and the
-  HyperFrames project files. `assets/fonts/`: Pretendard (downloaded by setup.sh), Geist Mono, and the Latin fonts of
-  the old compositions.
+- `assets/gfx/`: `engine.js` (world camera, depth of field, motion blur, captures, the stage theme), `sketch.js` +
+  `rough.js` (the sketch theme's drawing kit), GSAP and the HyperFrames project files. `assets/fonts/`: Pretendard,
+  Gaegu and Architects Daughter (downloaded by setup.sh), Geist Mono, and the Latin fonts of the old compositions.
 - `examples/`: `shorts_example.json` (a plan), `GFX_BRIEF_template.md`, `gfx_s1.py` (full-visual compositions with
-  phrase anchors).
+  phrase anchors), `gfx_sketch.py` (a sketch-theme run: the transistor switch).
 - `references/`: `editing-spec.md` (the contract), `narration.md` (script-to-motion's narration rules),
   `script-writing.md` (script-to-motion's writing rules), `pipeline.md` (the commands), `graphics.md` (the engine API),
-  `theme.md` (the stage look), `speed.md` (parallelism), `lessons.md`.
+  `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `speed.md` (parallelism), `lessons.md`.

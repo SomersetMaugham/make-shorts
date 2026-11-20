@@ -1,5 +1,8 @@
 # The stage theme (the skill's own look)
 
+The default. The other look is the sketch theme (hand-drawn schematics on paper, `"theme": "sketch"` in project.json):
+[theme-sketch.md](theme-sketch.md).
+
 The graphics, captions, chips and cover share one look: a graphite stage lit from above with cards floating in it and a
 camera moving through it. It is the skill's neutral default (`theme: 'stage'` in the engine). The code implements it in
 `scripts/build_gfx_common.py` (CSS tokens and type classes), `assets/gfx/engine.js` (stage, shadows, camera) and

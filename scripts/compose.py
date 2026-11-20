@@ -40,6 +40,19 @@ def vfont(name, size, weight):
     except Exception: pass
     return f
 CAP = vfont(FONT, 74, 700)                    # captions: Pretendard bold, white with a graphite stroke
+import zlib
+sys.path.insert(0, 'scripts'); import config as _cfg0
+SKETCH = _cfg0.THEME == 'sketch'               # theme-sketch.md: handwriting (Gaegu) in ink on a highlighter stroke
+if SKETCH: CAP = ImageFont.truetype(F + 'Gaegu-Bold.ttf', 78)
+SK_INK = (34, 32, 28); SK_RED = (212, 56, 44); SK_HL = (255, 208, 0, 150)
+
+def hl_band(d, box, seed, rgba=SK_HL):
+    """a highlighter stroke over box: slightly slanted, ragged ends (deterministic per seed)"""
+    import random, zlib
+    rnd = random.Random(seed); x0, y0, x1, y1 = box; n = 9
+    top = [(x0 + (x1 - x0) * k / n, y0 + rnd.uniform(-4, 4) - 4 * k / n) for k in range(n + 1)]
+    bot = [(x1 - (x1 - x0) * k / n, y1 + rnd.uniform(-4, 4) - 4 * (n - k) / n) for k in range(n + 1)]
+    d.polygon(top + [(x1 + rnd.uniform(4, 12), (y0 + y1) / 2)] + bot + [(x0 - rnd.uniform(4, 12), (y0 + y1) / 2)], fill=rgba)
 INK = (17, 18, 20); STAGE950 = (11, 12, 14); STAGE800 = (24, 25, 28); STAGE700 = (33, 34, 38)
 TEXT_MUTED = (126, 129, 138); AZURE = (47, 149, 255); AZURE_INK = (21, 96, 208)
 ACCENTS = {'azure': (47, 149, 255), 'ember': (255, 138, 91), 'iris': (156, 124, 255), 'mint': (79, 214, 160)}
@@ -144,6 +157,13 @@ def caption_img(text, hl=False):
     lw = lambda l: sum(dummy.textlength(wd, font=font) for wd in l.split()) + gap * (len(l.split()) - 1)
     w = int(max(lw(l) for l in lines)) + 2 * pad; h = lh * len(lines) + 2 * pad
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    if SKETCH:                                    # ink handwriting on a highlighter stroke, no outline
+        for j, l in enumerate(lines):
+            x = (w - lw(l)) / 2; y = pad + j * lh
+            hl_band(d, (x - 18, y + 4, x + lw(l) + 18, y + lh - 2), zlib.crc32(l.encode()))
+            for wd in l.split():
+                d.text((x, y), wd, font=font, fill=SK_INK + (255,)); x += dummy.textlength(wd, font=font) + gap
+        return np.asarray(im)
     for j, l in enumerate(lines):
         x = (w - lw(l)) / 2; y = pad + j * lh
         for wd in l.split():
@@ -170,7 +190,25 @@ def tracked(draw, xy, text, f, fill, track_em):
     return prev + extra * (len(text) - 1)
 
 
+def chip_parts_sketch(text):
+    """the sketch theme's keyword: red handwriting on a strong highlighter stroke; the red pen line sweeps in beneath"""
+    size = 88
+    while True:
+        f = ImageFont.truetype(F + 'Gaegu-Bold.ttf', size); tw = f.getlength(text)
+        if tw + 80 <= MAX_LINE or size <= 56: break
+        size -= 2
+    asc = f.getbbox(text)[3]; pad = 60
+    W_, H_ = int(tw + 2 * pad + 40), int(asc + 2 * pad + 30)
+    im = Image.new('RGBA', (W_, H_), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    x0, y0 = pad + 20, pad
+    hl_band(d, (x0 - 24, y0 - 6, x0 + tw + 24, y0 + asc + 12), zlib.crc32(text.encode()), (255, 208, 0, 190))
+    d.text((x0, y0), text, font=f, fill=SK_RED + (255,))
+    ly = y0 + asc + 18
+    return im, (x0, ly, x0 + tw, ly + 7), SK_RED
+
+
 def chip_parts(text, accent='azure'):
+    if SKETCH: return chip_parts_sketch(text)
     acc = ACCENTS.get(accent, ACCENTS['azure'])
     size = CHIP_SIZE
     while True:                                                   # long phrases shrink to fit the 1080 frame
@@ -213,7 +251,10 @@ def chip_render(k, parts, t_rel):
     key = (k, round(pin, 3), round(sw, 3))
     if key not in CHIP_CACHE:
         base, line, acc = parts; im = base
-        if sw > 0:                                                # the accent line, with a soft glow, drawn left to right
+        if sw > 0 and SKETCH:                                     # the red pen line, no glow
+            x0, y0, x1, y1 = line; xe = x0 + (x1 - x0) * sw; im = im.copy()
+            ImageDraw.Draw(im).line((x0, y0 + 3, xe, y0 + 3 - 6 * sw), fill=acc + (255,), width=7)
+        elif sw > 0:                                              # the accent line, with a soft glow, drawn left to right
             x0, y0, x1, y1 = line; xe = x0 + (x1 - x0) * sw
             glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).rounded_rectangle((x0, y0, xe, y1), 3, fill=255)
             glow = glow.filter(ImageFilter.GaussianBlur(7))
@@ -265,6 +306,7 @@ def cover_rgba(title_lines):
     """frame 0's title in the design system: white Pretendard 600 at the headline tracking on a graphite glass card (accent
     hairline + bloom, the long panel shadow) with the azure accent line drawn beneath the words - the keyword-pop chip at
     title size. Centred at y ~432 (the spec's 262-603 band for two lines); the graphic keeps everything below 620."""
+    if SKETCH: return cover_sketch(title_lines)
     acc = ACCENTS['azure']; track = -0.03; size = 104
     while True:
         ft = vfont(FONT, size, 600)
@@ -299,6 +341,23 @@ def cover_rgba(title_lines):
     gl = Image.new('RGBA', (Wc, Hc), acc + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.8)))
     im = Image.alpha_composite(im, gl)
     ImageDraw.Draw(im).rounded_rectangle((lx0, ly, lx0 + lw, ly + line_h), 3, fill=acc + (255,))
+    return np.asarray(im).astype(np.float32)
+
+def cover_sketch(title_lines):
+    """the sketch theme's cover: the title handwritten in ink, each line on a highlighter stroke, a red pen line beneath"""
+    size = 120
+    while True:
+        ft = ImageFont.truetype(F + 'Gaegu-Bold.ttf', size); tws = [ft.getlength(l) for l in title_lines]
+        if max(tws) <= 880 or size <= 76: break
+        size -= 4
+    lh = int(size * 1.2); asc = ft.getbbox('가')[3]; top = 432 - (lh * len(title_lines) + 30) / 2
+    im = Image.new('RGBA', (Wc, Hc), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    for j, (l, tw) in enumerate(zip(title_lines, tws)):
+        x = (Wc - tw) / 2; y = top + j * lh
+        hl_band(d, (x - 26, y + asc * 0.35, x + tw + 26, y + asc + 14), j * 7 + 3)
+        d.text((x, y), l, font=ft, fill=SK_INK + (255,))
+    ly = top + (len(title_lines) - 1) * lh + asc + 34; lw = max(tws)
+    d.line(((Wc - lw) / 2, ly + 6, (Wc + lw) / 2, ly - 4), fill=SK_RED + (255,), width=9)
     return np.asarray(im).astype(np.float32)
 
 _BBOX = {}

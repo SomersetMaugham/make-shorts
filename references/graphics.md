@@ -10,7 +10,7 @@ Contents: [Theme](#theme-the-neutral-stage-look) · [Timing & Phrase Anchors](#t
 
 ## Theme: the neutral stage look
 
-`theme: 'stage'` (the default; `'paper'` restores the white style only on explicit request) applies the skill's neutral dark look ([references/theme.md](theme.md)):
+`theme: 'stage'` (the default; `'paper'` restores the white style only on explicit request) applies the skill's neutral dark look ([references/theme.md](theme.md)); `theme: 'sketch'` (project.json `"theme"`) draws the run as a hand-drawn schematic on paper with `cfg['sketch']` instead of cards ([references/theme-sketch.md](theme-sketch.md), `examples/gfx_sketch.py`):
 - **Ground**: graphite stage (#18191C at top to #0B0C0E at bottom), soft overhead spotlight, two faint angled beams, subtle vignette.
 - **No horizon wave**: the old accent dot wave under the captions is gone (it only took room); pages have no `#wave` canvas.
 - **Accents**: `'azure'` (default #2F95FF), `'ember'` (limits, costs #FF8A5B), `'mint'` (passes, success #4FD6A0), `'iris'` (#9C7CFF). Use one accent per scene.

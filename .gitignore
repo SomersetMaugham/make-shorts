@@ -7,3 +7,5 @@ assets/fonts/PretendardVariable.ttf
 assets/fonts/Pretendard-OFL.txt
 *.part
 test-output/
+assets/fonts/Gaegu-*
+assets/fonts/ArchitectsDaughter-*

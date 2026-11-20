@@ -67,16 +67,20 @@ TASK = {
               'that shows a different state in the MIDDLE of a run may be a capture glitch: report it as "suspect flash", separately '
               'from the must-fix list.',
 }[point]
+THEME = json.load(open('project.json')).get('theme', 'stage') if os.path.exists('project.json') else 'stage'
+LOOK = ('hand-drawn on paper in the sketch theme (pen schematics, red/blue pens, highlighter, handwriting; read '
+        + os.path.join(SKILL, 'references', 'theme-sketch.md') + ' and score it by the sketch-theme paragraph of the rubric)'
+        if THEME == 'sketch' else 'on a graphite stage with glass cards')
 prompt = f"""You are the ART DIRECTOR of the elevation described in {RUBRIC} (read it all; use its §4 rubric and answer in
 exactly the format of its §5). You have no stake in this work: you did not build it and you do not defend it. You only
 look at the images listed below, read the files named here, and judge. Do not edit or create any file, do not run
 anything; your answer is your report.
 
 The work: a Korean vertical short (1080x1920, YouTube Shorts / Reels), narration with burned-in captions and keyword
-chips, every run a full-frame HyperFrames graphic on a graphite stage with glass cards. Audience: Korean viewers
+chips, every run a full-frame HyperFrames graphic {LOOK}. Audience: Korean viewers
 scrolling shorts, curious about AI but not specialists. The scale is ABSOLUTE (3 = competent explainer graphics,
 4 = a crafted world a viewer finds beautiful on its own, 5 = reel-worthy); never grade on effort or against a previous
-round. A glass card holding a title and a line of text is a slide (B at most 2).
+round. A card or page holding a title and a line of text is a slide (B at most 2).
 On the phone the platform draws its like/comment/share buttons over x > 960, y 1000–1700 and its title below y 1560:
 text or a key element there is a floor violation.
 

@@ -36,6 +36,13 @@ fetch https://raw.githubusercontent.com/orioncactus/pretendard/5c41199ea0024a9e0
   "$FONTS/PretendardVariable.ttf" 3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22
 fetch https://raw.githubusercontent.com/orioncactus/pretendard/0189074fdad117a5e360aad00a59b47225429c31/LICENSE \
   "$FONTS/Pretendard-OFL.txt" 82e9c8a4b203261f10ddba1296422d64914ff3d4b7bd8a12896d03f0f088d70a
+# The sketch theme's handwriting (references/theme-sketch.md): Gaegu Bold (Hangul + Latin) and Architects Daughter
+# (the schematic's uppercase labels), both SIL OFL 1.1, from the commits of google/fonts pinned here.
+GF=https://raw.githubusercontent.com/google/fonts
+fetch $GF/088df5c822dacc8fad9dd64dbbe5649cd6830e99/ofl/gaegu/Gaegu-Bold.ttf "$FONTS/Gaegu-Bold.ttf" cc38a4af9506a45254d1ce07c589ec473d9e5f0be319e5a77b17c214903f8c1c
+fetch $GF/088df5c822dacc8fad9dd64dbbe5649cd6830e99/ofl/gaegu/OFL.txt "$FONTS/Gaegu-OFL.txt" 53a9ce47085d9fef613c7ecb3730dc80d25962510bbea231b89564f58240f251
+fetch $GF/f81a0e9fb2ff01bf783fff251ece4ffe2df61278/ofl/architectsdaughter/ArchitectsDaughter-Regular.ttf "$FONTS/ArchitectsDaughter-Regular.ttf" 6159718a08898e34bc1cb7354086141a5f9a70b73e54dbec27ead0d59a697359
+fetch $GF/f81a0e9fb2ff01bf783fff251ece4ffe2df61278/ofl/architectsdaughter/OFL.txt "$FONTS/ArchitectsDaughter-OFL.txt" 0e441ae9f18ad0c294cc5b6ae3974c2db1614cab220598578b1b58c4cc334485
 
 W=work
 mkdir -p "$W/scripts" "$W/gfx/assets" "$W/fonts" "$W/narration" edit

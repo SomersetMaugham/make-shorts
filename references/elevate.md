@@ -69,6 +69,14 @@ The stage theme (graphite stage, glass cards, accents; theme.md) is the material
 a centred title and a line of text is a slide, whatever its hairline and bloom, and scores at most 2 on B. The
 infographic look (thin lines and small diagrams on a dark gradient, a label column beside them) scores at most 2 on B.
 
+**The sketch theme** (theme-sketch.md) is read on its own terms: paper and pen are the material, so "thin lines on a
+flat ground" is not the infographic cap there. What scores 4 in it: the drawing fills the content zone as one figure
+(not small diagrams in a column of labels), the three pens each do their job (red = what changes now, blue = before,
+highlighter = the one key line), the hand's order follows the words, the current is seen at a glance (band and moving
+charges), a push commits to its close-up and the change is written there as a correction. What caps it at 2: a
+sketch frame that is a slide in handwriting (a title and bullet lines on paper), a drawing that appears all at once,
+labels under 44 px, colour used without a job.
+
 **A. 연출 — direction**
 - The concept object/idea is present and keeps changing role; each section has a world, not a backdrop.
 - Shots vary (wide · medium · close-up · insert); the key gesture of each beat gets its close-up; no layout three runs
