@@ -220,6 +220,15 @@
     ITEMS.forEach((it, k) => {
       if (it.kind === 'stream') return;
       if (it.n.tagName === 'text') {
+        // a line that runs off the page is shrunk to fit x 40-1000 (a safety net; size the copy so it never triggers)
+        let b0 = it.n.getBBox();
+        if (b0.width > 0 && (b0.x < 40 || b0.x + b0.width > 1000)) {
+          const fs = +it.n.getAttribute('font-size'), k = Math.min(1, 960 / b0.width);
+          it.n.setAttribute('font-size', Math.floor(fs * k)); b0 = it.n.getBBox();
+          const dx = b0.x < 40 ? 40 - b0.x : b0.x + b0.width > 1000 ? 1000 - b0.x - b0.width : 0;
+          if (dx) { it.n.setAttribute('x', +it.n.getAttribute('x') + dx); it.n.setAttribute('transform', (it.n.getAttribute('transform') || '').replace(/rotate\(([-\d.]+) ([-\d.]+) /, (m, r, x) => `rotate(${r} ${+x + dx} `)); }
+          console.warn('sketch: text shrunk to fit the page:', it.n.textContent);
+        }
         const b = it.n.getBBox(), cp = document.createElementNS(NS, 'clipPath'), r = document.createElementNS(NS, 'rect');
         cp.id = 'skc' + k; r.setAttribute('x', b.x - 10); r.setAttribute('y', b.y - 20); r.setAttribute('height', b.height + 40);
         cp.appendChild(r); defs.appendChild(cp); it.n.setAttribute('clip-path', `url(#skc${k})`); it.clip = r; it.w = b.width + 20;
