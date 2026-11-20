@@ -65,15 +65,21 @@ def run_at(t):
 
 # ---------------------------------------------------------------- captions
 _PUNCT = re.compile(r'[.,!?·…"\'“”‘’()\[\]]+$')
+def _strip(s):
+    """the word without its closing punctuation, but a bracket the word opened keeps its pair: 인(P) stays 인(P)"""
+    t = _PUNCT.sub('', s)
+    for o, c in ('()', '[]'):
+        if t.count(o) > t.count(c) and c in s[len(t):]: t += c
+    return t
 def disp_tokens():
     """the words (Korean 어절, as in the cue text) with their times from timeline.py; p = the word ends a clause"""
     toks = []
     for w in C['words']:
         s = w['w']
-        toks.append(dict(w=s, s=w['s'], e=w['e'], line=w['line'], p=s[-1] in '.,?!…', d=_PUNCT.sub('', s) or s))
+        toks.append(dict(w=s, s=w['s'], e=w['e'], line=w['line'], p=s[-1] in '.,?!…', d=_strip(s) or s))
     return toks
 
-_norm = lambda s: _PUNCT.sub('', s)
+_norm = _strip
 HL = [[_norm(x) for x in h.split()] for h in S.get('highlights', [])]
 sys.path.insert(0, 'scripts'); import config as _cfg
 MAX_LINE = 2 * (_cfg.LAYOUT['ui_right'][0] - 540)    # 840: centred captions end at x 960, left of the platforms' button column
