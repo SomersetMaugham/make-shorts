@@ -354,6 +354,16 @@ cues had it. Extra commas do not help, a plain re-take is a coin flip, and "..."
   no tag.
 - **A break where there is no comma** ("바다 ‖ 바닥에"): join the words in `say` only (`바다바닥에`).
 - **A pause the user asks for** ("'양도 강이' 사이에 쉼표"): `"양도, [pause short] 강이"` in `say`, and the comma in `text`.
+- **Words that split or join by sound** (2026-11-20, `scripts/say_lint.py`, run by `prep.sh`; it prints 👂 lines and
+  changes nothing): a one-syllable word that sounds like a particle or ending after a word with no pause ("엔쪽 인 원자"
+  was heard "엔쪽인"; write "엔쪽, [pause short] 인"), "즉" with no pause before it, spelled letters with spaces
+  ("지 알 피 오" broke as "지 ‖ 알피오": "지알피오"), and digits, Latin letters or symbols left in `say`. A word before it
+  that ends in a particle ("실리콘에 인") was heard apart and is not flagged. The cold-listener review reads text and
+  cannot catch these.
+- **The pronunciation lexicon** (`scripts/lexicon.py`): `references/pronunciation.json` (any short) and
+  `work/pronunciation.json` (this project) hold readings the user corrected once ("마이너스 극" → "마이너스극",
+  "1점" → "일쩜", "GRPO" → "지알피오"); `narration_init.py` applies them to every new or reworded `say`. When a review
+  note fixes a reading that would come back, add it there (SKILL.md step 5) so the user never writes it twice.
 - **Done before recording** (2026-11-20): `narration_init.py` puts `[pause short]` after every comma in a new or reworded
   line's `say`. On the PN short Chirp ran on through 16 of 19 commas, and the breaks found after recording cost the user
   more review notes than anything else (11 of 19 notes over three shorts were pauses). So tag first and record once.

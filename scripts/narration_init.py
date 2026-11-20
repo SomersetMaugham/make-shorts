@@ -4,7 +4,8 @@ usage: python scripts/narration_init.py [s1 s2 ...]        (every short in short
 
 What comes from shorts.json, per line: id, text (shown: captions), say (spoken: numbers, units and English terms in
 spoken Hangul, [pause short] where Chirp 3 HD breaks wrongly; defaults to text), gapAfter and noPause (optional).
-Every comma in say gets a [pause short] after it here, before any recording (Chirp 3 HD ran on through 16 of 19 commas
+The readings in the pronunciation lexicon (scripts/lexicon.py) are applied first. Every comma in say gets a
+[pause short] after it here, before any recording (Chirp 3 HD ran on through 16 of 19 commas
 on the PN short and the user had to find them by ear; references/narration.md §3). A comma already followed by a tag
 keeps it, and so does a line already in script.json with the same untagged say (a take recorded before this rule
 stays valid). Off for one line: "noPause": true on the shorts.json line; off for a short: "autoPause": false in script.json.
@@ -14,7 +15,7 @@ so a re-run after a wording change keeps everything the takes already have. A cu
 on the next recording and tts.mjs reports its cut as not applied (references/narration.md)."""
 import json, os, re, sys
 
-sys.path.insert(0, 'scripts'); import config as C
+sys.path.insert(0, 'scripts'); import config as C, lexicon
 
 S = json.load(open('shorts.json', encoding='utf-8'))
 DEFAULTS = {
@@ -30,8 +31,16 @@ DEFAULTS = {
 COMMA = re.compile(r'(?<!\d),(?!\d)(?!\s*\[pause)\s*(?=\S)')   # not 1,000; not one already tagged; not at the end
 
 
+LEX = lexicon.load()
+
+
 def auto_pause(say):
     return COMMA.sub(', [pause short] ', say)
+
+
+def spoken(say):
+    """the readings the user already corrected (lexicon.py), then a pause after every comma"""
+    return auto_pause(lexicon.apply(say, LEX))
 
 
 for sk in sys.argv[1:] or list(S):
@@ -48,7 +57,8 @@ for sk in sys.argv[1:] or list(S):
         c = dict(prev.get(L['id'], {}))
         say = L.get('say') or L['text']
         # new or reworded lines only: a line whose say is already in script.json untagged keeps it (its take stays good)
-        if out.get('autoPause', True) and not L.get('noPause') and c.get('say') != say: say = auto_pause(say)
+        if c.get('say') != say:
+            say = lexicon.apply(say, LEX) if (not out.get('autoPause', True) or L.get('noPause')) else spoken(say)
         if c and (c.get('say') != say or c.get('text') != L['text']): changed.append(L['id'])
         c.update(id=L['id'], text=L['text'], say=say)
         if 'gapAfter' in L: c['gapAfter'] = L['gapAfter']

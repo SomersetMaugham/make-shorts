@@ -103,10 +103,14 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    `review.py announce "N개 반영 · L에서 '반영된 곳 이어 보기'"`. The page plays each fixed moment in turn and the user
    answers 확인 or 다시 (`USER n003 open: …` lines: the next round). A note sent with "바로 고치기" ticked arrives alone at
    once (a NOTE line with no BATCH): fix just that one. Unclear → `--status question "…"`.
+   A note that fixes **how a word is read or split** ("일쩜", "마이너스극", a pause the user wants) that would come
+   back in another line or short also goes into the pronunciation lexicon (`work/pronunciation.json` for this
+   project, `references/pronunciation.json` when it holds for any short); narration_init.py applies it from then on.
    Without the server, index.html still works from file:// (S copies the moment, A the screenshot command).
    The loop runs until the user says the review is complete. Only then is an MP4 made, and the user makes it.
 6. **Record (on the user's word):** `node scripts/narration/tts.mjs narration/<sk> --approved`; then the after-recording
-   pass (`references/narration.md`): read every take (`wave.mjs narration/<sk> --unreviewed`; `autocut.py` drafts a cut
+   pass (`references/narration.md`; before the recording question, `prep.sh` has already printed `say_lint.py`'s
+   👂 lines: fix those in shorts.json first): read every take (`wave.mjs narration/<sk> --unreviewed`; `autocut.py` drafts a cut
    you correct), set each `cut` (in `narration/<sk>/script.json`), run `phrasing-check.mjs` until its verdict is ok
    for every cue (commas are tagged before recording; check_narration.py refuses a MISSING) and fix wrong breaks with
    `[pause short]` in the line's `say` **in shorts.json** (prep.sh copies it over) and `--only` re-takes, set `at` for every keyword chip and every phrase a graphic lands on, read the whole sound for dead air.

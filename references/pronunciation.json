@@ -1,0 +1,38 @@
+{
+ "about": "Readings the user corrected once. narration_init.py applies them to every new or reworded say (scripts/lexicon.py). Add an entry whenever a review note fixes a reading that would come back (references/narration.md §3).",
+ "entries": [
+  {
+   "from": "플러스 극",
+   "to": "플러스극",
+   "note": "PN n013: read as two words with a pause between"
+  },
+  {
+   "from": "마이너스 극",
+   "to": "마이너스극",
+   "note": "PN n013"
+  },
+  {
+   "from": "지 알 피 오",
+   "to": "지알피오",
+   "note": "GRPO n005 n006: spaced letters broke as '지 ‖ 알피오'"
+  },
+  {
+   "from": "GRPO",
+   "to": "지알피오",
+   "word": true,
+   "note": "GRPO: an acronym is spelled in joined Hangul letters"
+  },
+  {
+   "from": "1점",
+   "to": "일쩜",
+   "word": true,
+   "note": "GRPO n001 n004: a score is read 일쩜, not 일점"
+  },
+  {
+   "from": "0점",
+   "to": "영쩜",
+   "word": true,
+   "note": "GRPO n001"
+  }
+ ]
+}
