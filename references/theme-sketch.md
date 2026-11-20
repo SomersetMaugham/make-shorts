@@ -58,6 +58,13 @@ Times are run-relative and come from the words: build the JS in Python with `W(w
 - **Commit to the push**: a push-in goes all the way (2×) onto the thing being explained, with `ease: 'expo.inOut'`
   (slow start, fast middle, soft landing), holds while the change is written there, then pulls back (`power3.inOut`).
   A 1.3× push read as "당기다 그만 둔 느낌".
+- **Camera budget: 4–5 pushes per short, no more** (the user, 2026-11-21, PN part 3: "눈이 너무 피곤하네요. 내용은
+  정말 좋은데"). Push only on the key moments (the hook, the half-seen moment, the answer, the payoff); every other run
+  keeps the camera at rest and lets the drawing change instead (drawn on, corrected, set aside). Every push is back at
+  rest, or framed so the hero and every label sit inside the zones, before its run ends: never cut out of a run while
+  zoomed. Part 3 had 50 moves over 31 runs (parts 1–2: 14 over 34) after a director's "1.0× everywhere is monotonous"
+  was passed on as "a push in every run": it tired the eye and clipped labels at run ends. When a stretch is called
+  static, answer with what the drawing does, not with the camera.
 - **Show the change, not the result**: write the value before (blue `3V` beside OUT), then at the payoff circle it,
   strike it out in red and write the new value (`0V로 뚝!`). A changed state is drawn as a correction on the page.
 - Something keeps moving while words go on (the charges flow until the run ends); the drawing never redraws itself.

@@ -83,7 +83,8 @@ labels under 44 px, colour used without a job.
   in a row; nothing holds the same composition for more than ~2 s while words go on, unless the stillness means
   something. A short is watched on a phone: the hero fills the content zone (y 140–1395), not the upper half.
 - The camera moves for a reason in the words (push-in on what is named, pull-out for the whole) and stays still
-  otherwise; no habitual drift.
+  otherwise; no habitual drift. Budget: 4–5 pushes per short (theme-sketch.md "Camera budget"); never ask for a
+  push in every run, and never score a short down because the camera rests where the drawing carries the change.
 - Staging: one focal point per moment; the eye is led — where it lands at a cut is where the next run starts; reveals
   are withheld and land on the word; the captions (y 1410–1550) are part of the frame, never fighting the hero.
 - Rhythm: density follows the story (hook → build → peak → resolve); the peaks are visibly peaks. The first 2 s are
