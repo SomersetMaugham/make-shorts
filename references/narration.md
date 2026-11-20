@@ -399,6 +399,8 @@ Do not read the STT word timestamps instead: in v1 and v2 they shift by about a 
    `wave.mjs <dir> --cue <id>` and correct the numbers before keeping them.
 4. `tts.mjs <dir> --approved` (applies the cuts), then `phrasing-check.mjs` on those cues; repeat until it exits 0.
 5. Dead-air scan, `check.mjs`, then ask the user to listen — intonation and speed are not checked by any of this.
+   A pitch check did not tell the flagged lines from the rest (lessons.md); list the lines that open with
+   "그래서/이렇게 + subject는" first when you hand over, those drew the emphasis notes.
 
 ---
 

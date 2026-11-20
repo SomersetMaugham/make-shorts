@@ -378,6 +378,12 @@ async function takeFor(c) {
   }
   const samples = await synthesize(c);   // kept exactly as received: what (if anything) comes out is the agent's call
   if (!samples.length) throw new Error(`cue ${c.id}: Fish Audio returned no audio`);
+  // local (SOURCE.md): a re-take of an unchanged say has the same key; keep the take it replaces, so the take a review
+  // note was about can still be measured later (PN c12, 2026-11-20: the take heard as too fast was overwritten)
+  if (fs.existsSync(file)) {
+    const keep = path.join(cacheDir, 'replaced'); fs.mkdirSync(keep, { recursive: true });
+    fs.renameSync(file, path.join(keep, `${key}.${c.id}.${new Date().toISOString().replace(/[:.]/g, '-')}.pcm`));
+  }
   fs.writeFileSync(file, Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength));
   freshFiles.push(file);
   fresh++;

@@ -26,6 +26,10 @@ Messages in these scripts still name script-to-motion's files (`check.mjs`, `ref
 - `autocut.py`: a `[pause]` / `[pause long]` in `say` keeps the longest silence(s) at 0.55 / 0.8 s instead of 0.27 s
   (2026-11-20, PN a03). Lines without those tags are cut exactly as upstream cuts them.
 
+- `tts.mjs`: a re-take whose `say` did not change has the same take id, so it used to overwrite the take it replaces.
+  That take now moves to `.tts-cache/replaced/<take>.<cue>.<time>.pcm` first, so the take a review note was about can
+  still be measured (2026-11-20; on the PN short the take heard as too fast was lost this way).
+
 ## Upstream sha256 at copy time
 - `tts.mjs`  1942000ee5ad2acad8582a82f3973aed00ed9da53613c77e655d574cc7dd50d0
 - `wave.mjs`  7c87578787812a023f953c68d1341c47b452b52fd19f94d425ad4c4ed2b77039

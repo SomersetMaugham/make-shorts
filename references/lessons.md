@@ -7,6 +7,14 @@
   got shorter (14.6 s -> 10.0 s). Check with phrasing-check.mjs either way (GRPO short, 2026-11-19).
 - **A highlight is a chip once.** A term repeated in many lines ("GRPO", "평균") became a chip every time (18 chips in
   2.5 min). compose.py now uses each highlight once; list one entry per moment, written as it appears there.
+- **Intonation is not measured; only the user's ear catches it.** On the PN short the user flagged an opening subject
+  read with emphasis ("실리콘 원자는", "그래서 공학자들은" higher than "그래서"), a particle that jumped ("남아도"의 "도")
+  and one line faster than the rest. A pitch check was tried on the 26 first takes (2026-11-20, Praat via
+  praat-parselmouth, syllable nuclei): only the raised opening of c04 stood out (+8.5 st over the line, with 2 unflagged
+  lines also over +6 st); "공학자들은" and "도" sat inside the ±8 st that Korean phrase intonation moves anyway. So no
+  pitch gate. Two cheap habits instead: hand the user the lines that open with "그래서/이렇게 + subject는" to listen to
+  first (both emphasis notes were such openings), and since takes replaced by a re-take are now kept in
+  `.tts-cache/replaced/`, a later check can be measured on the takes the notes were about.
 - **Read with phrasing-check before trusting your own reading of a pause.** A 0.35 s pause read off wave.mjs as the comma
   break was, by phrasing-check, after the topic word instead.
 
