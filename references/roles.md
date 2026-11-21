@@ -22,8 +22,11 @@ every short unless the user says otherwise; ask before moving a step to someone 
 | Commit / push | skill changes | **only on the user's word** (each push asked) | — |
 
 Rules that go with it:
-- **Delegate politely** to agy and the Gemini app: a kind manager asking a trusted colleague, never commands; context
-  and hard limits stated clearly but courteously (global CLAUDE.md "위임 말투"). Prompts built into scripts too.
+- **Delegate in polite, unambiguous English** to agy and the Gemini app (user, 2026-11-22; global CLAUDE.md "위임 말투와
+  언어"): a kind manager asking a trusted colleague, never commands, and no room for the other side's own interpretation —
+  numbers with units, file paths, a numbered list of tasks, the files not to touch, the finish condition and the DIGEST
+  format, and "if anything is unclear or conflicts, stop and report it instead of guessing". No vague words ("roughly",
+  "if possible", "as needed", "etc.", "nice"). Prompts built into scripts follow the same rule.
 - **No score decides anything** (elevate.md): the checker finds defects; taste is the user's and the approved
   references' (earlier parts of the series, the parts catalogue).
 - **Verify every delegated result yourself**: agy's "done" is a claim. Build, shoot and check before reporting.

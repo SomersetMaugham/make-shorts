@@ -56,31 +56,32 @@ script = os.path.abspath(f'narration/{sk}/script.txt')
 runs = '\n'.join(f'- {sk}_r{r["i"]} {r["T0"]:.2f}–{r["T1"]:.2f} s {r.get("scene", "")}: '
                  + ' '.join(q['text'] for q in C['cues'] if q['id'] in r.get('lines', []))[:90] for r in C['runs'])
 TASK = {
-    'lookdev': 'This round is POINT 1: the hero frames of each section, before the rest of the short is built. Could you '
-               'check every frame against the floor (elevate.md §3) and the consistency rules (§4)?',
+    'lookdev': 'This round is POINT 1: the hero frames of each section, before the rest of the short is built. Please '
+               'check every image against the floor (elevate.md §3) and the consistency rules (§4).',
     'whole': 'This round is POINT 3: the whole short before it goes to the user for review (whole-short and section sheets '
-             'and key frames). Could you check the floor (elevate.md §3) and the consistency rules (§4) everywhere, '
-             'including three runs in a row with the same layout and, against the previous round (--before), a changed '
-             'stretch that still looks the same at phone size?',
-    'motion': 'This round is POINT 2: frame-by-frame sheets (consecutive tiles are 1–6 frames apart at 60 fps). Could you '
-              'look at every run boundary and camera move for one-frame jumps, jerks (a move packed into a few frames), '
+             'and key frames). Please check every image against the floor (elevate.md §3) and the consistency rules (§4), '
+             'including three runs in a row with the same layout and, when previous-round images are listed, a changed '
+             'stretch that still looks the same at phone size (judge it scaled to 360 px wide).',
+    'motion': 'This round is POINT 2: frame-by-frame sheets (consecutive tiles are 1–6 frames apart at 60 fps). Please '
+              'check every run boundary and camera move for one-frame jumps, jerks (a camera move completed within 10 frames), '
               'flashes of a wrong state, muddy overlaps, a hero missing at a run\'s first frame, a run that ends while '
-              'zoomed, and a visual that lands after its words (elevate.md §3)? Naming each finding by its sheet and tile '
-              'label helps a lot. A single tile that shows a different state in the MIDDLE of a run may just be a capture '
-              'glitch, so those fit better under "Suspect" than "Must-fix".',
+              'zoomed, and a visual that lands after its words (elevate.md §3)? Please name each finding by its image number and tile label. '
+              'If exactly one tile shows a different state in the middle of a run (not at a run boundary) and its '
+              'neighbours agree with each other, list it under "Suspect", not "Must-fix": it can be a capture glitch.',
 }[point]
 THEME = json.load(open('project.json')).get('theme', 'stage') if os.path.exists('project.json') else 'stage'
 LOOK = ('hand-drawn on paper in the sketch theme (read ' + os.path.join(SKILL, 'references', 'theme-sketch.md') + ')'
         if THEME == 'sketch' else 'on a graphite stage with glass cards (read ' + os.path.join(SKILL, 'references', 'theme.md') + ')')
-prompt = f"""Hi, and thank you for taking this on. I'd love your help as the defect checker described in {RUBRIC}
-(it would help if you could read it all and answer in the format of its §5). You didn't build this work, which is exactly
-why your fresh eyes are valuable. Please just look at the images listed below and read the files named here; there's no
-need to edit or create any file or run anything, because your answer itself is the report.
+prompt = f"""Hi, and thank you for taking this on. I'd like to ask you to act as the defect checker described in {RUBRIC}.
+Please read that file in full and answer in exactly the format of its §5. You didn't build this work, which is exactly
+why your fresh eyes are valuable. Please look at the images listed below and read the files named here. Please do not edit or
+create any file and do not run any command: your written answer is the report, and this script saves it.
 
-What helps most is a list of defects you can point to in an image: a rule from §3 or §4 that the image breaks, and where.
-Scores, grades, ranked upgrades, ideas for new shots, more camera moves or more effects, and opinions on taste or beauty
-are not needed here; the user decides those, and leaving them out keeps the report focused. If a frame breaks no rule,
-it's clean, and saying so is a perfectly good answer.
+Please report only defects you can point to in an image: for each, the image number and label, the rule from §3 or §4
+it breaks, and where in the frame (for example "top-left, y 150-210"). Please leave out scores, grades, ranked upgrades,
+ideas for new shots, requests for more camera moves or effects, and opinions on taste or beauty: the user decides those.
+If an image breaks no rule, list its number under "Clean". If a rule is unclear to you, or two rules conflict, please
+say so in the report instead of guessing.
 
 The work: a Korean vertical short (1080x1920, YouTube Shorts / Reels), narration with burned-in captions and keyword
 chips, every run a full-frame HyperFrames graphic {LOOK}.
@@ -108,7 +109,7 @@ for d in dirs: cmd += ['--add-dir', d]
 t0 = time.time()
 r = subprocess.run(cmd, capture_output=True, text=True)
 text = (r.stdout or '').strip()
-if r.returncode or len(text) < 60:           # a clean report is short
+if r.returncode or '## Must-fix' not in text:   # judged by the §5 format, not length: a clean report is short
     raise SystemExit(f'agy failed (exit {r.returncode}): {(r.stderr or text)[-600:]}')
 open(out, 'w', encoding='utf-8').write(f'<!-- {point} round {rnd} · {model} · {len(imgs)} images · {time.time() - t0:.0f} s -->\n' + text + '\n')
 m = re.search(r'## Must-fix[^\n]*\n(.*?)(?=\n## |\Z)', text, re.S)
