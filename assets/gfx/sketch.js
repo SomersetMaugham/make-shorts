@@ -274,7 +274,7 @@
         });
         (targetG || partG).appendChild(node);
         const f0 = win[0], f1 = win[1];
-        const it = { n: node, t0: baseAt.t0 + baseAt.d * f0, d: Math.max(baseAt.d * (f1 - f0), 1e-3), kind: baseAt.kind };
+        const it = { n: node, t0: baseAt.kind === 'pop' ? baseAt.t0 : baseAt.t0 + baseAt.d * f0, d: Math.max(baseAt.d * (f1 - f0), 1e-3), kind: baseAt.kind };
         ITEMS.push(it);
         partItems.push(it);
         return it;
@@ -282,7 +282,7 @@
       const pushWorldNode = (node, win = [0.7, 1]) => {
         parentG.appendChild(node);
         const f0 = win[0], f1 = win[1];
-        const it = { n: node, t0: baseAt.t0 + baseAt.d * f0, d: Math.max(baseAt.d * (f1 - f0), 1e-3), kind: baseAt.kind };
+        const it = { n: node, t0: baseAt.kind === 'pop' ? baseAt.t0 : baseAt.t0 + baseAt.d * f0, d: Math.max(baseAt.d * (f1 - f0), 1e-3), kind: baseAt.kind };
         ITEMS.push(it);
         partItems.push(it);
         return it;
@@ -325,7 +325,7 @@
         },
         worldText: (wx, wy, str, fontSize, to = {}, win = [0.7, 1]) => {
           const prevCur = CUR;
-          CUR = { t0: baseAt.t0 + baseAt.d * win[0], d: Math.max(baseAt.d * (win[1] - win[0]), 1e-3), kind: baseAt.kind };
+          CUR = { t0: baseAt.kind === 'pop' ? baseAt.t0 : baseAt.t0 + baseAt.d * win[0], d: Math.max(baseAt.d * (win[1] - win[0]), 1e-3), kind: baseAt.kind };
           let tNode;
           try {
             tNode = S.text(wx, wy, str, fontSize, { font: 'l', anchor: 'middle', ...to, rot: 0 });
@@ -1815,6 +1815,11 @@
     try { (new Function('S', window.CFG.sketch || ''))(S); } catch (e) { console.error('sketch:', e); }
     prep(); built = true;
   }
+  function revealWhole(it) {   // items shown without the pen draw-on: open every mask and dash once
+    if (it._revealed || !it.paths) return;
+    for (const q of it.paths) { if (q.maskPath) q.maskPath.style.strokeDashoffset = 0; else if (!q.solid) q.e.style.strokeDashoffset = 0; }
+    it._revealed = true;
+  }
   const ease = (p) => 1 - Math.pow(1 - p, 3);
   function draw(t) {
     if (!built) build();
@@ -1828,9 +1833,11 @@
         it.n.setAttribute('transform', `translate(${sg[0][0] + (sg[1][0] - sg[0][0]) * f} ${sg[0][1] + (sg[1][1] - sg[0][1]) * f})`);
         it.n.style.opacity = t < it.t0 ? 0 : vis * Math.min(1, p * 3) * Math.min(1, v * 12, (1 - v) * 12); continue;
       }
-      if (it.clip) { it.clip.setAttribute('width', it.w * e); it.n.style.opacity = p > 0 ? vis : 0; continue; }
+      const on = p > 0 || (it.t0 <= 0 && t >= 0);   // a piece placed at t0 <= 0 is already there at frame 0 (else every run's first frame is blank)
+      if (it.clip) { it.clip.setAttribute('width', it.w * (it.kind === 'pop' ? 1 : e)); it.n.style.opacity = on ? vis : 0; continue; }   // 'pop' text appears whole
+      if (it.kind === 'fade' || it.kind === 'pop') revealWhole(it);   // no draw-on: dashed strokes' masks fully open (else a 'pop' hole stays hidden)
       if (it.kind === 'fade') { it._vis = e * vis; it.n.style.opacity = it._vis; continue; }
-      it._vis = p > 0 ? vis : 0;
+      it._vis = on ? vis : 0;
       it.n.style.opacity = it._vis;
       if (it.kind === 'pop') continue;
       for (const q of it.paths) {
