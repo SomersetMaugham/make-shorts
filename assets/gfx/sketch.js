@@ -14,18 +14,19 @@
        S.line(x1,y1,x2,y2,o)  S.path([[x,y],..],o)  S.dot(x,y,r,col)  S.circle(cx,cy,d,o)  S.ellipse(cx,cy,w,h,o)  S.rect(x,y,w,h,o)
        S.text(x,y,str,size,{font:'k'|'l', fill, anchor, rot})   k = Gaegu (Korean + words), l = Architects Daughter (labels)
      Parts (canonical 120 px unit, 20 px grid, fixed per-part seed, world return {pins, path, paths, box, at(t,state)}):
-       S.defPart(name, spec)                     define a canonical part; size 'S'(2/3)|'M'(1)|'L'(4/3), rot, flip
+       S.defPart(name, spec)                     define a canonical part; size 'S'(2/3)|'M'(1)|'L'(4/3)|'XL'(2)|'XXL'(3), rot, flip
        S.res(cx, cy, {rot, size, flip})          pins {A, B}   (legacy 2-pt S.res(x1,y1,x2,y2,{s}) supported)
        S.pot(cx, cy, {rot, size, flip})          pins {A, B, W}
        S.ldr(cx, cy, {rot, size, flip})          pins {A, B}
        S.thermistor(cx, cy, {rot, size, flip})   pins {A, B}
        S.cap(cx, cy, {rot, size, flip, polar})   pins {A, B} or {P, N}   (legacy 2-pt S.cap(x1,y1,x2,y2,{s}) supported)
+       S.vcap(cx, cy, {rot, size, flip})         pins {A, B}   (variable capacitor)
        S.ecap(cx, cy, {rot, size, flip})         pins {P, N}   (electrolytic; curved N plate, + red / - blue)
        S.ind(cx, cy, {core, rot, size, flip})    pins {A, B}   (4 humps; core:true adds 2 core lines)
        S.xfmr(cx, cy, {rot, size, flip})         pins {P1, P2, S1, S2}; paths {primary, secondary}
        S.fuse(cx, cy, {rot, size, flip})         pins {A, B}
        S.xtal(cx, cy, {rot, size, flip})         pins {A, B}
-       S.diode(cx, cy, {kind, rot, size, flip, on})  kind: 'std'|'led'|'zener'|'photo', pins {A, K}; S.led alias with {on} state
+       S.diode(cx, cy, {kind, rot, size, flip, on})  kind: 'std'|'led'|'zener'|'photo'|'schottky', pins {A, K}; S.led alias with {on} state
        S.battery(cx, cy, {cells, rot, size, flip})   pins {P, N}   (legacy S.battery(x,y,dir,s) -> {..., L, R} supported)
        S.vdc(cx, cy, {rot, size, flip})          pins {P, N}   (circle with upright + red / - blue)
        S.vac(cx, cy, {rot, size, flip})          pins {A, B}   (circle with sine wave)
@@ -39,6 +40,7 @@
        S.lamp(cx, cy, {on, rot, size, flip})     pins {A, B}; .at(t, {on})
        S.motor(cx, cy, {rot, size, flip})        pins {A, B}
        S.speaker(cx, cy, {rot, size, flip})      pins {A, B}
+       S.buzzer(cx, cy, {rot, size, flip})       pins {A, B}
        S.meter(cx, cy, {label, rot, size, flip}) label: 'A'|'V'|'Ω', pins {A, B}; aliases S.ammeter, S.voltmeter
        S.dial(cx, cy, {value, min, max, label, rot, size, flip})  pins {P, N} (+ red / - blue); .at(t, {value})
        S.scope(cx, cy, {pts, w, h, color, rot, size, flip})       pins {IN, GND}
@@ -52,6 +54,13 @@
        S.term(cx, cy, {fill, label, rot, size, flip})  open circle terminal; pins {A}
        S.block(x, y, w, h, title, opts)          dashed block enclosure with title; returns {box, pins}
        S.label(part, name, value, {side})        name 48 px, value 44 px; auto-flips if crossing x>960 or y<140
+     Real-world parts (hand-drawn physical illustrations, 20 px grid):
+       S.cellReal(cx, cy, {kind:'AA'|'9V', rot, size, flip})   pins {P, N} (+ red / - blue)
+       S.resReal(cx, cy, {value:'220', tol:'gold', rot, size, flip})  pins {A, B} (4-band colour code from value)
+       S.ledReal(cx, cy, {on, color, rot, size, flip})         pins {A, K} (long A, short K, flat rim K); .at(t, {on})
+       S.ecapReal(cx, cy, {rot, size, flip})                   pins {P, N} (vent cross, blue - stripe, long P)
+       S.to92(cx, cy, {pins:'EBC', label, rot, size, flip})    3 legs at (-20,0,+20, 60); pins in opts.pins order
+       S.breadboard(x, y, cols, rows, opts)                    20 px hole grid + rails; returns .hole(c, r) (also (cx,cy,opts))
      Pen marks:
        S.arrow(pts,col,w)  S.strike(x,y,w,h,col)  S.hl(x,y,w,h)  S.marker(x,y,str,size,maxW)  S.note(x,y,w,h,lines)
      Matter:
@@ -65,7 +74,7 @@
   const NS = 'http://www.w3.org/2000/svg';
   const INK = '#22201c', RED = '#d4382c', BLUE = '#2a5db0', ORANGE = '#f08a2c', GRAY = '#8a857b', HL = 'rgba(255,208,0,.55)';
   const S = { INK, RED, BLUE, ORANGE, GRAY, HL };
-  const SIZE_K = { S: 2 / 3, M: 1, L: 4 / 3, s: 2 / 3, m: 1, l: 4 / 3 };
+  const SIZE_K = { S: 2 / 3, M: 1, L: 4 / 3, XL: 2, XXL: 3, s: 2 / 3, m: 1, l: 4 / 3, xl: 2, xxl: 3 };   // XL/XXL: a real object as the hero
   let svg, g, rc, seed, ITEMS, CUR, MOVES, STATES, maskSeq, partSeq, built = false;
 
   function reset() {
@@ -462,6 +471,8 @@
     ctx.polygon([[-26, -28], [-26, 28], [26, 0]], { stroke: c, strokeWidth: 5, fill: opts.fill, fillStyle: opts.fill ? 'solid' : undefined }, [0.1, 0.6]);
     if (kind === 'zener') {
       ctx.path([[16, -34], [26, -28], [26, 28], [36, 34]], { stroke: c, strokeWidth: 8, preserveVertices: true }, [0.5, 0.85]);
+    } else if (kind === 'schottky') {
+      ctx.path([[42, -16], [42, -32], [26, -32], [26, 32], [10, 32], [10, 16]], { stroke: c, strokeWidth: 8, preserveVertices: true }, [0.5, 0.85]);
     } else {
       ctx.line(26, -28, 26, 28, { stroke: c, strokeWidth: 8, preserveVertices: true }, [0.5, 0.85]);
     }
@@ -493,7 +504,8 @@
     }
     const A = ctx.toWorld(-60, 0), K = ctx.toWorld(60, 0);
     const localBox = (kind === 'led' || kind === 'photo') ? [-60, -74, 60, 32]
-      : kind === 'zener' ? [-60, -34, 60, 34] : [-60, -28, 60, 28];
+      : kind === 'zener' ? [-60, -34, 60, 34]
+      : kind === 'schottky' ? [-60, -32, 60, 32] : [-60, -28, 60, 28];
     return { pins: { A, K }, path: [A, K], paths: { AK: [A, K] }, localBox };
   });
   S.diode = (a, b, c, d, e) => (typeof d === 'number' ? twoPointWrap(diodePart, 'diode', a, b, c, d, e) : diodePart(a, b, c));
@@ -1254,6 +1266,310 @@
     const fn = GATE_PARTS[t];
     if (!fn) throw new Error(`sketch: unknown gate type "${type}"`);
     return fn(cx, cy, opts);
+  };
+
+  /* ---- phase 2 deferred symbols & real-world parts ---- */
+  S.vcap = defPart('vcap', (ctx, opts) => {
+    const c = opts.stroke || INK;
+    ctx.line(-60, 0, -12, 0, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0, 0.45]);
+    ctx.line(12, 0, 60, 0, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0, 0.45]);
+    ctx.line(-12, -38, -12, 38, { stroke: c, strokeWidth: 8, preserveVertices: true }, [0.35, 0.75]);
+    ctx.line(12, -38, 12, 38, { stroke: c, strokeWidth: 8, preserveVertices: true }, [0.35, 0.75]);
+    partArrow(ctx, -34, 34, 34, -34, { stroke: c, strokeWidth: 4.5, head: 16, winLine: [0.6, 0.9], winHead: [0.7, 1] });
+    const A = ctx.toWorld(-60, 0), B = ctx.toWorld(60, 0);
+    return { pins: { A, B }, path: [A, B], paths: { AB: [A, B] }, localBox: [-60, -38, 60, 38] };
+  });
+
+  S.buzzer = defPart('buzzer', (ctx, opts) => {
+    const c = opts.stroke || INK;
+    ctx.line(-20, 4, -20, 60, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0, 0.35]);
+    ctx.line(20, 4, 20, 60, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0, 0.35]);
+    ctx.line(-48, 4, 48, 4, { stroke: c, strokeWidth: 6, preserveVertices: true }, [0.25, 0.6]);
+    ctx.arc(0, 4, 80, 80, Math.PI, 2 * Math.PI, false, { stroke: c, strokeWidth: 5, roughness: 0.9 }, [0.4, 0.85]);
+    ctx.arc(0, 4, 106, 106, -Math.PI * 0.67, -Math.PI * 0.33, false, { stroke: c, strokeWidth: 3.5, roughness: 0.8 }, [0.7, 0.95]);
+    ctx.arc(0, 4, 124, 124, -Math.PI * 0.63, -Math.PI * 0.37, false, { stroke: c, strokeWidth: 3.5, roughness: 0.8 }, [0.75, 1]);
+    const A = ctx.toWorld(-20, 60), B = ctx.toWorld(20, 60);
+    const ab = dedupPts([A, ctx.toWorld(-20, 4), ctx.toWorld(20, 4), B]);
+    return { pins: { A, B }, path: ab, paths: { AB: ab }, localBox: [-48, -58, 48, 60] };
+  });
+
+  function withAlpha(col, alpha) {
+    if (!col) return `rgba(212,56,44,${alpha})`;
+    const s = String(col).trim().toLowerCase();
+    const named = { red: '#d4382c', blue: '#2a5db0', green: '#2e8b57', yellow: '#ffd000', orange: '#f08a2c', white: '#ffffff' };
+    const hex = named[s] || s;
+    const m6 = hex.match(/^#([0-9a-f]{6})$/);
+    if (m6) {
+      const n = parseInt(m6[1], 16);
+      return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+    }
+    const m3 = hex.match(/^#([0-9a-f]{3})$/);
+    if (m3) {
+      const r = parseInt(m3[1][0] + m3[1][0], 16), g0 = parseInt(m3[1][1] + m3[1][1], 16), b = parseInt(m3[1][2] + m3[1][2], 16);
+      return `rgba(${r},${g0},${b},${alpha})`;
+    }
+    const mRgb = hex.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/);
+    if (mRgb) return `rgba(${mRgb[1]},${mRgb[2]},${mRgb[3]},${alpha})`;
+    return col;
+  }
+
+  const RES_DIGIT_COLS = ['#1e1d1a', '#7b4a26', '#d4382c', '#f08a2c', '#e6c229', '#2e8b57', '#2a5db0', '#7a49a5', '#7b7770', '#f5f2ea'];
+  const RES_MULT_EXTRA = { '-2': '#b8bcc2', '-1': '#d4a638' };
+  const RES_TOL_COLS = {
+    gold: '#d4a638', '5%': '#d4a638',
+    silver: '#b8bcc2', '10%': '#b8bcc2',
+    brown: '#7b4a26', '1%': '#7b4a26',
+    red: '#d4382c', '2%': '#d4382c',
+    green: '#2e8b57', '0.5%': '#2e8b57',
+    blue: '#2a5db0', '0.25%': '#2a5db0',
+    violet: '#7a49a5', '0.1%': '#7a49a5',
+    none: null, '20%': null
+  };
+  function parseResOhms(val) {
+    if (typeof val === 'number') return val;
+    const raw = String(val == null ? '220' : val).replace(/[Ωω,\s]/g, '').replace(/ohms?$/i, '');
+    let m = raw.match(/^(\d*)[Rr](\d+)$/);
+    if (m) return parseFloat((m[1] || '0') + '.' + m[2]);
+    m = raw.match(/^(\d+)[kK](\d+)$/);
+    if (m) return parseFloat(m[1] + '.' + m[2]) * 1e3;
+    m = raw.match(/^(\d+)[mM](\d+)$/);
+    if (m) return parseFloat(m[1] + '.' + m[2]) * 1e6;
+    m = raw.match(/^([\d.]+)([kKmMgG]?)$/);
+    if (m) {
+      const mul = { '': 1, k: 1e3, K: 1e3, M: 1e6, G: 1e9, m: 1e-3 }[m[2]] || 1;
+      return parseFloat(m[1]) * mul;
+    }
+    return 220;
+  }
+  function resColorBands(val, tol, override) {
+    if (Array.isArray(override) && override.length >= 3) return override.slice(0, 4);
+    const ohms = parseResOhms(val);
+    let b1 = RES_DIGIT_COLS[0], b2 = RES_DIGIT_COLS[0], b3 = RES_DIGIT_COLS[0];
+    if (ohms > 0 && Number.isFinite(ohms)) {
+      let exp = Math.floor(Math.log10(ohms)) - 1;
+      let sig = Math.round(ohms / Math.pow(10, exp));
+      if (sig >= 100) { sig = Math.round(sig / 10); exp += 1; }
+      if (sig < 10) { sig *= 10; exp -= 1; }
+      exp = Math.max(-2, Math.min(9, exp));
+      b1 = RES_DIGIT_COLS[Math.floor(sig / 10) % 10];
+      b2 = RES_DIGIT_COLS[sig % 10];
+      b3 = exp < 0 ? RES_MULT_EXTRA[String(exp)] : RES_DIGIT_COLS[exp];
+    }
+    const tolKey = tol == null ? 'gold' : String(tol).trim().toLowerCase();
+    const b4 = Object.prototype.hasOwnProperty.call(RES_TOL_COLS, tolKey) ? RES_TOL_COLS[tolKey] : tol;
+    return b4 ? [b1, b2, b3, b4] : [b1, b2, b3];
+  }
+
+  S.cellReal = defPart('cellReal', (ctx, opts) => {
+    const c = opts.stroke || INK;
+    const kind = String(opts.kind || 'AA').toUpperCase() === '9V' ? '9V' : 'AA';
+    if (kind === '9V') {
+      ctx.polygon([[-40, -32], [-28, -46], [50, -46], [38, -32]],
+        { stroke: c, strokeWidth: 4.5, fill: 'rgba(138,133,123,.15)', fillStyle: 'hachure', hachureGap: 6, fillWeight: 2.5, preserveVertices: true }, [0.1, 0.55]);
+      ctx.polygon([[38, -32], [50, -46], [50, 46], [38, 60]],
+        { stroke: c, strokeWidth: 4.5, fill: 'rgba(138,133,123,.26)', fillStyle: 'hachure', hachureGap: 6, fillWeight: 2.5, preserveVertices: true }, [0.15, 0.6]);
+      ctx.rect(-40, -32, 78, 28,
+        { stroke: 'none', fill: 'rgba(212,56,44,.22)', fillStyle: 'hachure', hachureGap: 6, fillWeight: 3, hachureAngle: 55 }, [0.2, 0.65]);
+      ctx.rect(-40, -32, 78, 92, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0, 0.5]);
+      ctx.line(-40, -4, 38, -4, { stroke: c, strokeWidth: 4.5 }, [0.35, 0.7]);
+      ctx.rect(-26, -60, 12, 20,
+        { stroke: c, strokeWidth: 4.5, fill: 'rgba(212,56,44,.22)', fillStyle: 'hachure', hachureGap: 4, fillWeight: 2, preserveVertices: true }, [0.5, 0.85]);
+      ctx.polygon([[10, -60], [30, -60], [27, -40], [13, -40]],
+        { stroke: c, strokeWidth: 4.5, fill: 'rgba(42,93,176,.22)', fillStyle: 'hachure', hachureGap: 4, fillWeight: 2, preserveVertices: true }, [0.5, 0.85]);
+      ctx.sign(-38 - 16 / ctx.k, -50, '+', { stroke: RED, scale: 0.85 }, [0.7, 1]);
+      ctx.sign(46 + 16 / ctx.k, -50, '-', { stroke: BLUE, scale: 0.85 }, [0.7, 1]);
+      const P = ctx.toWorld(-20, -60), N = ctx.toWorld(20, -60);
+      return { pins: { P, N }, path: [P, N], paths: { PN: [P, N] }, localBox: [-40, -60, 50, 60] };
+    }
+    ctx.polygon([[-46, -28], [53, -28], [53, 28], [-46, 28]],
+      { stroke: 'none', fill: 'rgba(138,133,123,.14)', fillStyle: 'hachure', hachureGap: 8, fillWeight: 2.5, hachureAngle: -30 }, [0.1, 0.55]);
+    ctx.rect(-46, -28, 30, 56,
+      { stroke: 'none', fill: 'rgba(212,56,44,.22)', fillStyle: 'hachure', hachureGap: 6, fillWeight: 3, hachureAngle: 55 }, [0.2, 0.65]);
+    ctx.arc(-16, 0, 14, 56, -Math.PI / 2, Math.PI / 2, false, { stroke: c, strokeWidth: 4.5, roughness: 0.9 }, [0.35, 0.75]);
+    ctx.line(-46, -28, 53, -28, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0.1, 0.55]);
+    ctx.line(-46, 28, 53, 28, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0.1, 0.55]);
+    ctx.ellipse(-46, 0, 14, 56, { stroke: c, strokeWidth: 5, roughness: 0.9 }, [0.2, 0.65]);
+    ctx.arc(53, 0, 14, 56, -Math.PI / 2, Math.PI / 2, false, { stroke: c, strokeWidth: 5, roughness: 0.9 }, [0.25, 0.7]);
+    ctx.rect(-60, -11, 14, 22,
+      { stroke: c, strokeWidth: 5, fill: 'rgba(212,56,44,.25)', fillStyle: 'hachure', hachureGap: 4, fillWeight: 2.5, preserveVertices: true }, [0.45, 0.85]);
+    ctx.sign(-36 - 14 / ctx.k, -32 - 22 / ctx.k, '+', { stroke: RED }, [0.7, 1]);
+    ctx.sign(36 + 14 / ctx.k, -32 - 22 / ctx.k, '-', { stroke: BLUE }, [0.7, 1]);
+    const P = ctx.toWorld(-60, 0), N = ctx.toWorld(60, 0);
+    return { pins: { P, N }, path: [P, N], paths: { PN: [P, N] }, localBox: [-60, -28, 60, 28] };
+  });
+
+  S.resReal = defPart('resReal', (ctx, opts) => {
+    const c = opts.stroke || INK;
+    const bands = resColorBands(opts.value, opts.tol, opts.bands);
+    ctx.line(-60, 0, -38, 0, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0, 0.35]);
+    ctx.line(38, 0, 60, 0, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0, 0.35]);
+    const bodyPts = [
+      [-38, 0], [-36, -18], [-24, -20], [-14, -15], [14, -15], [24, -20], [36, -18],
+      [38, 0], [36, 18], [24, 20], [14, 15], [-14, 15], [-24, 20], [-36, 18]
+    ];
+    ctx.polygon(bodyPts,
+      { stroke: 'none', fill: '#e6d3ad', fillStyle: 'hachure', hachureGap: 7, fillWeight: 3, hachureAngle: -35 }, [0.15, 0.6]);
+    const bandSpecs = [[-29, 34], [-14, 28], [1, 28], [20, 34]];
+    bands.forEach((bCol, i) => {
+      const [bx, bh] = bandSpecs[i];
+      ctx.rect(bx, -bh / 2, 7, bh,
+        { stroke: bCol, strokeWidth: 1.5, fill: bCol, fillStyle: 'hachure', hachureGap: 3.2, fillWeight: 3.2, hachureAngle: 70, roughness: 0.6 },
+        [0.45 + i * 0.08, 0.85 + i * 0.04]);
+    });
+    ctx.polygon(bodyPts, { stroke: c, strokeWidth: 5, roughness: 1.0 }, [0.2, 0.8]);
+    const A = ctx.toWorld(-60, 0), B = ctx.toWorld(60, 0);
+    return { pins: { A, B }, path: [A, B], paths: { AB: [A, B] }, localBox: [-60, -20, 60, 20] };
+  });
+
+  S.ledReal = defPart('ledReal', (ctx, opts) => {
+    const c = opts.stroke || INK;
+    ctx.normalizeState((s) => {
+      if (s.on !== undefined) return { on: s.on ? 1 : 0 };
+      if (s.off !== undefined) return { on: s.off ? 0 : 1 };
+      return s;
+    });
+    ctx.setInitState({ on: !!opts.on });
+    const baseCol = opts.color;
+    const offTint = withAlpha(baseCol || RED, 0.16);
+    const innerLit = baseCol ? withAlpha(baseCol, 0.88) : 'rgba(255,208,0,.9)';
+    const outerGlow = (!baseCol || String(baseCol).toLowerCase() === 'yellow') ? HL : withAlpha(baseCol, 0.48);
+    const domePts = [[-26, -8], [-26, -34], [-22, -46], [-12, -55], [0, -58], [12, -55], [22, -46], [26, -34], [26, -8]];
+    const glowItem = ctx.circle(0, -32, 136,
+      { stroke: 'none', fill: outerGlow, fillStyle: 'hachure', hachureGap: 8, fillWeight: 10, roughness: 2 }, [0.55, 1]);
+    const litItem = ctx.polygon(domePts, { stroke: 'none', fill: innerLit, fillStyle: 'solid' }, [0.55, 1]);
+    ctx.polygon(domePts,
+      { stroke: 'none', fill: offTint, fillStyle: 'hachure', hachureGap: 7, fillWeight: 3, hachureAngle: -40 }, [0.1, 0.55]);
+    ctx.path([[-16, -8], [-16, -26], [-8, -32]], { stroke: GRAY, strokeWidth: 3 }, [0.3, 0.65]);
+    ctx.polygon([[4, -30], [16, -30], [16, -8], [8, -8], [8, -22]], { stroke: GRAY, strokeWidth: 3 }, [0.3, 0.65]);
+    ctx.path(domePts, { stroke: c, strokeWidth: 5, roughness: 1.0 }, [0.15, 0.7]);
+    ctx.polygon([[-26, -8], [-35, -6], [-35, 3], [26, 3], [26, -8]],
+      { stroke: c, strokeWidth: 5, fill: offTint, fillStyle: 'hachure', hachureGap: 6, fillWeight: 2.5, preserveVertices: true }, [0.25, 0.75]);
+    ctx.line(21, -8, 21, 3, { stroke: c, strokeWidth: 3.5 }, [0.4, 0.75]);
+    ctx.line(-20, 3, -20, 60, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0.45, 0.95]);
+    ctx.line(20, 3, 20, 40, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0.45, 0.95]);
+    ctx.onDraw((_t, st) => {
+      const on = Math.min(1, Math.max(0, st.on || 0));
+      glowItem.n.style.opacity = (glowItem._vis != null ? glowItem._vis : 1) * on;
+      litItem.n.style.opacity = (litItem._vis != null ? litItem._vis : 1) * on;
+    });
+    const A = ctx.toWorld(-20, 60), K = ctx.toWorld(20, 40);
+    return { pins: { A, K }, path: [A, K], paths: { AK: [A, K] }, localBox: [-35, -58, 26, 60] };
+  });
+
+  S.ecapReal = defPart('ecapReal', (ctx, opts) => {
+    const c = opts.stroke || INK;
+    ctx.rect(-34, -48, 68, 56,
+      { stroke: 'none', fill: 'rgba(34,32,28,.12)', fillStyle: 'hachure', hachureGap: 7, fillWeight: 2.5, hachureAngle: -35 }, [0.1, 0.5]);
+    ctx.rect(14, -46, 18, 54,
+      { stroke: BLUE, strokeWidth: 2, fill: 'rgba(42,93,176,.32)', fillStyle: 'hachure', hachureGap: 4.5, fillWeight: 3, hachureAngle: 50 }, [0.35, 0.8]);
+    ctx.line(-34, -48, -34, 8, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0, 0.45]);
+    ctx.line(34, -48, 34, 8, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0, 0.45]);
+    ctx.arc(0, 8, 68, 20, 0, Math.PI, false, { stroke: c, strokeWidth: 5, roughness: 0.9 }, [0.25, 0.65]);
+    ctx.ellipse(0, -48, 68, 22, { stroke: c, strokeWidth: 5, fill: 'rgba(255,255,255,.5)', fillStyle: 'solid', roughness: 0.9 }, [0.2, 0.65]);
+    ctx.line(-18, -53, 18, -43, { stroke: GRAY, strokeWidth: 3.5 }, [0.55, 0.9]);
+    ctx.line(-18, -43, 18, -53, { stroke: GRAY, strokeWidth: 3.5 }, [0.55, 0.9]);
+    ctx.line(-20, 16, -20, 60, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0.5, 0.95]);
+    ctx.line(20, 16, 20, 40, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0.5, 0.95]);
+    ctx.sign(23, -18, '-', { stroke: BLUE, scale: 0.65 * ctx.k, strokeWidth: 4.5 }, [0.7, 1]);
+    const P = ctx.toWorld(-20, 60), N = ctx.toWorld(20, 40);
+    return { pins: { P, N }, path: [P, N], paths: { PN: [P, N] }, localBox: [-34, -59, 34, 60] };
+  });
+
+  S.to92 = defPart('to92', (ctx, opts) => {
+    const c = opts.stroke || INK;
+    const rawPins = opts.pins != null ? opts.pins : 'EBC';
+    const names = (Array.isArray(rawPins) ? rawPins.map(String) : String(rawPins).split('')).slice(0, 3);
+    while (names.length < 3) names.push(['E', 'B', 'C'][names.length]);
+    ctx.arc(0, -34, 72, 24, Math.PI, 2 * Math.PI, false,
+      { stroke: c, strokeWidth: 5, fill: 'rgba(34,32,28,.12)', fillStyle: 'hachure', hachureGap: 6, fillWeight: 2.5, roughness: 0.9 }, [0.1, 0.55]);
+    ctx.rect(-36, -34, 72, 46,
+      { stroke: c, strokeWidth: 5, fill: 'rgba(34,32,28,.20)', fillStyle: 'hachure', hachureGap: 6, fillWeight: 3, hachureAngle: -40 }, [0.15, 0.65]);
+    [-20, 0, 20].forEach((lx, i) => {
+      ctx.line(lx, 12, lx, 60, { stroke: c, strokeWidth: 5, preserveVertices: true }, [0.45 + i * 0.08, 0.95]);
+    });
+    if (opts.label) ctx.text(0, -11, String(opts.label), 44, { font: 'l', anchor: 'middle', fill: c }, [0.7, 1]);
+    const pts = [ctx.toWorld(-20, 60), ctx.toWorld(0, 60), ctx.toWorld(20, 60)];
+    const pins = {};
+    names.forEach((pn, i) => { pins[pn] = pts[i]; });
+    const mid = ctx.toWorld(0, 0);
+    const paths = {};
+    if (pins.C && pins.E) paths.CE = dedupPts([pins.C, mid, pins.E]);
+    if (pins.B && pins.E) paths.BE = dedupPts([pins.B, mid, pins.E]);
+    if (pins.D && pins.S) paths.DS = dedupPts([pins.D, mid, pins.S]);
+    const mainPath = paths.CE || paths.DS || [pts[0], pts[2]];
+    return { pins, path: mainPath, paths, localBox: [-36, -46, 36, 60] };
+  });
+
+  const breadboardPart = defPart('breadboard', (ctx, opts) => {
+    const cols = Math.max(2, opts.cols || 15);
+    const rows = Math.max(2, opts.rows || 10);
+    const rails = opts.rails !== false;
+    const topRows = Math.ceil(rows / 2);
+    const c = opts.stroke || INK;
+    const W = (cols + 3) * 20;
+    const H = (rows + (rails ? 8 : 2)) * 20;
+    const hw = W / 2, hh = H / 2;
+    const colX = (col) => -hw + 40 + col * 20;
+    const rowY = (row) => {
+      if (typeof row === 'string') {
+        const s = row.toLowerCase();
+        if (s === 'top+' || s === '+') return -hh + 20;
+        if (s === 'top-' || s === '-') return -hh + 40;
+        if (s === 'bot+') return hh - 40;
+        if (s === 'bot-') return hh - 20;
+      }
+      if (rails) {
+        if (row === -2) return -hh + 20;
+        if (row === -1) return -hh + 40;
+        if (row === rows) return hh - 40;
+        if (row === rows + 1) return hh - 20;
+      }
+      const baseY = -hh + (rails ? 80 : 20);
+      return baseY + (row >= topRows ? row + 1 : row) * 20;
+    };
+    ctx.rect(-hw, -hh, W, H, { stroke: c, strokeWidth: 5, fill: '#faf6ed', fillStyle: 'solid' }, [0, 0.3]);
+    if (rails) {
+      ctx.line(-hw + 30, -hh + 10, hw - 16, -hh + 10, { stroke: RED, strokeWidth: 3 }, [0.15, 0.5]);
+      ctx.line(-hw + 30, -hh + 50, hw - 16, -hh + 50, { stroke: BLUE, strokeWidth: 3 }, [0.15, 0.5]);
+      ctx.line(-hw + 8, -hh + 60, hw - 8, -hh + 60, { stroke: GRAY, strokeWidth: 2.5 }, [0.2, 0.55]);
+      ctx.line(-hw + 8, hh - 60, hw - 8, hh - 60, { stroke: GRAY, strokeWidth: 2.5 }, [0.2, 0.55]);
+      ctx.line(-hw + 30, hh - 50, hw - 16, hh - 50, { stroke: RED, strokeWidth: 3 }, [0.15, 0.5]);
+      ctx.line(-hw + 30, hh - 10, hw - 16, hh - 10, { stroke: BLUE, strokeWidth: 3 }, [0.15, 0.5]);
+      ctx.sign(-hw + 18, -hh + 20, '+', { stroke: RED, scale: 0.45 * ctx.k, strokeWidth: 4 }, [0.65, 1]);
+      ctx.sign(-hw + 18, -hh + 40, '-', { stroke: BLUE, scale: 0.45 * ctx.k, strokeWidth: 4 }, [0.65, 1]);
+      ctx.sign(-hw + 18, hh - 40, '+', { stroke: RED, scale: 0.45 * ctx.k, strokeWidth: 4 }, [0.65, 1]);
+      ctx.sign(-hw + 18, hh - 20, '-', { stroke: BLUE, scale: 0.45 * ctx.k, strokeWidth: 4 }, [0.65, 1]);
+    }
+    const trenchY = -hh + (rails ? 80 : 20) + topRows * 20;
+    ctx.rect(-hw + 10, trenchY - 8, W - 20, 16,
+      { stroke: GRAY, strokeWidth: 3, fill: 'rgba(138,133,123,.22)', fillStyle: 'hachure', hachureGap: 6, fillWeight: 2 }, [0.2, 0.6]);
+    const drawHole = (hx, hy) => {
+      ctx.rect(hx - 4, hy - 4, 8, 8, { stroke: c, strokeWidth: 2, fill: '#3b3730', fillStyle: 'solid', roughness: 0.4 }, [0.25, 0.95]);
+    };
+    if (rails) {
+      for (const ry of [-hh + 20, -hh + 40, hh - 40, hh - 20]) {
+        for (let col = 0; col < cols; col++) drawHole(colX(col), ry);
+      }
+    }
+    for (let r = 0; r < rows; r++) {
+      const hy = rowY(r);
+      for (let col = 0; col < cols; col++) drawHole(colX(col), hy);
+    }
+    const hole = (col, row) => ctx.toWorld(colX(col), rowY(row));
+    return { pins: {}, path: [], paths: {}, localBox: [-hw, -hh, hw, hh], extra: { hole, cols, rows } };
+  });
+  S.breadboard = (xOrCx, yOrCy, colsOrOpts, rowsArg, extraOpts) => {
+    if (typeof colsOrOpts === 'number') {
+      const cols = Math.max(2, colsOrOpts);
+      const rows = typeof rowsArg === 'number' ? Math.max(2, rowsArg) : 10;
+      const opts = (typeof rowsArg === 'object' && rowsArg !== null) ? rowsArg : (extraOpts || {});
+      const rails = opts.rails !== false;
+      const k = sizeScale(opts.size);
+      const W = (cols + 3) * 20 * k;
+      const H = (rows + (rails ? 8 : 2)) * 20 * k;
+      return breadboardPart(xOrCx + W / 2, yOrCy + H / 2, { ...opts, cols, rows });
+    }
+    return breadboardPart(xOrCx, yOrCy, colsOrOpts);
   };
 
   /* ---- labels ---- */

@@ -89,7 +89,7 @@ Promise.all(['700 40px Gaegu', '40px "Architects Daughter"'].map((f) => document
 
 CATALOG_PAGE_1 = r"""
 S.at(0, 0.3, () => {
-  S.text(60, 105, '부품 도감 (1/6) — 수동·전원·반도체', 62, { rot: 0 });
+  S.text(60, 105, '부품 도감 (1/7) — 수동·전원·반도체', 62, { rot: 0 });
   S.line(60, 122, 1020, 122, { stroke: S.RED, strokeWidth: 5 });
 });
 
@@ -142,7 +142,7 @@ items.forEach((it, idx) => {
 
 CATALOG_PAGE_2 = r"""
 S.at(0, 0.3, () => {
-  S.text(60, 105, '부품 도감 (2/6) — IC 칩 · 물질 · 전류', 62, { rot: 0 });
+  S.text(60, 105, '부품 도감 (2/7) — IC 칩 · 물질 · 전류', 62, { rot: 0 });
   S.line(60, 122, 1020, 122, { stroke: S.RED, strokeWidth: 5 });
 });
 
@@ -190,7 +190,7 @@ for (const it of items) {
 
 CATALOG_PAGE_3 = r"""
 S.at(0, 0.3, () => {
-  S.text(60, 105, '부품 도감 (3/6) — 수동 소자(확장) · 전원', 60, { rot: 0 });
+  S.text(60, 105, '부품 도감 (3/7) — 수동 소자(확장) · 전원', 60, { rot: 0 });
   S.line(60, 122, 1020, 122, { stroke: S.RED, strokeWidth: 5 });
 });
 
@@ -241,7 +241,7 @@ items.forEach((it, idx) => {
 
 CATALOG_PAGE_4 = r"""
 S.at(0, 0.3, () => {
-  S.text(60, 105, '부품 도감 (4/6) — 반도체 (MOSFET · OPAMP · 게이트)', 50, { rot: 0 });
+  S.text(60, 105, '부품 도감 (4/7) — 반도체 (MOSFET · OPAMP · 게이트)', 50, { rot: 0 });
   S.line(60, 122, 1020, 122, { stroke: S.RED, strokeWidth: 5 });
 });
 
@@ -287,7 +287,7 @@ items.forEach((it) => {
 
 CATALOG_PAGE_5 = r"""
 S.at(0, 0.3, () => {
-  S.text(60, 105, '부품 도감 (5/6) — 스위치 · 출력', 58, { rot: 0 });
+  S.text(60, 105, '부품 도감 (5/7) — 스위치 · 출력', 58, { rot: 0 });
   S.line(60, 122, 1020, 122, { stroke: S.RED, strokeWidth: 5 });
 });
 
@@ -338,7 +338,7 @@ items.forEach((it, idx) => {
 
 CATALOG_PAGE_6 = r"""
 S.at(0, 0.3, () => {
-  S.text(60, 105, '부품 도감 (6/6) — 계측기 · 배선 · 구획', 56, { rot: 0 });
+  S.text(60, 105, '부품 도감 (6/7) — 계측기 · 배선 · 구획', 56, { rot: 0 });
   S.line(60, 122, 1020, 122, { stroke: S.RED, strokeWidth: 5 });
 });
 
@@ -384,6 +384,84 @@ items.forEach((it) => {
 """
 
 
+CATALOG_PAGE_7 = r"""
+S.at(0, 0.3, () => {
+  S.text(60, 105, '부품 도감 (7/7) — 2단계 기호 · 실물 그림', 56, { rot: 0 });
+  S.line(60, 122, 1020, 122, { stroke: S.RED, strokeWidth: 5 });
+});
+
+const items = [
+  { ko: '가변 커패시터', fn: 'S.vcap', cx: 190, cy: 340, labelOff: 155, draw: (x, y) => S.vcap(x, y) },
+  { ko: '쇼트키 다이오드', fn: "S.diode({kind:'schottky'})", cx: 540, cy: 340, labelOff: 155, draw: (x, y) => S.diode(x, y, { kind: 'schottky' }) },
+  { ko: '버저', fn: 'S.buzzer', cx: 890, cy: 340, labelOff: 155, draw: (x, y) => S.buzzer(x, y) },
+  { ko: '건전지 실물 (AA)', fn: "S.cellReal({kind:'AA'})", cx: 190, cy: 675, labelOff: 155, draw: (x, y) => S.cellReal(x, y, { kind: 'AA' }) },
+  { ko: '건전지 실물 (9V)', fn: "S.cellReal({kind:'9V'})", cx: 540, cy: 675, labelOff: 155, draw: (x, y) => S.cellReal(x, y, { kind: '9V' }) },
+  { ko: '색띠 저항 (220Ω)', fn: "S.resReal({value:'220'})", cx: 890, cy: 675, labelOff: 155, draw: (x, y) => S.resReal(x, y, { value: '220', tol: 'gold' }) },
+  { ko: 'LED 실물 (꺼짐)', fn: 'S.ledReal({on:false})', cx: 190, cy: 1015, labelOff: 155, draw: (x, y) => S.ledReal(x, y, { on: false }) },
+  { ko: 'LED 실물 (켜짐)', fn: 'S.ledReal().at({on:true})', cx: 540, cy: 1015, labelOff: 155, draw: (x, y) => S.ledReal(x, y, { on: false }).at(0.6, { on: true }) },
+  { ko: '전해 콘덴서 캔', fn: 'S.ecapReal', cx: 890, cy: 1015, labelOff: 155, draw: (x, y) => S.ecapReal(x, y) },
+  { ko: 'TO-92 트랜지스터', fn: "S.to92({pins:'EBC'})", cx: 230, cy: 1410, labelOff: 180, draw: (x, y) => S.to92(x, y, { pins: 'EBC' }) },
+  { ko: '브레드보드 조각', fn: 'S.breadboard(x,y,12,8)', cx: 700, cy: 1450, labelOff: 220, draw: (x, y) => S.breadboard(x - 150, y - 160, 12, 8) },
+];
+
+const pinOffsets = (p, cx, cy) => {
+  const [px, py] = p, dx = px - cx, dy = py - cy;
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    return dy < 0 ? [px, py - 14, 'middle'] : [px, py + 30, 'middle'];
+  }
+  return dx < 0 ? [px - 14, py + 9, 'end'] : [px + 14, py + 9, 'start'];
+};
+
+items.forEach((it) => {
+  const cx = it.cx, cy = it.cy;
+  const labelY = cy - it.labelOff;
+  S.at(0.05, 0.35, () => {
+    S.text(cx, labelY, it.ko, 34, { font: 'k', anchor: 'middle', rot: 0 });
+    S.text(cx, labelY + 34, it.fn, 22, { font: 'l', fill: S.GRAY, anchor: 'middle', rot: 0 });
+    const part = it.draw(cx, cy);
+    if (part && part.pins) {
+      for (const [pn, pt] of Object.entries(part.pins)) {
+        S.dot(pt[0], pt[1], 5, S.RED);
+        const [lx, ly, anchor] = pinOffsets(pt, cx, cy);
+        S.text(lx, ly, pn, 22, { font: 'l', fill: S.BLUE, anchor, rot: 0 });
+      }
+    }
+  });
+});
+"""
+
+
+CATALOG_REAL_SYMBOL = r"""
+S.at(0, 0.3, () => {
+  S.text(60, 105, '실물 ↔ 회로 기호', 62, { rot: 0 });
+  S.line(60, 122, 1020, 122, { stroke: S.RED, strokeWidth: 5 });
+  S.text(135, 178, '부품', 34, { font: 'k', fill: S.BLUE, anchor: 'middle', rot: 0 });
+  S.text(430, 178, '실물 그림', 34, { font: 'k', fill: S.BLUE, anchor: 'middle', rot: 0 });
+  S.text(840, 178, '회로 기호', 34, { font: 'k', fill: S.BLUE, anchor: 'middle', rot: 0 });
+});
+
+const pairs = [
+  { ko: 'AA 건전지', sub: 'cellReal ↔ battery', y: 305, real: (x, y) => S.cellReal(x, y, { kind: 'AA' }), sym: (x, y) => S.battery(x, y) },
+  { ko: '9V 건전지', sub: 'cellReal(9V) ↔ battery', y: 535, real: (x, y) => S.cellReal(x, y, { kind: '9V' }), sym: (x, y) => S.battery(x, y, { cells: 2 }) },
+  { ko: '색띠 저항', sub: 'resReal(220) ↔ res', y: 765, real: (x, y) => S.resReal(x, y, { value: '220', tol: 'gold' }), sym: (x, y) => S.res(x, y) },
+  { ko: 'LED', sub: 'ledReal ↔ led', y: 995, real: (x, y) => S.ledReal(x, y, { on: false }).at(0.7, { on: true }), sym: (x, y) => S.led(x, y, { on: false }).at(0.7, { on: true }) },
+  { ko: '전해 커패시터', sub: 'ecapReal ↔ ecap', y: 1225, real: (x, y) => S.ecapReal(x, y), sym: (x, y) => S.ecap(x, y) },
+  { ko: '트랜지스터', sub: 'to92 ↔ npn', y: 1485, real: (x, y) => S.to92(x, y, { pins: 'EBC' }), sym: (x, y) => S.npn(x, y, { size: 'S' }) },
+];
+
+pairs.forEach((p, idx) => {
+  S.at(0.05, 0.35, () => {
+    if (idx > 0) S.line(60, p.y - 115, 1020, p.y - 115, { stroke: S.GRAY, strokeWidth: 2, strokeLineDash: [8, 8] });
+    S.text(60, p.y - 6, p.ko, 36, { font: 'k', anchor: 'start', rot: 0 });
+    S.text(60, p.y + 30, p.sub, 22, { font: 'l', fill: S.GRAY, anchor: 'start', rot: 0 });
+    p.real(430, p.y);
+    S.text(635, p.y + 12, '↔', 44, { font: 'k', fill: S.RED, anchor: 'middle', rot: 0 });
+    p.sym(840, p.y);
+  });
+});
+"""
+
+
 DRAW_PART_FN = r"""
 const drawPart = (kind, cx, cy, opts) => {
   if (kind === 'res') return S.res(cx, cy, opts);
@@ -391,6 +469,7 @@ const drawPart = (kind, cx, cy, opts) => {
   if (kind === 'ldr') return S.ldr(cx, cy, opts);
   if (kind === 'thermistor') return S.thermistor(cx, cy, opts);
   if (kind === 'cap') return S.cap(cx, cy, opts);
+  if (kind === 'vcap') return S.vcap(cx, cy, opts);
   if (kind === 'ecap') return S.ecap(cx, cy, opts);
   if (kind === 'ind') return S.ind(cx, cy, opts);
   if (kind === 'ind_core') return S.ind(cx, cy, { ...opts, core: true });
@@ -400,6 +479,7 @@ const drawPart = (kind, cx, cy, opts) => {
   if (kind === 'diode') return S.diode(cx, cy, opts);
   if (kind === 'zener') return S.diode(cx, cy, { ...opts, kind: 'zener' });
   if (kind === 'photo') return S.diode(cx, cy, { ...opts, kind: 'photo' });
+  if (kind === 'schottky') return S.diode(cx, cy, { ...opts, kind: 'schottky' });
   if (kind === 'led') return S.led(cx, cy, opts);
   if (kind === 'battery') return S.battery(cx, cy, opts);
   if (kind === 'vdc') return S.vdc(cx, cy, opts);
@@ -424,6 +504,7 @@ const drawPart = (kind, cx, cy, opts) => {
   if (kind === 'lamp') return S.lamp(cx, cy, opts);
   if (kind === 'motor') return S.motor(cx, cy, opts);
   if (kind === 'speaker') return S.speaker(cx, cy, opts);
+  if (kind === 'buzzer') return S.buzzer(cx, cy, opts);
   if (kind === 'ammeter') return S.ammeter(cx, cy, opts);
   if (kind === 'voltmeter') return S.voltmeter(cx, cy, opts);
   if (kind === 'ohmmeter') return S.meter(cx, cy, { ...opts, label: 'Ω' });
@@ -436,6 +517,13 @@ const drawPart = (kind, cx, cy, opts) => {
   if (kind === 'electron') return S.electron(cx, cy, opts);
   if (kind === 'hole') return S.hole(cx, cy, opts);
   if (kind === 'ion') return S.ion(cx, cy, { ...opts, sign: '+' });
+  if (kind === 'cell_aa') return S.cellReal(cx, cy, { ...opts, kind: 'AA' });
+  if (kind === 'cell_9v') return S.cellReal(cx, cy, { ...opts, kind: '9V' });
+  if (kind === 'res_real') return S.resReal(cx, cy, { ...opts, value: '220', tol: 'gold' });
+  if (kind === 'led_real') return S.ledReal(cx, cy, opts);
+  if (kind === 'ecap_real') return S.ecapReal(cx, cy, opts);
+  if (kind === 'to92') return S.to92(cx, cy, { ...opts, pins: 'EBC' });
+  if (kind === 'breadboard') return S.breadboard(cx, cy, { ...opts, cols: 5, rows: 2 });
   throw new Error('Unknown part: ' + kind);
 };
 """
@@ -734,6 +822,52 @@ S.stream(1.6, DISCHARGE, { n: 9 });
 """
 
 
+CIRCUIT_4_BREADBOARD = r"""
+S.at(0, 0.3, () => {
+  S.text(60, 105, '시트 3 (4/4) — 브레드보드 실물 회로 (9V · 220Ω · LED)', 46, { rot: 0 });
+  S.line(60, 122, 1020, 122, { stroke: S.RED, strokeWidth: 5 });
+});
+
+let bb, bat, r1, led, wp, wn, j1, j2, j3;
+S.at(0.1, 0.45, () => {
+  bb = S.breadboard(260, 700, 25, 10);
+  bat = S.cellReal(160, 880, { kind: '9V' });
+  S.label(bat, 'V1', '9V', { side: 'bottom' });
+
+  r1 = S.resReal(440, 820, { value: '220', tol: 'gold' });
+  led = S.ledReal(620, 780, { on: false }).at(1.15, { on: true });
+
+  wp = S.route(bat.pins.P, bb.hole(1, 'top+'), { via: 'vh', stroke: S.RED });
+  wn = S.route(bb.hole(2, 'top-'), bat.pins.N, { via: 'hv', stroke: S.BLUE });
+  j1 = S.route(bb.hole(4, 'top+'), bb.hole(4, 0), { stroke: S.RED });
+  j2 = S.route(bb.hole(10, 4), bb.hole(15, 4), { stroke: S.INK });
+  j3 = S.route(bb.hole(17, 4), bb.hole(19, 'top-'), { via: [[680, 860]], stroke: S.BLUE });
+});
+
+S.at(0.65, 0.4, () => {
+  S.text(360, 550, '220Ω (빨·빨·갈·금)', 44, { font: 'k', anchor: 'middle', rot: 0 });
+  S.arrow([[380, 570], [435, 795]], S.INK, 4);
+  S.text(720, 620, '긴 다리(+) / 평평한 쪽(−)', 44, { font: 'k', anchor: 'middle', fill: S.RED, rot: 0 });
+  S.arrow([[690, 640], [635, 725]], S.RED, 4);
+  S.text(540, 1140, 'hole(c, r) 구멍 간격 20 px 격자 정렬', 44, { font: 'k', anchor: 'middle', fill: S.BLUE, rot: 0 });
+});
+
+const LOOP = [
+  ...wp,
+  bb.hole(4, 'top+'),
+  ...j1,
+  ...r1.path,
+  ...j2,
+  ...led.path,
+  ...j3,
+  bb.hole(2, 'top-'),
+  ...wn,
+];
+S.energize(1.2, LOOP);
+S.stream(1.25, LOOP, { n: 12 });
+"""
+
+
 PUSH15_JS = r"""
 (() => {
   const w = document.getElementById('world');
@@ -862,6 +996,8 @@ def main():
             ('catalog_p4', CATALOG_PAGE_4),
             ('catalog_p5', CATALOG_PAGE_5),
             ('catalog_p6', CATALOG_PAGE_6),
+            ('catalog_p7', CATALOG_PAGE_7),
+            ('real_vs_symbol', CATALOG_REAL_SYMBOL),
         ]
         for stem, body in pages:
             html_path = os.path.join(out_dir, f'{stem}.html')
@@ -880,6 +1016,7 @@ def main():
             ('circuit_2_npn_after', CIRCUIT_2_NPN, 2.0, ''),
             ('circuit_3_rc_charge', CIRCUIT_3_RC, 1.0, ''),
             ('circuit_3_rc_discharge', CIRCUIT_3_RC, 2.2, ''),
+            ('circuit_4_breadboard', CIRCUIT_4_BREADBOARD, 2.0, ''),
         ]
         for stem, body, t_snap, after_js in circuit_shots:
             html_path = os.path.join(out_dir, f'{stem}.html')
@@ -890,7 +1027,7 @@ def main():
             print(os.path.abspath(png_path))
 
     if args.sheet in ('identity', 'all'):
-        total_id = 20
+        total_id = 26
         pages = [
             ('identity', make_identity_compact_sketch(0, total_id, ['res', 'cap', 'diode', 'zener', 'photo', 'led'])),
             ('identity_p2', make_identity_compact_sketch(1, total_id, ['battery', 'gnd', 'vcc', 'port', 'atom', 'electron', 'hole', 'ion'])),
@@ -912,6 +1049,12 @@ def main():
             ('identity_p18', make_identity_flip_sketch(17, total_id, ['sw', 'sw_push', 'sw_spdt', 'relay', 'lamp', 'motor'])),
             ('identity_p19', make_identity_flip_sketch(18, total_id, ['speaker', 'ammeter', 'voltmeter', 'ohmmeter', 'hop', 'term'])),
             ('identity_p20', make_identity_large_flip_sketch(19, total_id, ['dial', 'scope'])),
+            ('identity_p21', make_identity_compact_sketch(20, total_id, ['vcap', 'schottky', 'buzzer', 'cell_aa', 'cell_9v'])),
+            ('identity_p22', make_identity_compact_sketch(21, total_id, ['res_real', 'led_real', 'ecap_real', 'to92'])),
+            ('identity_p23', make_identity_flip_sketch(22, total_id, ['vcap', 'schottky', 'buzzer', 'cell_aa', 'cell_9v'])),
+            ('identity_p24', make_identity_flip_sketch(23, total_id, ['res_real', 'led_real', 'ecap_real', 'to92'])),
+            ('identity_p25', make_identity_large_sketch(24, total_id, ['breadboard'])),
+            ('identity_p26', make_identity_large_flip_sketch(25, total_id, ['breadboard'])),
         ]
         all_ok = True
         merged = {'ok': True, 'pages': []}
