@@ -44,7 +44,7 @@ def build():
     G.page('s1_r3', dict(
         dur=dur, theme='sketch',
         sketch=SCENE.format(**{a: round(b, 3) for a, b in t.items()}),
-        # a decisive push onto OUT (expo in-out), a hold while it is rewritten, then back to the whole circuit
-        moves=[dict(t=push, dur=0.9 * k * 1.3, ease='expo.inOut', kind='push', to=dict(x=730, y=700, s=2.0)),
-               dict(t=back, dur=0.8 * k * 1.3, ease='power3.inOut', kind='pull', to=dict(x=540, y=720, s=1.0))],
+        # a slow, even push onto OUT (sine in-out, >= 1.2 s, <= 1.5x), a hold while it is rewritten, then back
+        moves=[dict(t=push, dur=max(1.2, 0.9 * k * 1.3), ease='sine.inOut', kind='push', to=dict(x=700, y=710, s=1.5)),
+               dict(t=back, dur=max(1.0, 0.8 * k * 1.3), ease='sine.inOut', kind='pull', to=dict(x=540, y=720, s=1.0))],
         thumb=[[16 * k, dur]]))

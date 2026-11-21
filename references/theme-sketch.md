@@ -55,9 +55,13 @@ Times are run-relative and come from the words: build the JS in Python with `W(w
 - **Current must be seen at a glance**: a band plus moving charges, never small chevrons or arrows that blink (the
   user: chevrons were "자세히 쳐다 봐야 할 정도", too faint to carry the meaning). The control current is smaller and
   orange, the main current larger and red, so "a small current switches a big one" reads without words.
-- **Commit to the push**: a push-in goes all the way (2×) onto the thing being explained, with `ease: 'expo.inOut'`
-  (slow start, fast middle, soft landing), holds while the change is written there, then pulls back (`power3.inOut`).
-  A 1.3× push read as "당기다 그만 둔 느낌".
+- **A push is slow and even**: `ease: 'sine.inOut'` (or `power1/2.inOut`), at least 1.2 s in and 1.0 s back, at most
+  ~1.5×; it lands on the thing being explained, holds while the change is written there, then pulls back.
+  Never `expo.inOut` or `power3+` on the camera: they pack the whole move into ~0.15 s (peak speed 3.5× the average),
+  and a 1.3–2× zoom in that window reads as a jerk in the 60 fps MP4 even with motion blur (the user, PN part 3,
+  2026-11-21: "여러 곳에서 jerking"; frame-difference spikes sat exactly on the expo pushes). An earlier rule here asked
+  for "2× with expo.inOut" because a 1.3× push read as "당기다 그만 둔 느낌"; a slow push that lands and holds answers
+  that without the whip.
 - **Camera budget: 4–5 pushes per short, no more** (the user, 2026-11-21, PN part 3: "눈이 너무 피곤하네요. 내용은
   정말 좋은데"). Push only on the key moments (the hook, the half-seen moment, the answer, the payoff); every other run
   keeps the camera at rest and lets the drawing change instead (drawn on, corrected, set aside). Every push is back at
