@@ -51,6 +51,7 @@ report, publishing copy). Another language only when the user asks.
   short's script.json; key lines on screen; say so in the hand-off.
 
 ## Workflow
+**Who does each step** (Claude, agy Hydrogen, agy Neon, the Gemini app, a Claude subagent, the user): `references/roles.md`.
 Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; everything runs inside `<folder>/work/`.
 
 1. **Setup:** `bash SKILL/scripts/setup.sh <folder>` creates `.venv`, `work/` (scripts, the narration tools, the
@@ -174,4 +175,4 @@ Read `references/lessons.md` before improvising. The biggest ones:
 - `references/`: `editing-spec.md` (the contract), `narration.md` (script-to-motion's narration rules),
   `script-writing.md` (script-to-motion's writing rules, and the story spine for shorts), `story-ko.md` (the Korean
   shapes of hooks, turns and endings), `pipeline.md` (the commands), `graphics.md` (the engine API),
-  `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `parts.md` (the parts catalogue: every circuit part from the kit), `speed.md` (parallelism), `lessons.md`.
+  `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `parts.md` (the parts catalogue: every circuit part from the kit), `roles.md` (who does each step), `speed.md` (parallelism), `lessons.md`.

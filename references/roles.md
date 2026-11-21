@@ -1,0 +1,31 @@
+# Workflow and roles — who does each step
+
+The user's standing assignment of every step of a short (set 2026-11-21/22 on the PN-junction series). Follow it for
+every short unless the user says otherwise; ask before moving a step to someone else (e.g. when a tool fails).
+
+| step | what | who | checked by |
+|---|---|---|---|
+| 0. Setup | `setup.sh`, or refresh an existing project's copies of the kit and scripts (back up the old ones first) | Claude | parts sheet, regression |
+| 1. Research and fact-check | the facts list, 2+ sources each, `factcheck_<sk>.md` + `research_<sk>/` | **agy Hydrogen** (`gemini-4-hydrogen-high`, web tools only) | Claude opens the sources and compares |
+| 2. Script | story spine → lines, first-time-listener gates (script-writing.md) | **Claude** | step 3 |
+| 3. Cold-listener review | reads only `script.txt`, as a viewer who knows nothing | **a Claude subagent** | Claude applies it |
+| (optional) Fun and easy discussion | ideas to make the explanation more fun and easier; at most 3 rounds per short, many items batched per round | **agy Neon** (`gemini-4-neon-*`) | Claude checks every factual claim |
+| 4. Timeline | `shorts.json` → `prep.sh` (silent placeholders, nothing recorded) → read the runs | **Claude** | runs ≤ ~8 s, no two neighbours of one scene kind |
+| 5. Graphics brief | `GFX_BRIEF_<sk>.md`: 3–5 sections, a hero run each, the parts catalogue PNGs attached | **Claude** | — |
+| 6. Look development | hero runs first → compare with the approved look + defect check | graphics code: **Gemini app** / defect check: **agy Neon** (`defect_check.py lookdev`) | Claude confirms each finding on its frame |
+| 7. Full build | the remaining runs | **Gemini app** (if it fails, ask the user, then **agy Hydrogen** with a write grant to one output folder) | `check_parts.py` warnings 0 |
+| 8. Motion and whole check | frame-by-frame boundaries and camera moves, whole-short sheets | **agy Neon** (`defect_check.py motion` / `whole`); Claude counts the camera pushes (4–5 max) | no confirmed defect left |
+| 9. Preview | hand over `work/index.html` + `script.txt`, ask whether to record | Claude → **the user reviews** | review notes applied |
+| 10. Recording | Chirp 3 HD Enceladus, speed 1, **only after the user says so** | Claude | `check_narration.py`, chip `at`s |
+| 11. Render | `python3 render.py <sk> <NN> <slug>` | **the user** | Claude checks the MP4 (LUFS, length) |
+| 12. Wrap-up | thumbnail, `PUBLISH.md`, `check_publish.py`, STATUS | Claude | — |
+| Commit / push | skill changes | **only on the user's word** (each push asked) | — |
+
+Rules that go with it:
+- **Delegate politely** to agy and the Gemini app: a kind manager asking a trusted colleague, never commands; context
+  and hard limits stated clearly but courteously (global CLAUDE.md "위임 말투"). Prompts built into scripts too.
+- **No score decides anything** (elevate.md): the checker finds defects; taste is the user's and the approved
+  references' (earlier parts of the series, the parts catalogue).
+- **Verify every delegated result yourself**: agy's "done" is a claim. Build, shoot and check before reporting.
+- agy is called by its absolute path `~/.local/bin/agy` (the zsh alias adds `--dangerously-skip-permissions`), with
+  narrow grants: `--add-dir` for reading, `write_file(<folder or file>)` for writing, web tools only for research.
