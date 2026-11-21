@@ -24,3 +24,9 @@ finally:
     try: os.rmdir(lock)
     except OSError: pass
 print('built', list(G.THUMBS))
+# parts drawn by hand instead of with the kit (theme-sketch.md "Parts"): warnings only
+try:
+    import check_parts
+    check_parts.main([os.path.join(os.path.dirname(os.path.abspath(__file__)), f'gfx_{w}.py') for w in which])
+except Exception as e:                           # the check must never stop a build
+    print('check_parts skipped:', e)

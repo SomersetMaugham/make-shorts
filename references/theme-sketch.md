@@ -41,8 +41,13 @@ Times are run-relative and come from the words: build the JS in Python with `W(w
 
 - `S.at(t0, d, () => {...}, kind)` — everything drawn inside appears over [t0, t0+d]: strokes drawn on like a pen
   (`'draw'`), text written left to right, or `'fade'` / `'pop'`. `S.out(t, d, items)` takes pieces away again.
-- Parts: `res`, `cap`, `diode`, `npn` / `pnp` (return B, C, E and `inside`, the C→E path through the symbol), `gnd`,
-  `vcc`, `port` (the schematic's pentagon flag), `chip` (an IC with numbered pins; returns pin positions), `dot`.
+- **Parts: from the kit only** (the parts catalogue, references/parts.md). Every circuit part and matter drawing is a
+  kit function (`S.res`, `S.battery`, `S.npn`, `S.meter`, `S.sw`, `S.atom` … the full list is the header of
+  assets/gfx/sketch.js), so the same part looks the same in every short: same shape at any position, angle and size,
+  + red / − blue. Place a part by its centre (`S.res(cx, cy, {rot, size: 'S'|'M'|'L'})`) and wire from the pins it
+  returns (`part.pins.A`, `S.route(a.pins.B, b.pins.A)`); feed `part.path` to `S.energize` / `S.stream`; switch states,
+  LED and lamp glow and meter needles change with `part.at(t, state)`. A part the kit lacks is added to the kit and the
+  catalogue first; `check_parts.py` (run by build_gfx.py) warns about parts drawn by hand.
 - Pen marks: `arrow`, `ellipse` (red circle), `strike` (red X), `marker` (a key line on the highlighter, shrinks to fit
   820 px), `note` (a sticky note), `text`.
 - Current: `S.energize(t0, pts)` lays a translucent red band along the wire; `S.stream(t0, pts, {n, color, r, speed})`

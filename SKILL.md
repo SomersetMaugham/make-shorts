@@ -174,4 +174,4 @@ Read `references/lessons.md` before improvising. The biggest ones:
 - `references/`: `editing-spec.md` (the contract), `narration.md` (script-to-motion's narration rules),
   `script-writing.md` (script-to-motion's writing rules, and the story spine for shorts), `story-ko.md` (the Korean
   shapes of hooks, turns and endings), `pipeline.md` (the commands), `graphics.md` (the engine API),
-  `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `speed.md` (parallelism), `lessons.md`.
+  `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `parts.md` (the parts catalogue: every circuit part from the kit), `speed.md` (parallelism), `lessons.md`.

@@ -121,7 +121,7 @@ SKETCH_CSS = """
 @font-face{font-family:'Architects Daughter';src:url(assets/ArchitectsDaughter-Regular.ttf);font-display:block}
 #root.sketch{color:#22201c;font-family:Gaegu,sans-serif}
 #root.sketch #ground{background:#f3efe6}
-#root.sketch #ground::before{content:'';position:absolute;inset:-1080px;background-image:linear-gradient(rgba(143,179,201,.22) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(143,179,201,.22) 1.5px,transparent 1.5px);background-size:54px 54px}
+#root.sketch #ground::before{content:'';position:absolute;inset:-1080px;background-image:linear-gradient(rgba(143,179,201,.22) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(143,179,201,.22) 1.5px,transparent 1.5px);background-size:60px 60px}
 #root.sketch .beam{display:none}
 #root.sketch #vignette{z-index:3;pointer-events:none;background:radial-gradient(75% 75% at 50% 42%,rgba(90,74,48,0) 60%,rgba(90,74,48,.16) 100%)}
 #root.sketch #grain{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.55;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .22 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")}
