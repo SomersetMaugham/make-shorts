@@ -6,8 +6,8 @@ headless Chrome. No MP4 is made for looking (the MP4 is the user's, after the re
 
 > **When to look, and when not.**
 > - **Work you do on your own:** the first build, anything you decide to improve, a redesign you carry out. Look at it
->   with `render.py --screenshot` and keep improving until a pass finds nothing (and the elevation, elevate.md, has
->   scored it). Don't hand off what nobody has seen.
+>   with `render.py --screenshot` and keep improving until a pass finds nothing (and the defect check, elevate.md, has
+>   nothing confirmed left). Don't hand off what nobody has seen.
 > - **A fix the user asks for (a review note):** implement it straight away; don't run a new round of looking. Run the
 >   cheap gates (`check_narration.py`, `check_text.py`), say what changed at which time and cue, and hand back.
 > - **When the user asks you to look** (or pastes the player's **A** command), run it and open the images.
@@ -33,10 +33,10 @@ python3 render.py --screenshot --short s1 --from 40 --to 47 --gapframe 6 --out c
 | a section | 30–60 |
 | the whole short at a glance | 120 |
 
-Each tile is labelled `m:ss.ss [cue]`: the same time and cue the player's **S** key copies, so you, the director and
+Each tile is labelled `m:ss.ss [cue]`: the same time and cue the player's **S** key copies, so you, the checker and
 the user name the same moment. Run boundaries are in `cut.json` (`runs[].T0/T1`); phrase times in the runs' words.
 
-## 2. The review loop (step 5, before the elevation)
+## 2. The review loop (step 5, before the whole check)
 
 1. **Whole short** — `--gapframe 120`: variety of framing, scale and colour, or the same layout over and over? Does the
    picture escalate with the story? Where the narration goes on but nothing on screen follows the words, fix it.
@@ -47,16 +47,16 @@ the user name the same moment. Run boundaries are in `cut.json` (`runs[].T0/T1`)
    default state before their entrance, two runs muddily overlapping, a hero missing at a run's frame 0.
 5. **Fix, then shoot the same stretch again** (§6). Repeat until a pass finds nothing.
 
-**Who looks.** Steps 3–4 are dozens of images: they go to the motion reviewer (Gemini Neon,
-`python3 scripts/art_director.py motion <round> <images…>`, elevate.md §1), which reports the frames and what is
-wrong with them. You open only the frames it names, confirm, and fix. Steps 1–2 you skim yourself on the sheets; the
-judging of A and B is the director's (elevate.md).
+**Who looks.** Steps 3–4 are dozens of images: they go to the defect checker (Gemini Neon,
+`python3 scripts/defect_check.py motion <round> <images…>`, elevate.md §1), which reports the frames and what is
+wrong with them. You open only the frames it names, confirm, and fix. Steps 1–2 you skim yourself on the sheets
+against the craft guide (elevate.md §6). Nobody scores.
 
 **A one-tile flash is a suspect, not a finding.** Every tile is its own headless Chrome load, and now and then one
 catches a composition before it has taken its time (it shows the run's frame 0 for one tile, in the middle of a run).
 Before fixing a "one-frame jump" or "wrong state for one frame", shoot that moment and its neighbours again
 (`--at T-0.05,T,T+0.05 --jobs 1`): a flash that does not come back was the camera, not the short. A flash exactly at a run
-boundary that does come back is real (the next run's frame 0 differs from the last run's end). The motion reviewer is
+boundary that does come back is real (the next run's frame 0 differs from the last run's end). The defect checker is
 told the same, and its flash findings are confirmed this way before anything is changed (GRPO, 2026-11-20: four
 reported flashes, three gone on a re-shoot).
 

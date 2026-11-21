@@ -108,10 +108,11 @@ Graphics rules ([references/graphics.md](graphics.md)):
 
 ---
 
-### 3b. Look development, visual review, elevation (references/elevate.md, references/visual-review.md)
-Hero run per section first → `art_director.py lookdev` (Gemini Neon) until 4+ on 그래픽 디자인 → the rest of the build →
-the frame-by-frame motion pass (`art_director.py motion`) → the elevation rounds (`art_director.py whole`, up to 3) →
-only then the preview goes to the user. No MP4 anywhere in this.
+### 3b. Look development, visual review, defect check (references/elevate.md, references/visual-review.md)
+Hero run per section first → compare with the approved look + `defect_check.py lookdev` (Gemini Neon, defects only) →
+the rest of the build → the frame-by-frame motion check (`defect_check.py motion`) → the whole check
+(`defect_check.py whole`, up to 3 rounds) → only then the preview goes to the user. No score gates anything. No MP4
+anywhere in this.
 
 ## 4. Browser Preview (The Single User Gate)
 

@@ -94,4 +94,5 @@ films the preview the same way. Specific to the sketch theme:
   builds again once Gaegu and Architects Daughter are in);
 - the drawing order follows the words: a part is fully drawn by the time it is named.
 
-The elevation scores sketch shorts with the same rubric, read for this look (elevate.md §4, "The sketch theme").
+The defect check reads sketch shorts by the same floor and consistency rules (elevate.md §3–4); the craft guide's
+"Sketch theme" lines (§6) say what a designed sketch frame looks like.

@@ -1,173 +1,141 @@
-# Elevate — the aesthetic pass (고도화), with look development and the art director
+# Look development, the craft guide and the defect check
 
-Carried over from script-to-motion (references/elevate.md, cinematic-look.md §4, claude-roles.md §4), fitted to shorts:
-1080x1920 runs on the stage theme, the preview (index.html) instead of a rendered video, and the art director run by
-Gemini Neon (agy, `gemini-4-neon-medium`; the user's choice, 2026-11-20) through `scripts/art_director.py`.
+**No score decides anything** (the user, 2026-11-21). Taste belongs to the user and to what the user already approved
+(the theme files, the approved look-development frames, the parts catalogue sheet, `lessons.md`, the camera budget).
+The defect checker — Gemini Neon through agy (`gemini-4-neon-medium`), `scripts/defect_check.py` — only finds defects.
+It does not score, rank upgrades or ask for more camera moves or effects. The craft of the frame is the builder's job,
+guided by §6, and the user judges it in the review.
 
-**Defect-free is the floor, not the goal.** The user's verdict on videos that had passed every check: "연출에 대한 아쉬움,
-더 섬세한 그래픽 디자인 모션의 표현 등등 전체적으로 미적인 부분에서 큰 아쉬움들이 있어." The graphics checks (graphics.md
-"Checking": frame 0, 30 px, the zones) find what is *wrong*; this pass keeps going until the short is *designed*.
-
-An elevation that judges each frame against the frame before it tends to add layers to the same compositions, and the
-result is barely different from the first build. So the director scores against an **absolute bar** — a still a motion
-studio would put in its reel — never against the previous round, and a round that only decorates does not count.
+Why: the earlier art director scored every section 1–5 and the build could not go on below 4. Its taste replaced the
+user's: on PN part 3 its "1.0× everywhere is monotonous" became a push in every run (50 moves) and the user said "눈이
+너무 피곤하네요". A score also invites decorating frames to raise a number.
 
 ## Contents
 1. Where it runs: three points
-2. Two roles: the builder and the art director
-3. What the director gets
-4. The rubric: direction, graphic design, motion
-5. What the director returns
-6. What the builder does with it
+2. Roles: the builder, the defect checker, the user
+3. The floor: what is a defect
+4. Consistency rules
+5. What the checker returns
+6. The craft guide (for the builder, not a score)
 7. Rounds, stopping, reporting
 
 ## 1. Where it runs: three points
 
-| point | when (SKILL.md) | images | axes | gate |
-|---|---|---|---|---|
-| **look development** (`lookdev`) | step 4, before the graphics agents build every run | one hero frame per section of the short (3–5), `--at T --res full` | B 디자인 + world check | ≥ 4 on B, then the rest is built (up to 3 rounds) |
-| **visual review** (`motion`) | step 5, after the whole build passed the graphics checks | every transition and camera move frame by frame, every key moment around its word (visual-review.md) | C 모션, sync, the floor | nothing left on the floor |
-| **elevate** (`whole`) | step 5, before index.html goes to the user | whole-short sheet (`--gapframe 120`), each section's sheet (`--gapframe 30`), key moments `--res full` | A 연출 + B 디자인 per section, the floor, ranked upgrades | ≥ 4 on A and B (and C from the motion pass) in every section, or 3 rounds |
+| point | when (SKILL.md) | images | gate |
+|---|---|---|---|
+| **look development** (`lookdev`) | step 4, after one hero run per section (3–5) is built | the hero frame of each section, `--at T --res full` | no must-fix left, and you compared the frames with the approved look (§2); then the rest is built |
+| **motion** (`motion`) | step 5, after the whole build passed the graphics checks | every run boundary and camera move frame by frame, every key moment around its word (visual-review.md) | no must-fix left |
+| **whole** (`whole`) | step 5, before index.html goes to the user | whole-short sheet (`--gapframe 120`), each section's sheet (`--gapframe 30`), key moments `--res full` | no must-fix left |
 
-It is not optional and it does not wait for the user: it runs on the first build, after a redesign you carry out, and on
-any stretch the user calls flat ("밋밋해", "아쉬워"). It needs no recording (placeholders are fine) and makes no MP4.
-A fix the user asks for in the review is implemented straight away, without a new round (visual-review.md).
+It needs no recording (placeholders are fine) and makes no MP4. A fix the user asks for in the review is implemented
+straight away (visual-review.md); re-check only the stretches you changed.
 
 **Sections** are the short's story beats, written in GFX_BRIEF.md (e.g. hook · problem · mechanism · example · payoff),
-3–5 per short, each a run of consecutive runs. Score per section, never per run.
+3–5 per short, each a run of consecutive runs.
 
-## 2. Two roles: the builder and the art director
+## 2. Roles: the builder, the defect checker, the user
 
-You built the picture, so you are the worst judge of it. The **art director** is Gemini Neon with no stake in the code:
-it looks at the images, scores them and asks for changes. It never edits files and sees nothing but the images, the
-rubric, the script and the brief: `scripts/art_director.py` runs it read-only (agy `--add-dir` on the images and the
-project, no write grant, no shell). Heavy looking — dozens of frames, frame-by-frame transitions — goes to it, not to
-you; you read its report and open only the frames it names to confirm a finding before you act on it.
+- **The builder** (you and the graphics agents) designs every frame with §6 and the approved references, and owns it.
+  At look development, put the hero frames next to the approved references of the theme (the theme file's approved
+  look, earlier parts of the same series, the parts catalogue) and fix what does not match before going on.
+- **The defect checker** has no stake in the code: it looks at the images, the rules here, the script and the brief,
+  and lists defects. `defect_check.py` runs it read-only (agy `--add-dir` on the images and the project, no write grant,
+  no shell). Heavy looking — dozens of frames, frame-by-frame transitions — goes to it, not to you.
+  **Confirm every finding** by opening the frame it names before you act: Gemini has been wrong on these shorts. A
+  finding that is really a taste request (a new shot, more motion, "monotonous") is not a defect: drop it and log why.
+- **The user** judges the look in the review. When they call a stretch flat ("밋밋해", "아쉬워"), redesign it from its
+  concept with §6 (re-create, don't decorate), then run the checker on the changed stretch.
 
-When agy is missing or fails twice, do the director's job yourself in a separate, written step with the same rubric
-and the same output, score as a stranger would, and say so in the hand-off.
+When agy is missing or fails twice, run the same check yourself in a separate, written step with the same rules and
+the same output, and say so in the hand-off.
 
-## 3. What the director gets
+## 3. The floor: what is a defect
 
-Shoot fresh images for the round into `chk/elevate-<n>/` (`render.py --screenshot … --out chk/elevate-<n>`):
-- the whole short at `--gapframe 120`; each section at `--gapframe 30`;
-- the hero frame of each section and every moment named by an upgrade at `--at T --res full` (1080x1920, one image
-  each; on a grid sheet the tiles are small and Gemini reads them loosely);
-- for the motion pass: every run boundary and camera move at `--from A --to B --gapframe 3`.
+Any hit is a must-fix:
+- Text under 30 px (stage theme) or under 44 px (sketch theme).
+- Anything outside the zones (content y 140–1395, captions y 1410–1550, nothing below 1560) or under the captions; text
+  or the key element under the platforms' button column (x > 960, y 1000–1700). These hold in every camera position.
+- Overlaps and clipping; things that should touch and do not (a wire that misses its pin).
+- Run 0 frame 0 not cover-safe, or a hero missing at a run's frame 0.
+- A frame that is a slide or a document page (a title and bullet lines on a card or on paper); the stage theme's
+  infographic look (thin lines and small diagrams on a dark gradient beside a label column).
+- A drawing that appears all at once in the sketch theme (it must be drawn on).
+- Three runs in a row with the same layout; a stretch frozen for lack of a plan (the same picture for more than ~2 s
+  while the words move on to something else).
+- An effect or reveal landing after its word.
+- Motion: a one-frame jump, a flash of the wrong state at a run boundary, a jerk (a camera move packed into a few frames,
+  e.g. `expo`/`power3+` easing on the camera), a run that ends while zoomed, a muddy overlap of two states.
+- More than 4–5 camera pushes in the short (count them from cut.json/the compositions yourself; the checker sees only
+  images).
+- Against an earlier round (`--before`): a stretch you changed that looks the same at phone size.
 
-`art_director.py` adds the rubric (this file), `narration/<sk>/script.txt`, GFX_BRIEF.md and, per image, its time, cue
-and the line spoken there (from cut.json). Nothing else: no code, no logs. When an earlier round exists, pass its
-images too (`--before DIR`) and the director checks that changed stretches really look different at phone size.
+## 4. Consistency rules
 
-## 4. The rubric: direction, graphic design, motion
+- **The same part looks the same everywhere.** In the sketch theme every circuit part and matter drawing comes from the
+  kit (assets/gfx/sketch.js) and matches the approved parts catalogue sheet: a battery, resistor, meter or atom drawn
+  differently from its catalogue shape, or two different versions of one part in the short, is a defect.
+- The pens keep their jobs (theme-sketch.md): red = what changes now, the main current; blue = before; orange = the
+  control current; the highlighter = the one key line. A colour used for another job is a defect.
+- Polarity: + in red, − in blue.
+- Captions, chips and the cover follow the theme of the short.
 
-Score every section 1–5 on each axis (5 = a motion designer would put it in a reel), with the image names that justify
-the score. **The scale is absolute**: 3 is competent explainer graphics, 4 is a crafted world with material, light and
-depth that a viewer finds beautiful on its own, 5 is reel-worthy. The look-fors are prompts, not a checklist.
-
-The stage theme (graphite stage, glass cards, accents; theme.md) is the material, not a score: a glass card that holds
-a centred title and a line of text is a slide, whatever its hairline and bloom, and scores at most 2 on B. The
-infographic look (thin lines and small diagrams on a dark gradient, a label column beside them) scores at most 2 on B.
-
-**The sketch theme** (theme-sketch.md) is read on its own terms: paper and pen are the material, so "thin lines on a
-flat ground" is not the infographic cap there. What scores 4 in it: the drawing fills the content zone as one figure
-(not small diagrams in a column of labels), the three pens each do their job (red = what changes now, blue = before,
-highlighter = the one key line), the hand's order follows the words, the current is seen at a glance (band and moving
-charges), a push commits to its close-up and the change is written there as a correction. What caps it at 2: a
-sketch frame that is a slide in handwriting (a title and bullet lines on paper), a drawing that appears all at once,
-labels under 44 px, colour used without a job.
-
-**A. 연출 — direction**
-- The concept object/idea is present and keeps changing role; each section has a world, not a backdrop.
-- Shots vary (wide · medium · close-up · insert); the key gesture of each beat gets its close-up; no layout three runs
-  in a row; nothing holds the same composition for more than ~2 s while words go on, unless the stillness means
-  something. A short is watched on a phone: the hero fills the content zone (y 140–1395), not the upper half.
-- The camera moves for a reason in the words (push-in on what is named, pull-out for the whole) and stays still
-  otherwise; no habitual drift. Budget: 4–5 pushes per short (theme-sketch.md "Camera budget"); never ask for a
-  push in every run, and never score a short down because the camera rests where the drawing carries the change.
-- Staging: one focal point per moment; the eye is led — where it lands at a cut is where the next run starts; reveals
-  are withheld and land on the word; the captions (y 1410–1550) are part of the frame, never fighting the hero.
-- Rhythm: density follows the story (hook → build → peak → resolve); the peaks are visibly peaks. The first 2 s are
-  the hook: the strongest frame of the short, not a title card.
-- Joins: something survives the cut (match cut, morph, the travelling object); no hard pop, no fade-swap of unrelated
-  layouts.
-
-**B. 그래픽 디자인 — the finish of the frame**
-- Composition: a grid and balance you can name; negative space that is chosen, not left over; vertical centre of mass
-  in the content zone; alignment between elements that belong together.
-- Scale and hierarchy: one hero, clearly the largest thing when its word is said (on 1080 wide: 120–260 px type, or
-  an object filling half the frame); support legible (never under 30 px); a clear second and third level, not ten
-  equal labels.
-- Typography (Pretendard): weight and size contrast inside a line; tracking for display sizes; line breaks at phrase
-  boundaries, no orphan syllable; hero lines with a treatment that says what they say; numerals set as numerals.
-- Colour and light: one accent per scene with a job; value contrast that reads on a phone; a key light or glow that
-  makes the focal point; temperature that changes with the story.
-- World, material and depth: background, mid-ground and foreground layers with focus (depth of field) and haze;
-  falloff, rim and contact shadow; objects drawn with material — never thin lines floating on flat black; real
-  captures shown as real objects in the space, not pasted rectangles.
-- Detail: consistent stroke weights, icon language and radii; things that touch actually touch; nothing meaningless
-  on screen.
-
-**C. 모션 — the expression of movement** (the motion pass, on frame-by-frame sheets; stills cannot show it)
-- Easing with intent: confident entrances (`expo.out`, `power4.out`), quicker exits, no linear start/stop.
-- Choreography: hierarchy in time (the focal element first and most), overlaps of 0.2–0.4 s, staggers in the rhythm of
-  the speech; never everything at once with one tween.
-- Physicality: anticipation before big moves, overshoot and settle on arrival, follow-through.
-- Continuity: elements travel, transform and hand over rather than fade out and in; across a run boundary the eye
-  finds the next focal point where the last one was.
-- Life: while words go on, the thing they name moves; ambient life is subtle and never the only motion.
-- Sync: a visual lands with or slightly before its word (`W(ws, '구절')`), never after.
-
-**D. The floor — any hit is a must-fix, whatever the scores**
-A frame that would pass as a slide or a document page; the infographic look; text under 30 px; anything outside the
-zones (content y 140–1395, captions y 1410–1550, nothing below 1560) or under the captions; text or the key element under the platforms' button column (x > 960, y 1000–1700); overlaps and clipping;
-run 0 frame 0 not cover-safe or a hero missing at a run's frame 0; a stretch frozen for lack of a plan; three runs in a
-row with the same layout; an effect landing after its word; a one-frame jump or a flash of the wrong state at a run
-boundary; against an earlier round, a stretch that looks the same at phone size.
-
-## 5. What the director returns
+## 5. What the checker returns
 
 ```
-## Round <n> — scores
-| section (runs) | A 연출 | B 디자인 | C 모션 (motion pass only) | why (image names) |
+## Must-fix
+- <image number and label> — <rule from §3/§4> — what is wrong and where in the frame
 
-## World check
-- does each section read as a place in one lit, material world? where it reads as an infographic or a slide instead
+## Suspect
+- <image number and label> — what may be wrong (a possible capture glitch, or too small to be sure at this size)
 
-## Must-fix (the floor)
-- <image name> — what is wrong
-
-## The upgrades that matter most (ranked by impact, 6–10)
-1. <cue / run / time span> — what the image shows now → what it should become, concretely: the shot, the layout,
-   the move, the type treatment, the material and light
-
-## Keep
-- what already works and must survive the changes
+## Clean
+- the image numbers with nothing found
 ```
 
-Concrete means buildable: "s1_r9 (c07, 0:43–0:46): two equal cards and a title card stacked like a slide → one answer
-card fills the frame, the 1점 badge lands huge on '1점' and flips to 0점 as the second answer slides in" — not "make it
-more dynamic".
+No scores, no upgrades, no opinions on taste. `defect_check.py` saves it to `review/defects-<point>-<round>.md` and
+prints the must-fix list.
 
-## 6. What the builder does with it
+## 6. The craft guide (for the builder, not a score)
 
-- Fix the floor first, then take the upgrades from the top.
-- **Re-create, don't decorate**: a weak beat is redesigned from its concept (a new shot, a new picture of the idea,
-  real material and light), not given small added effects or labels. A round that only adds layers to the same frames
-  does not count.
-- Keep what the director said to keep; keep timing on phrases (`W()`), the zones and the frame-0 rules.
-- Rebuild (`build_gfx.py <tags>`, `preview.py`), re-shoot exactly the stretches you changed into
-  `chk/elevate-<n+1>/` and pass the previous round's images with `--before`.
-- You may disagree with an upgrade: say why in one line in the next round's `--note`; the director decides. Accuracy
-  and the first-time-listener rules outrank a design request.
+What a designed short looks like. Use it while building and when the user asks for a redesign; nobody grades it.
+
+**Direction**
+- The concept object or idea is present and keeps changing role; each section has a world, not a backdrop.
+- Shots vary (wide, medium, close-up, insert); the key gesture of each beat gets its close-up, within the camera budget.
+  The camera moves for a reason in the words (push-in on what is named, pull-out for the whole) and rests otherwise;
+  a resting camera with a drawing that changes is good, not monotonous.
+- One focal point per moment; the eye is led — where it lands at a cut is where the next run starts; reveals land on
+  the word; the captions are part of the frame.
+- Density follows the story (hook → build → peak → resolve). The first 2 s are the hook: the strongest frame, not a
+  title card. The hero fills the content zone (y 140–1395), not the upper half.
+- Joins: something survives the cut (match cut, morph, the travelling object).
+
+**Graphic design**
+- Composition with a grid and balance you can name; chosen negative space; centre of mass in the content zone.
+- One hero, clearly the largest thing when its word is said; a clear second and third level, not ten equal labels.
+- Typography: weight and size contrast; line breaks at phrase boundaries; hero lines with a treatment that says what
+  they say.
+- Colour: one accent per scene with a job; value contrast that reads on a phone.
+- Stage theme: layers with depth, light and material; real captures shown as objects in the space.
+- Sketch theme: the drawing fills the content zone as one figure; the hand's order follows the words; the current is
+  seen at a glance (band and moving charges); a push lands on its close-up and the change is written there.
+- Detail: consistent stroke weights and icon language (in the sketch theme: the kit's parts only).
+
+**Motion**
+- Easing with intent on elements (`expo.out`, `power4.out` entrances, quicker exits); the camera is slow and even
+  (`sine.inOut`, theme-sketch.md).
+- Hierarchy in time: the focal element first; overlaps of 0.2–0.4 s; staggers in the rhythm of the speech.
+- Elements travel, transform and hand over rather than fade out and in.
+- While words go on, the thing they name moves; a visual lands with or slightly before its word (`W(ws, '구절')`).
+
+**Re-create, don't decorate:** a beat the user calls weak is redesigned from its concept (a new shot, a new picture of
+the idea), not given small added effects or labels.
 
 ## 7. Rounds, stopping, reporting
 
-- Up to three rounds by default. Stop earlier when every section scores at least 4 on A, B and C **on the absolute
-  scale** and nothing is left on the floor; go past three only when a round still raised scores and the user asked
-  for the best possible.
-- `review/elevate.md` keeps each round: scores, the upgrades done, the image folders; the director's reports stay in
-  `review/art-<point>-<round>.md`.
-- The hand-off (and report.md) reports the elevation: rounds, the scores before → after per axis, the most visible
-  changes with their before/after images, and what the director still wanted that was not done (and why).
-- Time: each round costs fresh images and rebuilds. It is the part of the job the user notices most; spend it.
+- Fix every confirmed must-fix, rebuild (`build_gfx.py <tags>`, `preview.py`), re-shoot exactly the stretches you changed
+  into `chk/<point>-<n+1>/` and run the checker on them with `--before` the previous images.
+- Stop when nothing confirmed is left on the floor. After three rounds with defects still found, stop and report them.
+- `review/defects.md` keeps each round: the findings, which were confirmed or dropped (and why), the fixes, the image
+  folders. The checker's own reports stay in `review/defects-<point>-<round>.md`.
+- The hand-off (and report.md) says how many rounds ran, what was fixed, and anything left.

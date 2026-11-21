@@ -12,7 +12,7 @@ A copy sits in work/ (setup.sh puts it there); run it from work/ or the project 
     python3 render.py --screenshot --run s1_r3 [--gapframe 10]   the same over one whole run (a graphic's own check)
     python3 render.py --screenshot --short s1 --at 12.5,40 [--res full] [--out DIR]
                                            exactly these moments, one image each (labelled with the time and cue): --res full
-                                           is the stage at 1080x1920 (small type, detail; what the art director judges),
+                                           is the stage at 1080x1920 (small type, detail; what the defect checker reads),
                                            without it 540x960. --out puts sheets or frames in DIR (before / after sets)
                                            a contact sheet of the preview (index.html) from..to, every gapframe-th frame at
                                            60 fps, shot with headless Chrome -> chk/shot_<short>_<from>-<to>.png. No render
