@@ -42,3 +42,9 @@ Messages in these scripts still name script-to-motion's files (`check.mjs`, `ref
 - `lib/scriptsig.mjs`  ad74125845d0a09afdb66006098af8565a692ddeb34ea6d434bf326b0c0fc176
 
 `sync_upstream.sh` compares each file with the upstream copy and lists what changed there since; it never overwrites.
+- `tts.mjs` (2026-11-23): paragraph recording, Google only. `"tts": {"paragraphs": 5}` (or named groups) records up to 5
+  consecutive cues in one request and cuts the take into one take per cue at script.json `"splits"` (proposed from
+  pauses and syllable counts when absent, then confirmed with phrasing-check). Each piece is an ordinary
+  `.tts-cache/<take>.pcm`, so cut / at / wave / sync / checks are unchanged. `--only` re-takes the whole paragraph; the
+  paragraph take it replaces moves to `.tts-cache/replaced/`. Without `"paragraphs"` the script behaves exactly as before
+  (PN part 4 rebuilt byte-identical). Why: references/narration.md, Google §6.

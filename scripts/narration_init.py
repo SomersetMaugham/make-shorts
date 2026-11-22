@@ -21,7 +21,9 @@ S = json.load(open('shorts.json', encoding='utf-8'))
 DEFAULTS = {
     # narration: Google Cloud TTS, Chirp 3 HD, Korean male voice Enceladus (script-to-motion's default since
     # 2026-11-13; gcloud sign-in, no key). Fish Audio instead: "tts": {"provider": "fish"} + the user's voice id in "voice".
-    'tts': {'provider': 'google', 'voice': 'ko-KR-Chirp3-HD-Enceladus'},
+    # paragraphs: up to 5 consecutive lines recorded in one request so they share one pace (2026-11-23, the user's
+    # choice after the PN part 4 test: line-to-line sd 0.49 -> 0.19 syl/s; references/narration.md, Google §6)
+    'tts': {'provider': 'google', 'voice': 'ko-KR-Chirp3-HD-Enceladus', 'paragraphs': 5},
     'lang': 'ko',
     'leadIn': 0.3,
     'gap': 0.12,      # Google takes keep 0.3-1.0 s pauses of their own: a short gap avoids dead air

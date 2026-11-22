@@ -150,6 +150,9 @@ Once the user approves recording:
    node scripts/narration/tts.mjs narration/s1 --approved
    ```
    Calls Google Cloud TTS Chirp 3 HD (`ko-KR-Chirp3-HD-Enceladus`). Takes are cached in `narration/s1/.tts-cache/`.
+   Up to 5 lines go in one request (`"paragraphs": 5`) so they share one pace; tts.mjs prints 🧩 proposed split times.
+   Confirm them with step 3's `phrasing-check.mjs` (each cue starts and ends with its own words), fix a wrong one with
+   `wave.mjs`, and write them into `narration/s1/script.json` `"splits"` (references/narration.md, Google §6).
 
 2. **Review takes and set cuts**:
    ```bash
@@ -248,8 +251,8 @@ Change the smallest component and re-run only what it affects. `finish.sh` cache
 | Change | Re-run Steps | What Re-renders |
 |---|---|---|
 | **Script wording (before recording)** | Edit `shorts.json` → `bash scripts/prep.sh <sk>` → update `W()` if phrases changed → `bash scripts/finish.sh <sk> --draft` | Only modified runs re-render. |
-| **Script wording (after recording)** | Edit `text` / `say` in `shorts.json` → `prep.sh` (the cue becomes a silent placeholder) → **ask the user**; on their OK `tts.mjs narration/<sk> --approved --only <id>` → `wave.mjs` (set `cut`, `at`) → `prep.sh` → `build_gfx.py` → `render_full.sh` (the runs from that cue on) → `finish.sh` | One take re-recorded; the runs after it move, so their graphics re-render. |
-| **Re-take / phrasing adjustment** | Edit `say` in `shorts.json` (`[pause short]`, joined words) → `prep.sh` → `tts.mjs --approved --only <id>` (user's report or OK) → `wave.mjs` (set `cut`, `at`) → `prep.sh` → `build_gfx.py` → `render_full.sh` (changed runs) → `finish.sh` | One take re-recorded; graphics re-timed by their phrase anchors. |
+| **Script wording (after recording)** | Edit `text` / `say` in `shorts.json` → `prep.sh` (the cue becomes a silent placeholder) → **ask the user**; on their OK `tts.mjs narration/<sk> --approved --only <id>` → `wave.mjs` (set `cut`, `at`) → `prep.sh` → `build_gfx.py` → `render_full.sh` (the runs from that cue on) → `finish.sh` | The line's paragraph (up to 5 lines) re-recorded; the runs after it move, so their graphics re-render. |
+| **Re-take / phrasing adjustment** | Edit `say` in `shorts.json` (`[pause short]`, joined words) → `prep.sh` → `tts.mjs --approved --only <id>` (user's report or OK) → `wave.mjs` (set `cut`, `at`) → `prep.sh` → `build_gfx.py` → `render_full.sh` (changed runs) → `finish.sh` | The line's paragraph (up to 5 lines) re-recorded: every line in it needs new cuts and `at`, and the user hears them again; graphics re-timed by their phrase anchors. |
 | **Cut or `at` adjustment** | Edit `cut` / `at` in `narration/<sk>/script.json` (kept across prep.sh runs) → `prep.sh` (runs tts.mjs and sync.mjs) → `build_gfx.py` → `render_full.sh` for runs whose length or anchors changed → `finish.sh` | Timeline updates; only changed segments re-composite. |
 | **Graphics visual or animation fix** | Edit `scripts/gfx_<tag>.py` → `$PY scripts/build_gfx.py <tag>` → `bash scripts/render_full.sh <rid>` → `bash scripts/finish.sh <sk> NN slug` | Only that graphic and its composite segment re-render (~30–60 s). |
 | **Captions, highlights, or cover** | Edit `shorts.json` → `bash scripts/prep.sh <sk>` (or `$PY scripts/compose.py <sk> --events-only`) → `bash scripts/finish.sh <sk> NN slug` | No graphics re-render; only composite segments with changed captions re-render. |

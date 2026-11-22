@@ -430,10 +430,110 @@ for (const c of cues) {
   });
 }
 
+// ---------- paragraph recording (Google only): several cues in one request, so the voice keeps one pace ----------
+// script.json "tts": { …, "paragraphs": 5 } groups up to 5 consecutive cues per request (never over 4,500 bytes of text);
+// "paragraphs": [["a01","a02"], ["b01", …], …] names the groups (consecutive cues, every cue once). Measured on PN part 4
+// (2026-11-22): line-to-line pace sd 0.49 → 0.19 syllables/s, adjacent jumps ≥ 0.8 syl/s 3 → 0 (local, SOURCE.md; references/narration.md).
+// A paragraph take is cut into one take per cue at the split times: script.json "splits": { "<paragraph take id>":
+// [t1, t2, …] } — seconds in the paragraph take where each cue after the first starts. Without them this script PROPOSES
+// splits (in the middle of the longest pause near where the cue's syllables should end) and says so: they are a guess,
+// confirmed by the agent with phrasing-check.mjs (each cue's pieces must start and end with that cue's own words) and
+// written into "splits". Each cue's piece is then an ordinary take (.tts-cache/<take>.pcm) that "cut", "at", wave.mjs,
+// sync.mjs and check.mjs use as before. Changing a split gives the cues new take ids (their cuts must be set again).
+// --only <id> takes the cue's whole paragraph again: every cue in it gets a new reading.
+const paraSetting = googleTts ? script.tts?.paragraphs : null;
+if (script.tts?.paragraphs != null && !googleTts) die('"tts.paragraphs" works with the Google voice only');
+const paraMode = paraSetting != null && paraSetting !== false && !silent;
+const PARA_BYTES = 4500;
+function paragraphGroups() {
+  const ids = cues.map((c) => c.id);
+  if (Array.isArray(paraSetting)) {
+    const flat = paraSetting.flat();
+    if (flat.length !== ids.length || flat.some((id, i) => id !== ids[i])) die('"tts.paragraphs": the groups must list every cue once, in script order');
+    return paraSetting.map((g) => g.map((id) => cues[ids.indexOf(id)]));
+  }
+  const max = Number.isInteger(paraSetting) && paraSetting > 0 ? paraSetting : 5;
+  const out = [];
+  let cur = [];
+  for (const c of cues) {
+    const bytes = Buffer.byteLength([...cur, c].map((x) => x.say).join(' '));
+    if (cur.length && (cur.length >= max || bytes > PARA_BYTES)) { out.push(cur); cur = []; }
+    cur.push(c);
+  }
+  if (cur.length) out.push(cur);
+  for (const g of out) if (Buffer.byteLength(g.map((x) => x.say).join(' ')) > PARA_BYTES) die(`paragraph ${g[0].id}…: over ${PARA_BYTES} bytes — make it smaller`);
+  return out;
+}
+const paraKey = (g) => crypto.createHash('sha256').update(JSON.stringify({ v: 'para1', voice: cfg.voice, says: g.map((c) => c.say), sr: SR })).digest('hex').slice(0, 24);
+const sylCount = (s) => (stripTags(s).match(/[가-힣]/g) || []).length || stripTags(s).replace(/\s+/g, '').length;
+/** proposal only: per 10 ms frame the level; voice = within 35 dB of the loudest frame; a pause = 150 ms or more without it */
+function proposeSplits(samples, g) {
+  const h = Math.round(SR * 0.01), F = Math.floor(samples.length / h), db = new Float64Array(F);
+  for (let f = 0; f < F; f++) { let s = 0; for (let j = f * h; j < (f + 1) * h; j++) s += (samples[j] / 32768) ** 2; db[f] = 10 * Math.log10(s / h + 1e-18); }
+  const top = Math.max(...db), v = Array.from(db, (x) => x > top - 35);
+  const first = v.indexOf(true), last = v.lastIndexOf(true), pauses = [];
+  for (let f = first; f <= last; f++) if (!v[f]) { let e = f; while (!v[e]) e++; if (e - f >= 15) pauses.push([f, e]); f = e; }
+  const voicedBefore = (f) => { let n = 0; for (let k = first; k < f; k++) if (v[k]) n++; return n; };
+  const total = voicedBefore(last + 1), syl = g.map((c) => sylCount(c.say)), all = syl.reduce((a, b) => a + b, 0);
+  const out = [];
+  let acc = 0, floor = first;
+  for (let k = 0; k < g.length - 1; k++) {
+    acc += syl[k];
+    const want = (acc / all) * total;
+    const near = pauses.filter(([a]) => a > floor).map((p) => ({ p, off: Math.abs(voicedBefore(p[0]) - want) }));
+    if (!near.length) die(`paragraph ${g[0].id}…: no pause found for the split after ${g[k].id} — set "splits" by hand (wave.mjs)`);
+    const inWin = near.filter((x) => x.off < 120);
+    const pick = (inWin.length ? inWin.sort((a, b) => (b.p[1] - b.p[0]) - (a.p[1] - a.p[0])) : near.sort((a, b) => a.off - b.off))[0].p;
+    out.push(Math.round(((pick[0] + pick[1]) / 2) * h) / SR);
+    floor = pick[1];
+  }
+  return out.map((t) => Math.round(t * 1000) / 1000);
+}
+const proposed = [];
+async function paragraphTakes() {
+  const groups = paragraphGroups(), out = new Array(cues.length);
+  const splitsSet = script.splits || {};
+  await mapLimit(groups, 2, async (g) => {
+    const pk = paraKey(g), file = path.join(cacheDir, pk + '.pcm');
+    const wantNew = opt.force || (only && g.some((c) => only.has(c.id)));
+    let samples;
+    if (!wantNew && fs.existsSync(file)) { cached++; samples = toSamples(fs.readFileSync(file)); }
+    else if (opt.placeholder || !approved) {
+      for (const c of g) { placeholders++; if (!opt.placeholder) unapproved++; out[cues.indexOf(c)] = { samples: new Int16Array(Math.round(estimateSeconds(c.say) * SR)), placeholder: true, key: null }; }
+      return;
+    } else {
+      if (fs.existsSync(file)) {   // keep the paragraph take a re-take replaces (as for single takes)
+        const keep = path.join(cacheDir, 'replaced'); fs.mkdirSync(keep, { recursive: true });
+        fs.renameSync(file, path.join(keep, `${pk}.${g[0].id}.${new Date().toISOString().replace(/[:.]/g, '-')}.pcm`));
+      }
+      samples = await synthesizeGoogle({ id: `${g[0].id}…${g[g.length - 1].id}`, say: g.map((c) => c.say).join(' ') });
+      if (!samples.length) throw new Error(`paragraph ${g[0].id}…: Google returned no audio`);
+      fs.writeFileSync(file, Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength));
+      freshFiles.push(file); fresh++;
+      process.stdout.write(`  ✓ paragraph ${g.map((c) => c.id).join(' ')} (${(samples.length / SR).toFixed(2)}s)\n`);
+    }
+    let sp = splitsSet[pk];
+    const dur = samples.length / SR;
+    if (sp != null) {
+      if (!Array.isArray(sp) || sp.length !== g.length - 1 || sp.some((t, i) => typeof t !== 'number' || t <= 0 || t >= dur || (i && t <= sp[i - 1])))
+        die(`"splits" for paragraph ${pk} (${g[0].id}…): ${g.length - 1} increasing times inside the take (0 – ${dur.toFixed(3)} s) are needed`);
+    } else { sp = proposeSplits(samples, g); proposed.push({ pk, ids: g.map((c) => c.id), sp }); }
+    const edges = [0, ...sp.map((t) => Math.round(t * SR)), samples.length];
+    g.forEach((c, k) => {
+      const piece = samples.slice(edges[k], edges[k + 1]);
+      const key = crypto.createHash('sha256').update(JSON.stringify({ v: 'piece1', para: pk, k, from: edges[k], to: edges[k + 1] })).digest('hex').slice(0, 24);
+      const pf = path.join(cacheDir, key + '.pcm');
+      if (!fs.existsSync(pf)) { fs.writeFileSync(pf, Buffer.from(piece.buffer, piece.byteOffset, piece.byteLength)); freshFiles.push(pf); }
+      out[cues.indexOf(c)] = { samples: piece, placeholder: false, key, asRecorded: true, para: pk };
+    });
+  });
+  return out;
+}
+
 const freshFiles = [];   // takes synthesized in this run — recorded in generated.json as soon as the synthesis ends,
 let takes;               // whether it succeeded or not, so nothing that stops the run later leaves a paid take unrecorded
 try {
-  takes = await mapLimit(cues, 3, takeFor);
+  takes = paraMode ? await paragraphTakes() : await mapLimit(cues, 3, takeFor);
 } catch (err) {
   if (freshFiles.length) recordGenerated(freshFiles, 'tts.mjs');
   die(err.message + (fresh ? `\n  ${fresh} new take(s) recorded before it are cached in .tts-cache — the next run reuses them (no new charge)` : ''));
@@ -608,6 +708,10 @@ console.log(
     `${cues.length} cues (${fresh} new, ${cached} cached${placeholders ? `, ${placeholders} PLACEHOLDER` : ''})`,
 );
 if (unrecorded.length) console.log(`⚠ ${unrecorded.length} cached take(s) this script uses have no record in generated.json (cached before the tools kept it) — check.mjs refuses them. Ask the user; with their OK run once: node tts.mjs ${opt._[0] || '.'} --record-cache`);
+if (proposed.length) {
+  console.log(`🧩 ${proposed.length} paragraph take(s) split at PROPOSED times (a guess from pauses and syllable counts) — confirm each with phrasing-check.mjs (every cue's pieces must start and end with its own words), then write them into script.json "splits" (adjust where a word landed in the wrong cue):`);
+  for (const p of proposed) console.log(`   "${p.pk}": ${JSON.stringify(p.sp)}   // ${p.ids.join(' ')}`);
+}
 if (cutsApplied.length) console.log(`✂ cuts (script.json "cut") applied: ${cutsApplied.join(', ')}`);
 if (unreviewed.length) console.log(`👂 ${unreviewed.length} take(s) not read yet (${unreviewed.join(', ')}): kept exactly as recorded, with whatever the TTS put before, between and after the words. Where the silence is, and what comes out, is yours to decide — read them: node wave.mjs ${opt._[0] || '.'} --unreviewed, then set each cue's "cut" in script.json ("ranges": [] when nothing goes) and run tts.mjs again (references/sound.md §1). check.mjs refuses the hand-off until every take has its cut.`);
 if (silent) console.log(`· no narration ("narration": false): silent audio, each cue timed by its estimated reading time. To voice it later: set "narration": true and run tts.mjs again${googleTts ? ' (Google TTS needs only a gcloud login)' : edgeTts ? '' : ' with the user\'s Fish Audio voice id + API key'} — the scenes follow the new timings.`);

@@ -317,8 +317,10 @@ drama-3 directions and expression tags do not apply here.
 
 script.json (new_project.mjs writes this):
 
-    "tts": { "provider": "google", "voice": "ko-KR-Chirp3-HD-Enceladus" },
+    "tts": { "provider": "google", "voice": "ko-KR-Chirp3-HD-Enceladus", "paragraphs": 5 },
     "gap": 0.12,            // and "gapAfter": 0.12 per cue — Google takes keep pauses of their own
+
+`"paragraphs": 5` (narration_init.py's default since 2026-11-23) records up to 5 consecutive cues in one request: §6.
 
 A script.json without `"tts"` and without a Fish `"voice"` gets the same default. Optional: `"lang"` (default ko-KR),
 `"gcloud"` (path to the CLI; or GCLOUD_BIN).
@@ -337,8 +339,10 @@ A script.json without `"tts"` and without a Fish `"voice"` gets the same default
   tail to ~0.06 s, interior pauses over ~0.35 s down to ~0.27 s (shorter pauses stay — flattening them all erases the
   difference between a sentence break and a phrase break, which the user heard as wrong phrasing). Then scan
   audio/narration.wav for runs below −55 dBFS of 0.4 s or more: exactly 0.4 s counts as dead air.
-- **Not deterministic**: the same text gives a different take on every call. A re-take is a new reading, so the approved
-  takes exist only in the project's `.tts-cache/` — commit it (don't git-ignore it) or keep it safe.
+- **Not deterministic, but not always new**: the same text can give a different take on each call, so the approved
+  takes exist only in the project's `.tts-cache/` — commit it (don't git-ignore it) or keep it safe. Yet an identical
+  request often returns the **byte-identical** take (2026-11-22: 3 lines × 5 identical requests; one line gave the same
+  file 4 times out of 5), so a plain re-take is no reliable way to get a new reading.
 - A cue whose `say` did not change keeps the **same take id** when it is taken again (`--only`), so its old `cut` silently
   lands on the new audio. Redo the cut after every re-take.
 
@@ -401,6 +405,32 @@ Do not read the STT word timestamps instead: in v1 and v2 they shift by about a 
 5. Dead-air scan, `check.mjs`, then ask the user to listen — intonation and speed are not checked by any of this.
    A pitch check did not tell the flagged lines from the rest (lessons.md); list the lines that open with
    "그래서/이렇게 + subject는" first when you hand over, those drew the emphasis notes.
+
+## 6. Paragraph recording — one pace across lines (default since 2026-11-23)
+
+Recorded one line per request, each line gets its own pace: on PN parts 1–4 the lines ran 4.8–8.0 syllables per
+voiced second (sd 0.35–0.64 within a short), neighbouring lines had no relation (lag-1 r 0.07), and 16 of 69 line
+changes jumped by 0.8 syl/s or more — the user heard lines as fast or slow. Text features explained ~6% of it (agy Neon
+review); pauses and gaps could not fix it (sd 0.41 → 0.38). Recording part 4's 19 lines as 4 paragraphs gave sd
+0.49 → 0.19, range 6.02–8.04 → 6.56–7.40, no jump of 0.8 or more; the user listened and chose it.
+
+- `"tts": { …, "paragraphs": 5 }`: up to 5 consecutive cues per request (never over 4,500 bytes). Or name the groups:
+  `"paragraphs": [["a01","a02","b01"], …]` (every cue once, in order) — e.g. to keep a section's lines together.
+- tts.mjs joins the group's `say` with a space, records it once, and cuts it into one take per cue at **split times**:
+  `"splits": { "<paragraph take id>": [t1, t2, …] }` at the top of script.json — seconds in the paragraph take where
+  each cue after the first starts. Without them it **proposes** splits (middle of the longest pause near where the
+  cue's syllables should end) and prints them (🧩). The proposal is a guess: run `phrasing-check.mjs` on the cues — each
+  cue's heard text must begin with its own first word and end with its own last word. Where a word landed in the
+  neighbour (PN part 4 test: "그런데" of a02 ended a01, because the sentence pause before it was only 0.19 s, shorter
+  than a comma pause after it), read that stretch with `wave.mjs <dir> --cue <id> --from … --step 0.02`, put the split
+  in the silence between the sentences, and write all the paragraph's times into `"splits"`. Then cut, `at`, wave.mjs,
+  sync.mjs and the checks work on each cue's piece exactly as on a single take.
+- A changed split gives the cues of that paragraph new take ids: set their cuts again.
+- **A re-take is a paragraph re-take.** `--only <id>` records the cue's whole paragraph again, so every line in it gets
+  a new reading (and new cuts). Changing one line's `say` changes its paragraph's take too. Say this to the user before
+  a re-take, and list the other lines they will have to hear again.
+- Off for a short: remove `"paragraphs"` from its script.json (each line is recorded on its own, as before 2026-11-23).
+  Shorts recorded before then keep their single takes (no `"paragraphs"` in their script.json).
 
 ---
 
