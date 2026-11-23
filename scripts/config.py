@@ -17,7 +17,8 @@ def save(**kw):
 
 LANG = _cfg.get('lang', 'ko')
 FPS = _cfg.get('fps', 60)
-THEME = _cfg.get('theme', 'stage')     # the look of graphics, captions, chips and cover: 'stage' (theme.md) or 'sketch' (theme-sketch.md)
+THEME = _cfg.get('theme', 'stage')     # the look of graphics, captions, chips and cover: 'stage' (theme.md), 'sketch' (theme-sketch.md),
+                                       # 'reel' (theme-reel.md: code reel) or 'sungkim' (theme-sungkim.md: paper news cards)
 NODE = _cfg.get('node', 'node')
 NARRATION = 'scripts/narration'          # script-to-motion's TTS tools (tts.mjs, wave.mjs, sync.mjs, phrasing-check.mjs)
 

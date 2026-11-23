@@ -104,6 +104,13 @@ body.vp-playing:not(.vp-cursor){cursor:none}
 #stage.sk #cover{background:transparent;border:0;box-shadow:none;font:700 120px/1.2 Gaegu;letter-spacing:0;color:#22201c}
 #stage.sk #cover div:not(.ln){display:table;margin:0 auto;background:rgba(255,208,0,.59);padding:0 26px}
 #stage.sk #cover .ln{height:9px;background:#d4382c;box-shadow:none;margin-top:22px}
+/* the Sungkim theme (theme-sungkim.md): white words on a dark box, blue keyword chips, a paper cover */
+#stage.sg .cap{font:700 64px/88px Pretendard;-webkit-text-stroke:0}
+#stage.sg .cap span{background:rgba(20,22,27,.88);padding:6px 26px 10px;border-radius:16px;-webkit-box-decoration-break:clone}
+#stage.sg .chip{background:#1D5BFF;border:0;box-shadow:none;border-radius:18px;padding:24px 40px;font:800 70px/1 Pretendard;letter-spacing:0;color:#fff}
+#stage.sg .chip .ln{height:5px;margin-top:16px;background:#fff;box-shadow:none}
+#stage.sg #cover{background:#FFFDF8;border:3px solid #E3DDD0;box-shadow:none;border-radius:28px;font:900 100px/1.12 Pretendard;letter-spacing:0;color:#16181D}
+#stage.sg #cover .ln{height:6px;margin-top:34px;background:#1D5BFF;box-shadow:none}
 /* review desk (served by review_server.py): the marked box, notes, the list, the pins */
 #box{position:absolute;display:none;z-index:6;border:6px solid #FFD23F;border-radius:10px;box-shadow:0 0 0 3000px rgba(0,0,0,.18),0 0 30px rgba(255,210,63,.6);pointer-events:none}
 #draw{position:absolute;inset:0;z-index:7;display:none;cursor:crosshair}
@@ -168,6 +175,7 @@ const frames = D.runs.map((r) => {
   stage.insertBefore(f, caps); return f;
 });
 if (D.theme === 'sketch') stage.classList.add('sk');
+if (D.theme === 'sungkim') stage.classList.add('sg');
 const chunkEls = D.caps.map((c) => {
   const el = document.createElement('div');
   if (c.hl) { el.className = 'chip'; el.innerHTML = '<span class="tx"></span><span class="ln"></span>'; el.querySelector('.tx').textContent = c.text; }
