@@ -44,9 +44,9 @@ import zlib
 sys.path.insert(0, 'scripts'); import config as _cfg0
 SKETCH = _cfg0.THEME == 'sketch'               # theme-sketch.md: handwriting (Gaegu) in ink on a highlighter stroke
 if SKETCH: CAP = ImageFont.truetype(F + 'Gaegu-Bold.ttf', 78)
-SUNGKIM = _cfg0.THEME == 'sungkim'             # theme-sungkim.md: white Pretendard on a dark box, blue keyword chips, a paper cover
-if SUNGKIM: CAP = vfont(FONT, 64, 700)
-SG_BOX = (20, 22, 27, 224); SG_BLUE = (29, 91, 255); SG_INK = (22, 24, 29); SG_PAPER = (255, 253, 248, 255); SG_LINE = (227, 221, 208, 255)
+SUNGKIM = _cfg0.THEME == 'sungkim'             # theme-sungkim.md: black Pretendard on the paper (a thin paper outline), keywords in teal, run 0 is the cover
+if SUNGKIM: CAP = vfont(FONT, 50, 700)
+SG_INK = (17, 18, 20); SG_PAPER = (246, 243, 233); SG_TEAL = (15, 120, 108)
 SK_INK = (34, 32, 28); SK_RED = (212, 56, 44); SK_HL = (255, 208, 0, 150)
 
 def hl_band(d, box, seed, rgba=SK_HL):
@@ -173,12 +173,12 @@ def caption_img(text, hl=False):
             for wd in l.split():
                 d.text((x, y), wd, font=font, fill=SK_INK + (255,)); x += dummy.textlength(wd, font=font) + gap
         return np.asarray(im)
-    if SUNGKIM:                                   # white words on a dark rounded box, one box per line
+    if SUNGKIM:                                   # black words on the paper; the paper-coloured outline keeps them readable on the dark cover
         for j, l in enumerate(lines):
             x = (w - lw(l)) / 2; y = pad + j * lh
-            d.rounded_rectangle((x - 26, y - 6, x + lw(l) + 26, y + lh - 4), 16, fill=SG_BOX)
             for wd in l.split():
-                d.text((x, y + 4), wd, font=font, fill=(255, 255, 255, 255)); x += dummy.textlength(wd, font=font) + gap
+                d.text((x, y), wd, font=font, fill=SG_INK + (255,), stroke_width=5, stroke_fill=SG_PAPER + (255,))
+                x += dummy.textlength(wd, font=font) + gap
         return np.asarray(im)
     for j, l in enumerate(lines):
         x = (w - lw(l)) / 2; y = pad + j * lh
@@ -224,20 +224,13 @@ def chip_parts_sketch(text):
 
 
 def chip_parts_sungkim(text):
-    """the Sungkim theme's keyword: white Pretendard 800 on a solid blue box; a white line sweeps in beneath the words"""
-    size = 70
-    while True:
-        f = vfont(FONT, size, 800); tw = f.getlength(text)
-        if tw + 80 <= 980 or size <= 50: break
-        size -= 2
-    cap = f.getbbox('H')[3] - f.getbbox('H')[1]; dsc = f.getbbox('gjpqy')[3] - f.getbbox('H')[3]
-    padx, pady, line_gap, line_h = 40, 24, dsc + 12, 5
-    cw, ch = int(tw + 2 * padx), int(pady + cap + line_gap + line_h + pady); sp = 40
-    im = Image.new('RGBA', (cw + 2 * sp, ch + 2 * sp), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    d.rounded_rectangle((sp, sp, sp + cw, sp + ch), 18, fill=SG_BLUE + (255,))
-    ty = sp + pady; d.text((sp + padx, ty - f.getbbox('H')[1]), text, font=f, fill=(255, 255, 255, 255))
-    ly = ty + cap + line_gap
-    return im, (sp + padx, ly, sp + padx + tw, ly + line_h), (255, 255, 255)
+    """the Sungkim theme's keyword: the word itself in teal, bolder, with a paper outline; a teal line sweeps beneath"""
+    f = vfont(FONT, 56, 800); tw = f.getlength(text)
+    cap = f.getbbox('H')[3] - f.getbbox('H')[1]; sp = 40
+    im = Image.new('RGBA', (int(tw + 2 * sp), int(cap + 2 * sp + 30)), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    d.text((sp, sp - f.getbbox('H')[1]), text, font=f, fill=SG_TEAL + (255,), stroke_width=5, stroke_fill=SG_PAPER + (255,))
+    ly = sp + cap + 14
+    return im, (sp, ly, sp + tw, ly + 4), SG_TEAL
 
 
 def chip_parts(text, accent='azure'):
@@ -379,22 +372,8 @@ def cover_rgba(title_lines):
     return np.asarray(im).astype(np.float32)
 
 def cover_sungkim(title_lines):
-    """the Sungkim theme's cover: the title in ink (Pretendard 900) on a paper card with a warm hairline, a blue line beneath"""
-    size = 100
-    while True:
-        ft = vfont(FONT, size, 900); tws = [ft.getlength(l) for l in title_lines]
-        if max(tws) <= 880 or size <= 64: break
-        size -= 4
-    cap = ft.getbbox('H')[3] - ft.getbbox('H')[1]; lh = int(size * 1.12); padx, pady = 56, 46
-    bw = int(max(tws) + 2 * padx); bh = int(pady + lh * (len(title_lines) - 1) + cap + 34 + 6 + pady)
-    bx0, by0 = (Wc - bw) // 2, int(432 - bh / 2)
-    im = Image.new('RGBA', (Wc, Hc), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    d.rounded_rectangle((bx0, by0, bx0 + bw, by0 + bh), 28, fill=SG_PAPER, outline=SG_LINE, width=3)
-    for j, (l, tw) in enumerate(zip(title_lines, tws)):
-        d.text(((Wc - tw) / 2, by0 + pady + j * lh - ft.getbbox('H')[1]), l, font=ft, fill=SG_INK + (255,))
-    ly = by0 + pady + lh * (len(title_lines) - 1) + cap + 34; lw = max(tws)
-    d.rounded_rectangle(((Wc - lw) / 2, ly, (Wc + lw) / 2, ly + 6), 3, fill=SG_BLUE + (255,))
-    return np.asarray(im).astype(np.float32)
+    """the Sungkim theme draws its cover in run 0 itself (sungkim_kit.sungkim_cover), so nothing is laid over frame 0"""
+    return np.zeros((Hc, Wc, 4), np.float32)
 
 
 def cover_sketch(title_lines):

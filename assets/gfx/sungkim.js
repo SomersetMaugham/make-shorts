@@ -1,6 +1,8 @@
-/* The Sungkim theme (references/theme-sungkim.md): a warm paper page with a header (kicker + one-line title), a visual
-   box, a source line and up to three info cards that stack in as the narration names them. scripts/sungkim_kit.py
-   writes the page; everything here is a pure function of the run time t (engine.js calls window.CFG_RENDER(t)). */
+/* The Sungkim theme (references/theme-sungkim.md): runtime for pages written by scripts/sungkim_kit.py.
+   Everything is a pure function of the run time t (engine.js calls window.CFG_RENDER(t)):
+   [data-t]     lands at t: fades in and rises 16 px over 0.4 s (0 = in place on frame 0)
+   [data-fill]  a bar fills to its value from data-t over data-dur s
+   [data-u]     a unit square takes its colour data-c at t */
 (function () {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, p) => a + (b - a) * p;
@@ -9,33 +11,33 @@
   const prog = (t, t0, d, e) => (e || ease)(clamp((t - t0) / (d || 0.4), 0, 1));
   window.REEL = { clamp, lerp, ease, easeOut, prog };
 
-  // the title stays on one line: from 78 px down by 2 px until it fits (at least 48 px); measured once per page
+  // the title stays on one line: from 112 px down by 2 px until it fits (at least 72 px); measured once
   let fitted = false;
   function fitTitle() {
     const el = document.getElementById('skTitle');
     if (!el) return;
-    let size = 78;
+    let size = 112;
     el.style.fontSize = size + 'px';
-    while (el.scrollWidth > el.clientWidth && size > 48) { size -= 2; el.style.fontSize = size + 'px'; }
+    while (el.scrollWidth > el.clientWidth && size > 72) { size -= 2; el.style.fontSize = size + 'px'; }
     fitted = true;
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
 
   window.CFG_RENDER = function (t) {
-    const S = (window.CFG || {}).sungkim || {};
     if (!fitted) fitTitle();
-    // run 0: frame 0 is the cover, so the header and the visual box appear from the second frame
-    if (S.coverSafe) {
-      const show = t > 0.012 ? 1 : 0;
-      ['skHdr', 'skVis', 'skSrc'].forEach((id) => { const el = document.getElementById(id); if (el) el.style.opacity = show; });
-    }
-    // info cards: a card with t0 <= 0 is in place on frame 0; a later one rises 24 px and fades in over 0.24 s
-    (S.cards || []).forEach((c, i) => {
-      const el = document.getElementById('skCard' + i);
-      if (!el) return;
-      const p = c.t0 <= 0.02 ? 1 : prog(t, c.t0, 0.24, easeOut);
+    document.querySelectorAll('[data-t]').forEach((el) => {
+      const t0 = parseFloat(el.dataset.t);
+      const p = t0 <= 0.02 ? 1 : prog(t, t0, 0.4, easeOut);
       el.style.opacity = p;
-      el.style.transform = `translateY(${(1 - p) * 24}px)`;
+      if (!el.dataset.fill) el.style.transform = `translateY(${((1 - p) * 16).toFixed(2)}px)`;
+    });
+    document.querySelectorAll('[data-fill]').forEach((el) => {
+      const p = prog(t, parseFloat(el.dataset.t), parseFloat(el.dataset.dur || 1.2), easeOut);
+      el.style.opacity = 1;
+      el.style.width = (parseFloat(el.dataset.fill) * 100 * p).toFixed(2) + '%';
+    });
+    document.querySelectorAll('[data-u]').forEach((el) => {
+      el.style.background = t >= parseFloat(el.dataset.u) ? el.dataset.c : '';
     });
     if (window.TOP_RENDER) window.TOP_RENDER(t);
   };
