@@ -12,15 +12,17 @@ Usage:
 from __future__ import annotations
 
 import array
+import copy
 import datetime
 import hashlib
 import json
-import time
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
+import time
 from typing import Any
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -29,6 +31,7 @@ for _p in (SCRIPT_DIR, PARENT_DIR):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+import audio_critic
 import phrasing_audit
 import prosody_prep
 
@@ -74,6 +77,7 @@ def load_state(proj_dir: str, new_approval: bool = False) -> dict[str, Any]:
             'retakes': {},
             'rounds': 0,
             'critic_runs': 0,
+            'reverted_cues': [],
         }
         save_state(proj_dir, state)
         return state
@@ -82,6 +86,7 @@ def load_state(proj_dir: str, new_approval: bool = False) -> dict[str, Any]:
     state.setdefault('retakes', {})
     state.setdefault('rounds', 0)
     state.setdefault('critic_runs', 0)
+    state.setdefault('reverted_cues', [])
     return state
 
 
@@ -513,6 +518,24 @@ def _refresh_prosody_map(proj_dir: str, script: dict[str, Any]) -> None:
     prosody_prep.write_prosody_map(os.path.join(proj_dir, 'prosody_map.json'), pmap)
 
 
+def _append_ab_log(proj_dir: str, entry: dict[str, Any]) -> None:
+    qa_ab_dir = os.path.join(proj_dir, 'qa_ab')
+    os.makedirs(qa_ab_dir, exist_ok=True)
+    log_path = os.path.join(qa_ab_dir, 'log.json')
+    entries: list[dict[str, Any]] = []
+    if os.path.exists(log_path):
+        try:
+            loaded = json.load(open(log_path, encoding='utf-8'))
+            if isinstance(loaded, list):
+                entries = loaded
+        except (OSError, ValueError):
+            entries = []
+    entries.append(entry)
+    with open(log_path, 'w', encoding='utf-8') as f:
+        json.dump(entries, f, indent=1, ensure_ascii=False)
+        f.write('\n')
+
+
 def run_loop(
     proj_dir: str,
     new_approval: bool = False,
@@ -531,6 +554,8 @@ def run_loop(
     fixed_log: list[str] = []
     garble_notes: list[str] = []
     capped_paras: list[str] = []
+    ab_skipped_cap: list[str] = []
+    reverted_cues: set[str] = set(state.get('reverted_cues', []))
     last_audit: dict[str, Any] | None = None
     stop_reason = ''
 
@@ -538,7 +563,7 @@ def run_loop(
         stop_reason = f'round cap already reached ({state["rounds"]}/{MAX_LOOP_ROUNDS}); pass --new-approval after a new human recording approval'
         if os.path.exists(os.path.join(proj_dir, 'phrasing.json')):
             last_audit = phrasing_audit.audit_dir(proj_dir)
-        _print_final_report(stop_reason, fixed_log, garble_notes, capped_paras, last_audit, state)
+        _print_final_report(stop_reason, fixed_log, garble_notes, capped_paras, last_audit, state, ab_skipped_cap)
         return 0 if (last_audit and last_audit['clean']) else 1
 
     while state['rounds'] < MAX_LOOP_ROUNDS:
@@ -610,8 +635,8 @@ def run_loop(
                     if msg not in garble_notes:
                         garble_notes.append(msg)
 
-            # Skip say mutations on cues whose paragraph was just resplit; audit them fresh next round.
-            if cid in resplit_cues:
+            # Skip say mutations on cues whose paragraph was just resplit or that were reverted by A/B.
+            if cid in resplit_cues or cid in reverted_cues:
                 continue
             cue = cue_by_id.get(cid)
             if not cue:
@@ -623,6 +648,9 @@ def run_loop(
         # (d) Group mutated cues by paragraph and enforce MAX_RETAKES_PER_PARAGRAPH
         paras_to_retake: dict[str, list[dict[str, Any]]] = {}
         accepted_says: dict[str, str] = {}
+        prev_says: dict[str, str] = {}
+        prev_cuts_by_para: dict[str, dict[str, Any]] = {}
+        changed_cues_by_para: dict[str, list[str]] = {}
         for cid, (new_say, notes) in proposed_edits.items():
             pkey, grp = para_of_cue[cid]
             used = int(state['retakes'].get(pkey, 0))
@@ -632,13 +660,30 @@ def run_loop(
                     capped_paras.append(cap_msg)
                 print(f'  ! {cap_msg}')
                 continue
+            prev_says[cid] = cue_by_id[cid]['say']
+            if pkey not in prev_cuts_by_para:
+                prev_cuts_by_para[pkey] = {
+                    c['id']: copy.deepcopy(c['cut']) if 'cut' in c else None
+                    for c in grp
+                }
             cue_by_id[cid]['say'] = new_say
             accepted_says[cid] = new_say
             paras_to_retake[pkey] = grp
+            changed_cues_by_para.setdefault(pkey, []).append(cid)
             for n in notes:
                 fixed_log.append(f'[r{round_num}] {cid}: {n}')
 
         if paras_to_retake:
+            qa_ab_dir = os.path.join(proj_dir, 'qa_ab')
+            os.makedirs(qa_ab_dir, exist_ok=True)
+            old_wav_by_cue: dict[str, str] = {}
+            for cid in accepted_says:
+                src_wav = os.path.join(proj_dir, 'audio', 'cues', f'{cid}.wav')
+                if os.path.exists(src_wav):
+                    dst_wav = os.path.join(qa_ab_dir, f'{cid}.{round_num}.old.wav')
+                    shutil.copy2(src_wav, dst_wav)
+                    old_wav_by_cue[cid] = dst_wav
+
             _save_script(proj_dir, script)
             _sync_say_to_shorts(resolved_shorts, resolved_sk, accepted_says)
             _refresh_prosody_map(proj_dir, script)
@@ -658,6 +703,125 @@ def run_loop(
             _run_cmd([sys.executable, autocut_py, proj_dir, ','.join(recut_ids)])
             _run_cmd([node, tts_js, proj_dir])
             fixed_log.append(f'[r{round_num}] re-took paragraphs: {", ".join(paras_to_retake)} and recut {len(recut_ids)} cue(s)')
+
+            # A/B comparison of each changed cue against its pre-retake audio while critic cap allows.
+            round_reverted_cues: list[str] = []
+            revert_confidence: dict[str, str] = {}
+            for cid in accepted_says:
+                old_wav = old_wav_by_cue.get(cid)
+                new_wav = os.path.join(proj_dir, 'audio', 'cues', f'{cid}.wav')
+                if not old_wav or not os.path.exists(new_wav):
+                    continue
+                state['critic_runs'] = int(load_state(proj_dir).get('critic_runs', state.get('critic_runs', 0)))
+                if state['critic_runs'] >= MAX_CRITIC_RUNS:
+                    skip_msg = (
+                        f'[r{round_num}] {cid}: A/B comparison skipped '
+                        f'(MAX_CRITIC_RUNS {state["critic_runs"]}/{MAX_CRITIC_RUNS} reached)'
+                    )
+                    print(f'  ! {skip_msg}')
+                    ab_skipped_cap.append(skip_msg)
+                    continue
+
+                cue_text = cue_by_id[cid].get('text') or accepted_says[cid]
+                try:
+                    cmp_res = audio_critic.compare(
+                        old_wav,
+                        new_wav,
+                        cue_text=cue_text,
+                        narration_dir=proj_dir,
+                    )
+                except audio_critic.CriticCapReached:
+                    state['critic_runs'] = int(load_state(proj_dir).get('critic_runs', MAX_CRITIC_RUNS))
+                    skip_msg = (
+                        f'[r{round_num}] {cid}: A/B comparison skipped '
+                        f'(MAX_CRITIC_RUNS {state["critic_runs"]}/{MAX_CRITIC_RUNS} reached)'
+                    )
+                    print(f'  ! {skip_msg}')
+                    ab_skipped_cap.append(skip_msg)
+                    continue
+                except (OSError, RuntimeError, subprocess.TimeoutExpired) as e:
+                    state['critic_runs'] = int(load_state(proj_dir).get('critic_runs', state.get('critic_runs', 0)))
+                    print(f'  ! [r{round_num}] {cid}: A/B comparison failed ({e}); keeping new take')
+                    _append_ab_log(proj_dir, {
+                        'timestamp': _now_iso(),
+                        'round': round_num,
+                        'cue_id': cid,
+                        'old_wav': old_wav,
+                        'new_wav': new_wav,
+                        'old_say': prev_says[cid],
+                        'new_say': accepted_says[cid],
+                        'error': str(e),
+                        'reverted': False,
+                    })
+                    continue
+
+                state['critic_runs'] = int(load_state(proj_dir).get('critic_runs', state.get('critic_runs', 0)))
+                should_revert = (
+                    cmp_res.get('preferred') == 'old'
+                    and cmp_res.get('confidence') in ('high', 'medium')
+                    and cmp_res.get('heard_both') is True
+                )
+                _append_ab_log(proj_dir, {
+                    'timestamp': _now_iso(),
+                    'round': round_num,
+                    'cue_id': cid,
+                    'old_wav': old_wav,
+                    'new_wav': new_wav,
+                    'old_say': prev_says[cid],
+                    'new_say': accepted_says[cid],
+                    'preferred': cmp_res.get('preferred'),
+                    'confidence': cmp_res.get('confidence'),
+                    'heard_both': cmp_res.get('heard_both'),
+                    'stand_out_old': cmp_res.get('stand_out_old', []),
+                    'stand_out_new': cmp_res.get('stand_out_new', []),
+                    'raw': cmp_res.get('raw', ''),
+                    'reverted': should_revert,
+                })
+                print(
+                    f'  · [r{round_num}] A/B {cid}: preferred={cmp_res.get("preferred")} '
+                    f'confidence={cmp_res.get("confidence")} heard_both={cmp_res.get("heard_both")}'
+                    + (' -> REVERT' if should_revert else ' -> keep')
+                )
+                if should_revert:
+                    round_reverted_cues.append(cid)
+                    revert_confidence[cid] = str(cmp_res.get('confidence', ''))
+
+            if round_reverted_cues:
+                script = json.load(open(os.path.join(proj_dir, 'script.json'), encoding='utf-8'))
+                reloaded_by_id = {c['id']: c for c in script.get('cues', [])}
+                reverted_says_to_sync: dict[str, str] = {}
+                reverted_pkeys = {para_of_cue[cid][0] for cid in round_reverted_cues}
+                for pkey in sorted(reverted_pkeys):
+                    # Restore all cues mutated in this paragraph so tts.mjs reuses the cached old paragraph take
+                    # without new API calls; only the A/B-rejected cues are locked in reverted_cues.
+                    for other_cid in changed_cues_by_para.get(pkey, []):
+                        reloaded_by_id[other_cid]['say'] = prev_says[other_cid]
+                        reverted_says_to_sync[other_cid] = prev_says[other_cid]
+                        if other_cid not in round_reverted_cues:
+                            fixed_log.append(
+                                f'[r{round_num}] {other_cid}: temporarily restored with paragraph [{pkey}] '
+                                f'so cached old take is reused (eligible in later rounds)'
+                            )
+                    for grp_cid, old_cut in prev_cuts_by_para.get(pkey, {}).items():
+                        if grp_cid in reloaded_by_id:
+                            if old_cut is None:
+                                reloaded_by_id[grp_cid].pop('cut', None)
+                            else:
+                                reloaded_by_id[grp_cid]['cut'] = old_cut
+
+                _save_script(proj_dir, script)
+                _sync_say_to_shorts(resolved_shorts, resolved_sk, reverted_says_to_sync)
+                _refresh_prosody_map(proj_dir, script)
+                _run_cmd([node, tts_js, proj_dir])
+
+                reverted_cues.update(round_reverted_cues)
+                state['reverted_cues'] = sorted(reverted_cues)
+                for cid in round_reverted_cues:
+                    fixed_log.append(
+                        f'[r{round_num}] {cid}: reverted by A/B critic '
+                        f'(preferred=old, confidence={revert_confidence[cid]}); locked for later rounds'
+                    )
+
             round_changed = True
 
         state['rounds'] += 1
@@ -680,7 +844,7 @@ def run_loop(
             )
             break
 
-    _print_final_report(stop_reason, fixed_log, garble_notes, capped_paras, last_audit, state)
+    _print_final_report(stop_reason, fixed_log, garble_notes, capped_paras, last_audit, state, ab_skipped_cap)
     return 0 if (last_audit and last_audit['clean']) else 1
 
 
@@ -691,12 +855,16 @@ def _print_final_report(
     capped_paras: list[str],
     last_audit: dict[str, Any] | None,
     state: dict[str, Any],
+    ab_skipped_cap: list[str] | None = None,
 ) -> None:
     print('\n================ QA LOOP REPORT ================')
     print(f'Stop reason : {stop_reason}')
     print(f'Approval    : {state.get("approval", "unknown")}')
     print(f'Rounds      : {state.get("rounds", 0)}/{MAX_LOOP_ROUNDS}')
     print(f'Critic runs : {state.get("critic_runs", 0)}/{MAX_CRITIC_RUNS}')
+    reverted = state.get('reverted_cues', [])
+    if reverted:
+        print(f'Reverted    : {", ".join(reverted)}')
     retakes = state.get('retakes', {})
     if retakes:
         print('Retakes     :')
@@ -711,6 +879,11 @@ def _print_final_report(
             print(f'  - {item}')
     else:
         print('  (none)')
+
+    if ab_skipped_cap:
+        print('\nA/B critic skipped (MAX_CRITIC_RUNS reached):')
+        for item in ab_skipped_cap:
+            print(f'  - {item}')
 
     print('\nRemaining:')
     remaining_any = False

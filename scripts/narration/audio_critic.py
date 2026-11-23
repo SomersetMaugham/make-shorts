@@ -1,12 +1,16 @@
-"""Optional post-loop audio emphasis/intonation critic via Gemini Neon (agy, read-only).
+"""Audio emphasis/intonation critic via Gemini Neon (agy, read-only).
 
 Pitch heuristics could not separate unnatural emphasis from normal Korean intonational
-contours. This script sends audio/narration.wav and the timed cue list to Gemini Neon
-read-only, asking strictly for emphasis or intonation defects, writes qa_critic.json,
-and enforces MAX_CRITIC_RUNS per recording approval via qa_state.json. It never edits
-any script or audio file.
+contours, and a 2026-11-24 calibration showed single-recording review misses isolated-line
+emphasis while randomized A/B comparison catches it with high confidence.
+
+Primary mode (--compare) sends an old and new WAV to Gemini Neon read-only in randomized
+A/B order and maps the JSON verdict back to old/new. Legacy whole-narration mode remains
+available as advisory only. Both modes enforce MAX_CRITIC_RUNS via qa_state.json when a
+narration directory is provided. Neither mode edits any script or audio file.
 
 Usage:
+  python3 scripts/narration/audio_critic.py --compare OLD.wav NEW.wav [--text "the lines"] [--narration-dir DIR] [--model gemini-4-neon-medium]
   python3 scripts/narration/audio_critic.py <narration_dir> [--model gemini-4-neon-medium]
 """
 from __future__ import annotations
@@ -14,6 +18,7 @@ from __future__ import annotations
 import datetime
 import json
 import os
+import random
 import re
 import subprocess
 import sys
@@ -27,6 +32,10 @@ AGY_BIN = os.path.expanduser('~/.local/bin/agy')  # never the zsh alias (adds sk
 SUBPROCESS_TIMEOUT_SEC = 300
 
 _JSON_BLOCK_RE = re.compile(r'```(?:json)?\s*(\{.*?\})\s*```', re.S)
+
+
+class CriticCapReached(RuntimeError):
+    """Raised when MAX_CRITIC_RUNS in qa_state.json has been reached."""
 
 
 def _now_iso() -> str:
@@ -139,8 +148,152 @@ def _extract_json(stdout: str) -> tuple[dict[str, Any] | None, str | None]:
     return None, 'no JSON object found in agy response'
 
 
+def _build_compare_prompt(path_a: str, path_b: str, cue_text: str = '') -> str:
+    text_block = f'\nLines spoken: {cue_text.strip()}\n' if cue_text and cue_text.strip() else '\n'
+    return (
+        'Hi, could you help me compare two short Korean narration recordings? Thank you very much.\n\n'
+        'Please do not edit or create any file and do not run any command: your written answer is the report.\n\n'
+        f'Please open and listen to both audio files: A ({path_a}) and B ({path_b}). '
+        'They read almost the same sentences with the same synthetic voice.'
+        f'{text_block}\n'
+        'A listener who reviews these videos judges by one standard: the narration should sound like one calm '
+        'explainer talking naturally, and no word should stand out as if it were acted or announced (for example, '
+        'a short answer read like a dramatic stage line, with a different tone, a longer pause around it, or extra '
+        'weight).\n\n'
+        'For each file (A and B), list any Korean word or words that stand out, with the time in seconds and what '
+        'makes them stand out (tone, pause, loudness, pitch, speed), or an empty list if none. '
+        'If you cannot open a file, please say so plainly instead of guessing (set "heard_both" to false and '
+        '"preferred" to "same").\n\n'
+        'Please reply in English with one valid JSON object inside a ```json fenced block using these exact keys:\n'
+        '- "preferred": "A" or "B" or "same"\n'
+        '- "confidence": "high" or "medium" or "low"\n'
+        '- "stand_out": {"A": [{"words": "...", "time": 0.0, "why": "..."}], "B": [...]}\n'
+        '- "heard_both": true or false\n\n'
+        '```json\n'
+        '{\n'
+        '  "preferred": "A",\n'
+        '  "confidence": "high",\n'
+        '  "stand_out": {\n'
+        '    "A": [],\n'
+        '    "B": [{"words": "...", "time": 0.0, "why": "..."}]\n'
+        '  },\n'
+        '  "heard_both": true\n'
+        '}\n'
+        '```\n'
+        'Thank you very much.'
+    )
+
+
+def compare(
+    old_wav: str,
+    new_wav: str,
+    cue_text: str = '',
+    model: str = DEFAULT_MODEL,
+    narration_dir: str | None = None,
+) -> dict[str, Any]:
+    """Compare old vs. new cue WAV in randomized A/B order via Gemini Neon (read-only)."""
+    abs_old = os.path.abspath(old_wav)
+    abs_new = os.path.abspath(new_wav)
+    if not os.path.exists(abs_old):
+        raise FileNotFoundError(f'audio_critic: missing {abs_old}')
+    if not os.path.exists(abs_new):
+        raise FileNotFoundError(f'audio_critic: missing {abs_new}')
+    if not os.path.exists(AGY_BIN):
+        raise FileNotFoundError(f'audio_critic: agy binary not found at {AGY_BIN}')
+
+    if narration_dir:
+        abs_narration_dir = os.path.abspath(narration_dir)
+        state = _load_state(abs_narration_dir)
+        runs = int(state.get('critic_runs', 0))
+        if runs >= MAX_CRITIC_RUNS:
+            msg = (
+                f'audio_critic: MAX_CRITIC_RUNS reached ({runs}/{MAX_CRITIC_RUNS}) for approval '
+                f'{state.get("approval", "unknown")} — refusing to run again.'
+            )
+            print(msg, file=sys.stderr)
+            raise CriticCapReached(msg)
+        # Record the run before calling agy so the hard limit can never be exceeded.
+        state['critic_runs'] = runs + 1
+        _save_state(abs_narration_dir, state)
+
+    old_is_a = random.choice([True, False])
+    path_a, path_b = (abs_old, abs_new) if old_is_a else (abs_new, abs_old)
+    prompt = _build_compare_prompt(path_a, path_b, cue_text=cue_text)
+
+    cmd = [
+        AGY_BIN,
+        '-p', prompt,
+        '--model', model,
+        '--settings', '{"allowNonWorkspaceAccess": false}',
+    ]
+    for folder in dict.fromkeys((os.path.dirname(abs_old), os.path.dirname(abs_new))):
+        cmd.extend(['--add-dir', folder])
+
+    res = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        encoding='utf-8',
+        timeout=SUBPROCESS_TIMEOUT_SEC,
+    )
+    stdout = (res.stdout or '').strip()
+    if res.returncode != 0 or not stdout:
+        detail = (res.stderr or stdout)[-600:]
+        raise RuntimeError(f'audio_critic: agy failed (exit {res.returncode}): {detail}')
+
+    parsed, _parse_err = _extract_json(stdout)
+    if not isinstance(parsed, dict):
+        return {
+            'preferred': 'same',
+            'confidence': 'low',
+            'stand_out_old': [],
+            'stand_out_new': [],
+            'heard_both': False,
+            'raw': stdout,
+        }
+
+    raw_pref = parsed.get('preferred')
+    pref_norm = raw_pref.strip() if isinstance(raw_pref, str) else ''
+    if pref_norm.upper() == 'A':
+        preferred = 'old' if old_is_a else 'new'
+    elif pref_norm.upper() == 'B':
+        preferred = 'new' if old_is_a else 'old'
+    elif pref_norm.lower() == 'same':
+        preferred = 'same'
+    else:
+        preferred = 'same'
+
+    raw_conf = parsed.get('confidence')
+    conf_norm = raw_conf.strip().lower() if isinstance(raw_conf, str) else 'low'
+    confidence = conf_norm if conf_norm in ('high', 'medium', 'low') else 'low'
+
+    stand_out = parsed.get('stand_out')
+    if isinstance(stand_out, dict):
+        so_a = stand_out.get('A') if isinstance(stand_out.get('A'), list) else []
+        so_b = stand_out.get('B') if isinstance(stand_out.get('B'), list) else []
+    else:
+        so_a, so_b = [], []
+    stand_out_old = so_a if old_is_a else so_b
+    stand_out_new = so_b if old_is_a else so_a
+
+    heard_both = parsed.get('heard_both') is True
+
+    return {
+        'preferred': preferred,
+        'confidence': confidence,
+        'stand_out_old': stand_out_old,
+        'stand_out_new': stand_out_new,
+        'heard_both': heard_both,
+        'raw': stdout,
+    }
+
+
 def run_critic(proj_dir: str, model: str = DEFAULT_MODEL) -> int:
     """Invoke Gemini Neon read-only on audio/narration.wav and write qa_critic.json."""
+    print(
+        'audio_critic: note — whole-narration mode is advisory only; the 2026-11-24 calibration '
+        'showed single-recording review misses isolated-line emphasis (use --compare for A/B checks).'
+    )
     abs_dir = os.path.abspath(proj_dir)
     audio_path = os.path.join(abs_dir, 'audio', 'narration.wav')
     if not os.path.exists(audio_path):
@@ -229,17 +382,70 @@ def main(argv: list[str]) -> int:
         print(__doc__)
         return 0
     model = DEFAULT_MODEL
+    compare_pair: tuple[str, str] | None = None
+    cue_text = ''
+    narration_dir: str | None = None
     positional: list[str] = []
     i = 0
     while i < len(argv):
-        if argv[i] == '--model' and i + 1 < len(argv):
+        a = argv[i]
+        if a == '--model':
+            if i + 1 >= len(argv):
+                print('audio_critic: --model requires a value', file=sys.stderr)
+                return 2
             model = argv[i + 1]
             i += 2
+        elif a == '--compare':
+            if i + 2 >= len(argv):
+                print(
+                    'usage: python3 scripts/narration/audio_critic.py --compare OLD.wav NEW.wav '
+                    '[--text "the lines"] [--narration-dir DIR] [--model <name>]',
+                    file=sys.stderr,
+                )
+                return 2
+            compare_pair = (argv[i + 1], argv[i + 2])
+            i += 3
+        elif a == '--text':
+            if i + 1 >= len(argv):
+                print('audio_critic: --text requires a value', file=sys.stderr)
+                return 2
+            cue_text = argv[i + 1]
+            i += 2
+        elif a == '--narration-dir':
+            if i + 1 >= len(argv):
+                print('audio_critic: --narration-dir requires a value', file=sys.stderr)
+                return 2
+            narration_dir = argv[i + 1]
+            i += 2
         else:
-            positional.append(argv[i])
+            positional.append(a)
             i += 1
+
+    if compare_pair is not None:
+        old_wav, new_wav = compare_pair
+        try:
+            result = compare(
+                old_wav,
+                new_wav,
+                cue_text=cue_text,
+                model=model,
+                narration_dir=narration_dir,
+            )
+        except CriticCapReached:
+            return 2
+        except (FileNotFoundError, RuntimeError, subprocess.TimeoutExpired) as e:
+            print(str(e), file=sys.stderr)
+            return 1
+        print(json.dumps(result, indent=1, ensure_ascii=False))
+        return 0
+
     if not positional:
-        print('usage: python3 scripts/narration/audio_critic.py <narration_dir> [--model <name>]', file=sys.stderr)
+        print(
+            'usage:\n'
+            '  python3 scripts/narration/audio_critic.py --compare OLD.wav NEW.wav [--text "the lines"] [--narration-dir DIR] [--model <name>]\n'
+            '  python3 scripts/narration/audio_critic.py <narration_dir> [--model <name>]',
+            file=sys.stderr,
+        )
         return 2
     return run_critic(positional[0], model=model)
 

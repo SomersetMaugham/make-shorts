@@ -481,10 +481,12 @@ capped at 3 tries.
    ```bash
    python3 scripts/narration/phrasing_audit.py narration/<sk> [c01 ...]
    ```
-3. **Optional emphasis/intonation critic** (after the loop, read-only, writes `qa_critic.json`, capped at `MAX_CRITIC_RUNS`):
-   ```bash
-   python3 scripts/narration/audio_critic.py narration/<sk>
-   ```
+3. **A/B emphasis/intonation critic** (read-only, capped at `MAX_CRITIC_RUNS` in `qa_state.json`): a 2026-11-24
+   calibration showed single-take review missed theatrical emphasis on `'아닙니다'`, while randomized A/B comparison
+   picked the natural take with high confidence (naming the 0.7 s pauses and heavy tone). `qa_loop.py` copies each
+   changed cue to `qa_ab/<id>.<round>.old.wav`, runs A/B after re-take/cut (`qa_ab/log.json`), and reverts + locks cues
+   where `old` wins (`high`/`medium`, `heard_both`). Whole-narration mode (`narration/<sk>`) is advisory only; A/B CLI:
+   `python3 scripts/narration/audio_critic.py --compare OLD.wav NEW.wav [--text "the lines"] [--narration-dir DIR]`
 
 ---
 
