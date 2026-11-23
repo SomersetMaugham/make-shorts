@@ -434,6 +434,8 @@ review); pauses and gaps could not fix it (sd 0.41 → 0.38). Recording part 4's
 
 ## 7. Automatic phrasing QA (2026-11-24)
 
+"즉" is said and then a pause: `즉, [pause short] 단어나` (the user, note n016; an earlier rule that forbade this pause was wrong).
+
 Approved by the user on 2026-11-24 so narration review needs one approval and one listen, with every automated step
 capped at 3 tries.
 
@@ -567,7 +569,7 @@ would read differently from how a model might:
 | display (`text`) | `say` |
 |---|---|
 | 2026년 | 이천이십육 년 |
-| 3.5배 · 70.6% | 삼쩜오 배 · 칠십쩜육 퍼센트 (decimal as one word with `쩜`; spaced "삼 점 오" is read choppily) |
+| 3.5배 · 70.6% · 0.99 | 삼쩜 오 배 · 칠십쩜 육 퍼센트 · 영쩜 구구 (the point is always `쩜`, joined to the whole part; the digits after it one word — the user, 2026-11-24: "소수점은 '쩜'으로"; never "영 점 구구") |
 | Sonnet 5.5 · iPhone 17 · GPT-6 (name + version) | 소넷오쩜오 · 아이폰십칠 — **no space** between name and number, or the voice pauses after the name. Decide once whether a version is read in Korean or English ("소넷파이브") and keep it consistent |
 | 1,280,000명 | 백이십팔만 명 |
 | 15% | 십오 퍼센트 |

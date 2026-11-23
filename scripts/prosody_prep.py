@@ -145,8 +145,9 @@ def count_syllables(text: str) -> int:
 
 
 def join_spaced_decimals(say: str) -> str:
-    """Join spaced Hangul decimals (`삼 점 오` -> `삼쩜오`) so Chirp does not pause on `점`."""
-    return _SPACED_DECIMAL_RE.sub(r'\1쩜\2', say)
+    """Read a decimal point as 쩜, joined to the whole part, the digits after it as one word: `영 점 구구` -> `영쩜 구구`
+    (the user, 2026-11-24, notes n017-n019: "0.99는 '영쩜 99'로, 소수점은 '쩜'으로")."""
+    return _SPACED_DECIMAL_RE.sub(r'\1쩜 \2', say)
 
 
 def strip_quotes(text: str) -> str:
@@ -340,9 +341,10 @@ def _classify_boundaries(
             kinds[i], rules[i] = 'FORBIDDEN', 'F6'
             continue
 
-        # F7: appositive `즉` must never break after `즉` (pause belongs before `즉`).
+        # R7 (the user, 2026-11-24, note n016): "즉" is said, then a pause - "즉, 단어나". The earlier rule forbade the
+        # pause after 즉 and the QA loop joined "즉단어나"; the user heard that as wrong.
         if left.clean == '즉':
-            kinds[i], rules[i] = 'FORBIDDEN', 'F7'
+            kinds[i], rules[i] = 'REQUIRED', 'R7'
             continue
 
         # R1: sentence-initial stance/discourse adverb in cues >= 14 syllables.

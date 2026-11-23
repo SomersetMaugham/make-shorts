@@ -416,7 +416,7 @@ def audit_cue(
             # Only a comma, a pause tag or R1/R2 (stance adverb, quotation) is a defect to fix; R3 without a comma, R4
             # and R5 are advice: they shape `say` before recording, but on a finished take the user did not flag them,
             # and re-taking for them would make the voice choppy (user review, 2026-11-24).
-            severity = 'fix' if (has_tag or has_comma or rule_name in ('R1', 'R2')) else 'advise'
+            severity = 'fix' if (has_tag or has_comma or rule_name in ('R1', 'R2', 'R7')) else 'advise'
             issues.append({
                 'type': 'MISSING_BREAK',
                 'severity': severity,
