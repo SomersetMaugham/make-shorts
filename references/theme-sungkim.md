@@ -51,6 +51,9 @@ Background `#F6F3E9`. compose.py lays nothing over frame 0: run 0 is the cover (
   under the sentence as the narration names it. The kit STOPS the build when the text would be smaller or a mark
   falls outside the crop: pick a shorter part of the sentence (one line) rather than lowering the zoom.
 - LOOK at every capture frame before the hand-off: the cited words must be readable at phone size.
+- Anything the viewer must see whole (the page title, a figure) goes in `keep=[[x0,y0,x1,y1]]`: the build stops if the
+  crop cuts it (the user, n020: a byline zoom cut the title's first and last letters). If keeping it whole needs a
+  smaller zoom, lower the floor for that crop only with `min_text=` and say why at the call.
 - Numbers on charts and cards are written bare ("0.76"): no "~" (the user read it as a minus) and no "약" (the user, 2026-11-23); the narration may still say "약".
 
 One picture stays 3-19 s; a section uses 1-3. Pictures change by a hard cut. A concept picture must not pass for
@@ -88,3 +91,10 @@ Captions are the skill's 1-3 word chunks (the reference shows a whole clause); k
 reference has no chips); text stays at 30 px or more (the reference's source line is ~26 px); card text ends left of
 x 960 (the like/comment column). The cover is run 0 for its whole length (the reference: 3 s with no captions; here
 the captions run over it).
+
+## Intro and outro sting (the user's choice, 2026-11-24)
+The pixel lightbulb (`assets/gfx/sting.js`, `STING.bulb`, 3 s; chosen from six candidates) opens and closes every
+Sungkim short. Intro: on the cover run, between the title and the pill, starting at 0.2 s, outline in light grey
+(`sting('bulb', t0=0.2, x=540, y=905, size=432, colours={'ink': '#E6E9EF'})`): the hook is not delayed. Outro: set
+script.json `"tail": 3.6`; on the last run `sting('bulb', t0=r['dur'] - 3.05, x=540, y=880, size=480, cover=True)` fades
+the frame to paper over 0.35 s and lights the bulb, which ends in rising embers. Silent, like the rest of the short.

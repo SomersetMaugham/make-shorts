@@ -43,6 +43,11 @@
     document.querySelectorAll('[data-sweep]').forEach((el) => {      // a red underline under a cited sentence
       el.style.transform = `scaleX(${prog(t, parseFloat(el.dataset.sweep), 0.5, easeOut).toFixed(3)})`;
     });
+    (((window.CFG || {}).sungkim || {}).stings || []).forEach((st, i) => {   // pixel stings (sting.js)
+      const cv = document.getElementById('skSting' + i), cov = document.getElementById('skStingCover' + i);
+      if (cov) cov.style.opacity = prog(t, st.t0 - 0.35, 0.35, easeOut);
+      if (cv && window.STING) window.STING.draw(cv, st.name, t - st.t0, st.colours);
+    });
     if (window.TOP_RENDER) window.TOP_RENDER(t);
   };
 })();

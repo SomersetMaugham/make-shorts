@@ -99,19 +99,24 @@ def phrase_marks(json_path, phrase, t):
     return dict(boxes=d['phrases'][phrase], t=t)
 
 
-def capture_html(src, fw, fh, focus=None, zoom=None, w=968, h=553, marks=(), text_px=None):
+def capture_html(src, fw, fh, focus=None, zoom=None, w=968, h=553, marks=(), text_px=None, keep=(), min_text=None):
     """a real source capture filling the upper card, cropped around focus=(x, y) in the image's own pixels.
     marks: [phrase_marks(...) or dict(boxes=[[x0,y0,x1,y1],...], t=...)] - a red underline sweeps under each box at t
     (use W() - 0.2: it lands as the narration names it). Without focus the crop centres on the marks.
     text_px: the page's body text height in the image (capture_marks.py prints it). The kit stops the build when the
     text would show under MIN_CAPTURE_TEXT px or a mark would fall outside the crop: an unreadable capture is a defect.
-    Without zoom it picks the smallest zoom that makes the text readable."""
+    Without zoom it picks the smallest zoom that makes the text readable.
+    keep: boxes [x0, y0, x1, y1] (image pixels, e.g. a page title) that must stay whole in the crop - the build stops
+    otherwise (the user, 2026-11-24, n020: a zoom for the byline cut the title's first and last letters).
+    min_text: lower the readable-text floor for this crop only, when keeping a box whole needs a smaller zoom; say why
+    in a comment at the call."""
+    floor = min_text or MIN_CAPTURE_TEXT
     base = max(w / fw, h / fh)
-    if zoom is None: zoom = max(1.0, (MIN_CAPTURE_TEXT / text_px) / base) if text_px else 1.0
+    if zoom is None: zoom = max(1.0, (floor / text_px) / base) if text_px else 1.0
     k = base * zoom
-    if text_px and text_px * k < MIN_CAPTURE_TEXT - 0.01:
+    if text_px and text_px * k < floor - 0.01:
         raise SystemExit(f'capture_html {src}: body text {text_px} px x {k:.2f} = {text_px * k:.0f} px on screen, under '
-                         f'{MIN_CAPTURE_TEXT} px - use zoom >= {MIN_CAPTURE_TEXT / text_px / base:.2f} or crop a smaller region')
+                         f'{floor} px - use zoom >= {floor / text_px / base:.2f} or crop a smaller region')
     allb = [b for m in marks for b in m['boxes']]
     if focus is None and allb:
         focus = ((min(b[0] for b in allb) + max(b[2] for b in allb)) / 2, (min(b[1] for b in allb) + max(b[3] for b in allb)) / 2)
@@ -119,6 +124,9 @@ def capture_html(src, fw, fh, focus=None, zoom=None, w=968, h=553, marks=(), tex
     x = min(0, max(w - fw * k, w / 2 - fx * k)); y = min(0, max(h - fh * k, h / 2 - fy * k))
     out = (f'<img src="{html.escape(src)}" style="position:absolute;left:{x:.1f}px;top:{y:.1f}px;width:{fw * k:.1f}px;'
            f'height:{fh * k:.1f}px;display:block">')
+    for x0, y0, x1, y1 in keep:
+        if x + x0 * k < -1 or x + x1 * k > w + 1 or y + y0 * k < -1 or y + y1 * k > h + 1:
+            raise SystemExit(f'capture_html {src}: the kept box ({x0},{y0})-({x1},{y1}) is cut by the crop - lower zoom (min_text) or move focus')
     for m in marks:
         for x0, y0, x1, y1 in m['boxes']:
             L, T, R = x + x0 * k, y + y1 * k + 2, x + x1 * k
@@ -240,12 +248,30 @@ SK_CSS = f"""
 """
 
 
+def sting(name='bulb', t0=0.0, x=540, y=900, size=432, cover=False, colours=None):
+    """a pixel sting (assets/gfx/sting.js) on this run: starts at run time t0 (3 s long for 'bulb'), centred at
+    (x, y), size px square. cover=True first fades the whole frame to paper over 0.35 s (the outro: the short's
+    last picture gives way to the logo). The user chose the lightbulb on 2026-11-24 for the start and the end."""
+    # colours overrides the sting palette, e.g. {'ink': '#E6E9EF'} on the dark cover where the ink outline would vanish
+    return dict(name=name, t0=round(t0, 3), x=x, y=y, size=size, cover=cover, colours=colours)
+
+
+def _sting_html(stings):
+    out = ''
+    for i, st in enumerate(stings):
+        if st['cover']:
+            out += f'<div id="skStingCover{i}" style="position:absolute;inset:0;background:{PAPER};opacity:0;z-index:40"></div>'
+        out += (f'<canvas id="skSting{i}" width="{st["size"]}" height="{st["size"]}" style="position:absolute;'
+                f'left:{st["x"] - st["size"] // 2}px;top:{st["y"] - st["size"] // 2}px;z-index:41"></canvas>')
+    return out + ('<script src="sting.js"></script>' if stings else '')
+
+
 def _cfg(r, thumb):
     return dict(dur=r['dur'], mode='fv', cam0=dict(x=540, y=720, s=1.0), cards=[], moves=[], heroes=[],
                 thumb=[list(x) if isinstance(x, (list, tuple)) else x for x in thumb], sungkim=dict(), uiOk=True)
 
 
-def sungkim_page(rid, r, sec, vis_html, source, cards=(), vis_dark=False, vis_js='', vis_css='', thumb=(), mapped=True):
+def sungkim_page(rid, r, sec, vis_html, source, cards=(), vis_dark=False, vis_js='', vis_css='', thumb=(), mapped=True, stings=()):
     """one body run. sec = section(...); source = (one of SOURCE_KINDS, the exact source: paper, figure number, date,
     what the values are); cards = [(t, card), ...] with t the run-relative time of the card's phrase (W()), 0 = in
     place on frame 0. vis_dark=True for a dark image or video in the upper card."""
@@ -259,11 +285,12 @@ def sungkim_page(rid, r, sec, vis_html, source, cards=(), vis_dark=False, vis_js
             f'<div id="skTitle" style="color:{dk}">{html.escape(sec["title"])}</div></div>'
             f'<div id="skVis" class="{"dark" if vis_dark else ""}">{vis_html}</div>'
             f'<div id="skSrc">{html.escape(kind)} · {html.escape(src_text)}</div>'
-            f'<div id="skCards">{cards_html}</div><script src="sungkim.js"></script>')
-    page(rid, _cfg(r, thumb), extra_html=body, extra_css=SK_CSS + vis_css, extra_js=vis_js, mapped=mapped)
+            f'<div id="skCards">{cards_html}</div>{_sting_html(stings)}<script src="sungkim.js"></script>')
+    cfg = _cfg(r, thumb); cfg['sungkim']['stings'] = list(stings)
+    page(rid, cfg, extra_html=body, extra_css=SK_CSS + vis_css, extra_js=vis_js, mapped=mapped)
 
 
-def sungkim_cover(rid, r, kicker, lines, pill, note='', bg_img=None, thumb=(), mapped=True):
+def sungkim_cover(rid, r, kicker, lines, pill, note='', bg_img=None, thumb=(), mapped=True, stings=()):
     """run 0: the cover, shown whole from frame 0 (it is the cover frame). lines = 2-3 title lines, the last in gold;
     pill = the one fact that makes the hook concrete ("자식 20개 중 14개가 똑같은 복사본"); note = what the picture is
     and how sure the claim is; bg_img = a dark image (a real capture darkened, or a picture made for this short)."""
@@ -272,5 +299,6 @@ def sungkim_cover(rid, r, kicker, lines, pill, note='', bg_img=None, thumb=(), m
     bg = f'<div class="bg" style="background-image:url({html.escape(bg_img)})"></div>' if bg_img else ''
     note_html = f'<div class="note">{html.escape(note)}</div>' if note else ''
     body = (f'<div class="skcover">{bg}<div class="kick">{html.escape(kicker)}</div><div class="ttl">{ttl}</div>'
-            f'<div class="pill">{html.escape(pill)}</div>{note_html}</div><script src="sungkim.js"></script>')
-    page(rid, _cfg(r, thumb), extra_html=body, extra_css=SK_CSS, mapped=mapped)
+            f'<div class="pill">{html.escape(pill)}</div>{note_html}</div>{_sting_html(stings)}<script src="sungkim.js"></script>')
+    cfg = _cfg(r, thumb); cfg['sungkim']['stings'] = list(stings)
+    page(rid, cfg, extra_html=body, extra_css=SK_CSS, mapped=mapped)
