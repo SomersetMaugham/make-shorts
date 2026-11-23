@@ -15,6 +15,7 @@ import array
 import datetime
 import hashlib
 import json
+import time
 import math
 import os
 import re
@@ -35,6 +36,9 @@ import prosody_prep
 MAX_RETAKES_PER_PARAGRAPH = 3
 MAX_LOOP_ROUNDS = 3
 MAX_CRITIC_RUNS = 3
+MAX_STT_RETRIES = 3            # re-measure a rate-limited phrasing check at most this often per round
+STT_RETRY_WAIT_S = 60
+MAX_JOIN_SYLLABLES = 8        # never fuse words into a token longer than this: a break inside a long fused token needs a person
 
 # ---------- audio / paragraph constants matching tts.mjs & phrasing-check.mjs ----------
 SAMPLE_RATE = 44100
@@ -467,6 +471,9 @@ def _apply_say_fixes(say: str, issues: list[dict[str, Any]]) -> tuple[str, list[
         while i in join_indices and i + 1 < len(words):
             left_clean = re.sub(r',$', '', token)
             nxt = words[i + 1]
+            if len(re.findall(r'[가-힣]', left_clean + nxt.raw)) > MAX_JOIN_SYLLABLES:
+                notes.append(f'not joined "{words[i].clean} {nxt.clean}": would exceed {MAX_JOIN_SYLLABLES} syllables (needs the agent)')
+                break
             notes.append(f'joined "{words[i].clean} {nxt.clean}"')
             token = left_clean + nxt.raw
             tag_after = nxt.pause_tag_after
@@ -545,8 +552,19 @@ def run_loop(
             raise RuntimeError(f'phrasing-check.mjs did not write phrasing.json:\n{(pc_res.stderr or pc_res.stdout)[-500:]}')
 
         audit = phrasing_audit.audit_dir(proj_dir)
+        tries = 0
+        while audit['counts'].get('UNVERIFIED', 0) and tries < MAX_STT_RETRIES:
+            tries += 1
+            bad = [cid for cid, e in audit['cues'].items() if any(i['type'] == 'UNVERIFIED' for i in e['issues'])]
+            print(f'  ~ STT failed on {len(bad)} cue(s) (rate limit?): waiting {STT_RETRY_WAIT_S}s, re-measuring ({tries}/{MAX_STT_RETRIES})')
+            time.sleep(STT_RETRY_WAIT_S)
+            _run_cmd([node, phrasing_js, proj_dir] + bad, allow_nonzero=True)
+            audit = phrasing_audit.audit_dir(proj_dir)
         phrasing_audit.print_report(audit)
         last_audit = audit
+        if audit['counts'].get('UNVERIFIED', 0):
+            stop_reason = f'speech-to-text still failing after {MAX_STT_RETRIES} retries: measurement unavailable, round not counted'
+            break
 
         if audit['clean']:
             stop_reason = 'audit clean'

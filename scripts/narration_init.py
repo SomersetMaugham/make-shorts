@@ -60,11 +60,15 @@ for sk in sys.argv[1:] or list(S):
         say = L.get('say') or L['text']
         allow_pause = bool(out.get('autoPause', True) and not L.get('noPause'))
         # new or reworded lines only: a line whose say is already in script.json untagged keeps it (its take stays good)
-        if c.get('say') != say:
-            say = lexicon.apply(say, LEX) if not allow_pause else spoken(say)
-            say, entry, warns = prosody_prep.prepare_cue(say, text=L['text'], insert_pauses=allow_pause, cue_id=L['id'])
+        base = (lexicon.apply(say, LEX) if not allow_pause else spoken(say)) if c.get('say') != say else say
+        if c.get('say') not in (say, base):
+            # reworded (or new): prosody_prep may add pauses. A line that only differs from script.json by the tags the
+            # old comma step adds is NOT reworded: it keeps its say and its take (2026-11-24: prosody_prep re-tagged 7
+            # recorded lines on a plain prep.sh run and would have turned them into placeholders)
+            say, entry, warns = prosody_prep.prepare_cue(base, text=L['text'], insert_pauses=allow_pause, cue_id=L['id'])
             for w in warns: print(f'⚠ {sk} {L["id"]}: {w}')
         else:
+            say = c.get('say') if c.get('say') == base else say
             entry = prosody_prep.analyze_cue(say, text=L['text'])
         pmap[L['id']] = entry
         if c and (c.get('say') != say or c.get('text') != L['text']): changed.append(L['id'])

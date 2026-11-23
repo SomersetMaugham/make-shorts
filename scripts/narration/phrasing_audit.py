@@ -268,8 +268,10 @@ def audit_cue(
 
     # 1. Explicit STT error / hex byte garbles.
     if not heard or heard.strip() == '∅' or any(p.startswith('ERR') for p in pieces):
+        # a failed measurement (HTTP 429 rate limit, network) is not a defect of the take: report it as
+        # UNVERIFIED so the loop waits and measures again instead of acting on it (2026-11-24: one round was lost to 429)
         issues.append({
-            'type': 'GARBLE',
+            'type': 'UNVERIFIED',
             'rule': 'STT_ERR',
             'word': '',
             'detail': f'STT failed or returned empty audio: "{heard}"',
@@ -513,7 +515,7 @@ def audit_dir(proj_dir: str, cue_ids: list[str] | None = None) -> dict[str, Any]
     pmap = json.load(open(pmap_path, encoding='utf-8')) if os.path.exists(pmap_path) else {}
 
     target_ids = set(cue_ids) if cue_ids else None
-    counts = {'MISSING_BREAK': 0, 'FORBIDDEN_BREAK': 0, 'GARBLE': 0, 'BOUNDARY': 0}
+    counts = {'MISSING_BREAK': 0, 'FORBIDDEN_BREAK': 0, 'GARBLE': 0, 'BOUNDARY': 0, 'UNVERIFIED': 0}
     cues_out: dict[str, Any] = {}
 
     for c in script.get('cues', []):
