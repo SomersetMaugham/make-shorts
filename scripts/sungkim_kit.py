@@ -88,6 +88,47 @@ def tiles_card(title, tiles, step=0.9):
     return dict(kind='tiles', title=title, tiles=tiles, step=step, h=H['tiles'])
 
 
+MIN_CAPTURE_TEXT = 26     # px on screen: the body text of a capture must be at least this tall (the user's review, 2026-11-23)
+
+
+def phrase_marks(json_path, phrase, t):
+    """the boxes of one phrase found by scripts/capture_marks.py (its <capture>.json), to underline at run time t"""
+    import json as _json
+    d = _json.load(open(json_path, encoding='utf-8'))
+    if phrase not in d.get('phrases', {}): raise SystemExit(f'phrase_marks: {phrase!r} not in {json_path} - run capture_marks.py with --phrase')
+    return dict(boxes=d['phrases'][phrase], t=t)
+
+
+def capture_html(src, fw, fh, focus=None, zoom=None, w=968, h=553, marks=(), text_px=None):
+    """a real source capture filling the upper card, cropped around focus=(x, y) in the image's own pixels.
+    marks: [phrase_marks(...) or dict(boxes=[[x0,y0,x1,y1],...], t=...)] - a red underline sweeps under each box at t
+    (use W() - 0.2: it lands as the narration names it). Without focus the crop centres on the marks.
+    text_px: the page's body text height in the image (capture_marks.py prints it). The kit stops the build when the
+    text would show under MIN_CAPTURE_TEXT px or a mark would fall outside the crop: an unreadable capture is a defect.
+    Without zoom it picks the smallest zoom that makes the text readable."""
+    base = max(w / fw, h / fh)
+    if zoom is None: zoom = max(1.0, (MIN_CAPTURE_TEXT / text_px) / base) if text_px else 1.0
+    k = base * zoom
+    if text_px and text_px * k < MIN_CAPTURE_TEXT - 0.01:
+        raise SystemExit(f'capture_html {src}: body text {text_px} px x {k:.2f} = {text_px * k:.0f} px on screen, under '
+                         f'{MIN_CAPTURE_TEXT} px - use zoom >= {MIN_CAPTURE_TEXT / text_px / base:.2f} or crop a smaller region')
+    allb = [b for m in marks for b in m['boxes']]
+    if focus is None and allb:
+        focus = ((min(b[0] for b in allb) + max(b[2] for b in allb)) / 2, (min(b[1] for b in allb) + max(b[3] for b in allb)) / 2)
+    fx, fy = focus or (fw / 2, fh / 2)
+    x = min(0, max(w - fw * k, w / 2 - fx * k)); y = min(0, max(h - fh * k, h / 2 - fy * k))
+    out = (f'<img src="{html.escape(src)}" style="position:absolute;left:{x:.1f}px;top:{y:.1f}px;width:{fw * k:.1f}px;'
+           f'height:{fh * k:.1f}px;display:block">')
+    for m in marks:
+        for x0, y0, x1, y1 in m['boxes']:
+            L, T, R = x + x0 * k, y + y1 * k + 2, x + x1 * k
+            if L < -2 or R > w + 2 or T < 0 or T > h - 4:
+                raise SystemExit(f'capture_html {src}: the mark at ({x0},{y0})-({x1},{y1}) falls outside the crop - move focus or lower zoom')
+            out += (f'<div data-sweep="{max(0.02, m["t"]):.3f}" style="position:absolute;left:{L:.1f}px;top:{T:.1f}px;'
+                    f'width:{R - L:.1f}px;height:6px;border-radius:3px;background:#E0342C;transform-origin:0 50%;transform:scaleX(0)"></div>')
+    return out
+
+
 def _c(card, sec):
     return PALETTE[card.get('color') or sec['color']]
 

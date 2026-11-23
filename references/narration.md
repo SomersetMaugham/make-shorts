@@ -432,6 +432,60 @@ review); pauses and gaps could not fix it (sd 0.41 → 0.38). Recording part 4's
 - Off for a short: remove `"paragraphs"` from its script.json (each line is recorded on its own, as before 2026-11-23).
   Shorts recorded before then keep their single takes (no `"paragraphs"` in their script.json).
 
+## 7. Automatic phrasing QA (2026-11-24)
+
+Approved by the user on 2026-11-24 so narration review needs one approval and one listen, with every automated step
+capped at 3 tries.
+
+### Policy amendments (relaxing earlier rules in this file)
+- **Automatic phrasing re-takes under one approval** (amends SKILL.md step 4, *"A re-take or rewording you propose needs
+  their OK first"*): one person-approved `tts.mjs --approved` authorizes bounded automatic phrasing re-takes inside
+  `qa_loop.py` (`say`-only pause inserts and word joins). Rewording `text` still requires the user's OK.
+- **STT garble detection and optional audio critic** (amends SKILL.md step 4 and Google §4, *"Never transcribe it to judge
+  a take's words or delivery"*): `phrasing_audit.py` also flags `<0x..>` bytes and unmatched words in STT output as
+  `GARBLE` (printed for the agent, never auto-reworded), and `audio_critic.py` may send `audio/narration.wav` to Gemini
+  Neon (`gemini-4-neon-medium`, read-only) strictly to report emphasis or intonation that sounds wrong; the agent decides
+  what to act on.
+- **Code-set splits and cuts inside the QA loop** (amends SKILL.md step 4 and sound.md §1, *"No code decides where
+  silence, a pause or a word is"*): inside `qa_loop.py`, code may move paragraph `"splits"` into the silence between
+  adjacent cues and apply `autocut.py` cuts automatically (interior silence threshold `-45 dB`, updated from `-50 dB`
+  so breathy `-50` to `-45 dB` pauses no longer leak as `≥ 0.40 s` dead air). Phrase anchors (`at`) and final dead-air
+  verification remain unchanged.
+
+### Hard limits (never exceeded)
+- `MAX_RETAKES_PER_PARAGRAPH = 3`: automatic re-takes of one paragraph per recording approval.
+- `MAX_LOOP_ROUNDS = 3`: rounds of the audit → fix → re-take loop per short.
+- `MAX_CRITIC_RUNS = 3`: audio-critic runs per short per recording approval.
+- Counters live in `narration/<sk>/qa_state.json` (`{"approval", "retakes", "rounds", "critic_runs"}`) and reset only
+  when `--new-approval` is passed to `qa_loop.py` after a new person-approved `tts.mjs --approved`. When any cap is hit,
+  the tool stops and reports what is left.
+
+### Commands
+1. **Before recording** (`prep.sh` / `narration_init.py`): `scripts/prosody_prep.py` runs right after `auto_pause` on
+   new or reworded lines (respecting `"noPause": true` and `"autoPause": false`, optional `kiwipiepy` import with
+   fallback). It strips quote characters from `say`, joins spaced Hangul decimals (`삼 점 오` → `삼쩜오`), classifies
+   boundaries (`R1`–`R5`, `F1`–`F8`), inserts `, [pause short]` at `REQUIRED` boundaries, writes
+   `narration/<sk>/prosody_map.json`, and prints pre-recording warnings (`≤ 6` syl standalone cue, 1-syl `VV+ETM` like
+   `잰`/`잴`, `아니라,` in cues `> 30` syl). Standalone preview:
+   ```bash
+   python3 scripts/prosody_prep.py [shorts.json | narration/<sk>] [--write]
+   ```
+2. **After the user approves and initial `tts.mjs --approved` finishes**:
+   ```bash
+   python3 scripts/narration/qa_loop.py narration/<sk> --new-approval
+   ```
+   Each round runs `phrasing-check.mjs` → `phrasing_audit.py` → moves wrong `BOUNDARY` splits (same cached take) →
+   joins `FORBIDDEN_BREAK` words and tags `MISSING_BREAK` pauses in `say` (printing `GARBLE` for the agent) → re-takes
+   changed paragraphs with `tts.mjs --approved --only` up to `MAX_RETAKES_PER_PARAGRAPH` → recuts with `autocut.py`
+   (`-45 dB`) and applies cuts. Standalone audit (writes `qa_audit.json`, exits `1` on findings):
+   ```bash
+   python3 scripts/narration/phrasing_audit.py narration/<sk> [c01 ...]
+   ```
+3. **Optional emphasis/intonation critic** (after the loop, read-only, writes `qa_critic.json`, capped at `MAX_CRITIC_RUNS`):
+   ```bash
+   python3 scripts/narration/audio_critic.py narration/<sk>
+   ```
+
 ---
 
 # Narration with Fish Audio (only when the user asks for it)

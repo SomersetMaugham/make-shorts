@@ -2,7 +2,8 @@
    Everything is a pure function of the run time t (engine.js calls window.CFG_RENDER(t)):
    [data-t]     lands at t: fades in and rises 16 px over 0.4 s (0 = in place on frame 0)
    [data-fill]  a bar fills to its value from data-t over data-dur s
-   [data-u]     a unit square takes its colour data-c at t */
+   [data-u]     a unit square takes its colour data-c at t
+   [data-sweep] a red underline under a cited sentence sweeps in from the left at t over 0.5 s */
 (function () {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, p) => a + (b - a) * p;
@@ -38,6 +39,9 @@
     });
     document.querySelectorAll('[data-u]').forEach((el) => {
       el.style.background = t >= parseFloat(el.dataset.u) ? el.dataset.c : '';
+    });
+    document.querySelectorAll('[data-sweep]').forEach((el) => {      // a red underline under a cited sentence
+      el.style.transform = `scaleX(${prog(t, parseFloat(el.dataset.sweep), 0.5, easeOut).toFixed(3)})`;
     });
     if (window.TOP_RENDER) window.TOP_RENDER(t);
   };

@@ -1,4 +1,5 @@
 import json,sys,array,math,re
+INTERIOR_SILENCE_DB = -45
 proj=sys.argv[1]; ids=sys.argv[2].split(',')
 cj=open(proj+'/js/cues.js').read(); data=json.loads(cj[cj.index('{'):cj.rindex('}')+1])
 takes={c['id']:c.get('take') for c in data['cues']}
@@ -13,10 +14,10 @@ for c in d['cues']:
   t0=sp[0]*0.01; t1=(sp[-1]+1)*0.01
   R=[]
   if t0-0.06>0.02: R.append([0,round(t0-0.06,2)])
-  # interior silences (< -50 dB) longer than 0.35 s -> keep ~0.27
+  # interior silences (< -45 dB) longer than 0.35 s -> keep ~0.27
   st=None; gaps=[]
   for k in range(sp[0],sp[-1]+1):
-    if db[k]<-50: st=k if st is None else st
+    if db[k]<INTERIOR_SILENCE_DB: st=k if st is None else st
     else:
       if st is not None: gaps.append((st*0.01,k*0.01))
       st=None

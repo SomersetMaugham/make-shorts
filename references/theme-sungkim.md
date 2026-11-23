@@ -41,6 +41,18 @@ Background `#F6F3E9`. compose.py lays nothing over frame 0: run 0 is the cover (
 | how it works | the paper's own figure | `실제 그림` · paper, figure number |
 | a trend or comparison | a chart you draw from the paper's values (line draws on over ~4 s, bars fill over ~2.7 s) | `계산해서 그린 그림` · which figure's values, the condition |
 | the hook, a question, the closing | a concept picture (dark, `vis_dark=True`) | `개념 그림` · what it is, that it is illustrative |
+**Captures (the user's review, 2026-11-23): readable, clean, marked.**
+- Make every capture with `python3 scripts/capture_marks.py <url> gfx/assets/<tag>_x.png --phrase "<the cited
+  sentence>" … [--remove "form,textarea"] [--live]` (`--live` for pages that render with scripts, e.g. openai.com;
+  needs `websocket-client` in the venv). It removes stray page parts (comment boxes, banners), and writes the exact
+  boxes of the cited sentences and the page's body text size to `<capture>.json`.
+- Crop with `capture_html(src, w, h, text_px=<from the json>, marks=[phrase_marks(json, '<sentence>', W(ws,'구절') - 0.2)])`:
+  the crop centres on the marked sentence, the zoom makes the body text at least 26 px, and a red underline sweeps
+  under the sentence as the narration names it. The kit STOPS the build when the text would be smaller or a mark
+  falls outside the crop: pick a shorter part of the sentence (one line) rather than lowering the zoom.
+- LOOK at every capture frame before the hand-off: the cited words must be readable at phone size.
+- Numbers on charts and cards are written bare ("0.76"): no "~" (the user read it as a minus) and no "약" (the user, 2026-11-23); the narration may still say "약".
+
 One picture stays 3-19 s; a section uses 1-3. Pictures change by a hard cut. A concept picture must not pass for
 evidence: its source line says it is illustrative. (The reference used AI-generated pictures; this skill makes no
 images by another service, so a concept picture is drawn or a darkened real capture, unless the user supplies one.)

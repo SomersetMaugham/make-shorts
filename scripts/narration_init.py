@@ -15,7 +15,7 @@ so a re-run after a wording change keeps everything the takes already have. A cu
 on the next recording and tts.mjs reports its cut as not applied (references/narration.md)."""
 import json, os, re, sys
 
-sys.path.insert(0, 'scripts'); import config as C, lexicon
+sys.path.insert(0, 'scripts'); import config as C, lexicon, prosody_prep
 
 S = json.load(open('shorts.json', encoding='utf-8'))
 DEFAULTS = {
@@ -54,13 +54,19 @@ for sk in sys.argv[1:] or list(S):
     for k, v in DEFAULTS.items(): out.setdefault(k, v)
     out['title'] = sh.get('title', out.get('title', ''))
     prev = {c['id']: c for c in old.get('cues', [])}
-    cues, changed = [], []
+    cues, changed, pmap = [], [], {}
     for L in sh['lines']:
         c = dict(prev.get(L['id'], {}))
         say = L.get('say') or L['text']
+        allow_pause = bool(out.get('autoPause', True) and not L.get('noPause'))
         # new or reworded lines only: a line whose say is already in script.json untagged keeps it (its take stays good)
         if c.get('say') != say:
-            say = lexicon.apply(say, LEX) if (not out.get('autoPause', True) or L.get('noPause')) else spoken(say)
+            say = lexicon.apply(say, LEX) if not allow_pause else spoken(say)
+            say, entry, warns = prosody_prep.prepare_cue(say, text=L['text'], insert_pauses=allow_pause, cue_id=L['id'])
+            for w in warns: print(f'⚠ {sk} {L["id"]}: {w}')
+        else:
+            entry = prosody_prep.analyze_cue(say, text=L['text'])
+        pmap[L['id']] = entry
         if c and (c.get('say') != say or c.get('text') != L['text']): changed.append(L['id'])
         c.update(id=L['id'], text=L['text'], say=say)
         if 'gapAfter' in L: c['gapAfter'] = L['gapAfter']
@@ -70,5 +76,6 @@ for sk in sys.argv[1:] or list(S):
     gone = [i for i in prev if i not in {c['id'] for c in cues}]
     out['cues'] = cues
     json.dump(out, open(p, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    prosody_prep.write_prosody_map(f'{d}/prosody_map.json', pmap)
     print(f'{sk}: {len(cues)} cues -> {p}' + (f'; text/say changed: {", ".join(changed)}' if changed else '') +
           (f'; removed: {", ".join(gone)}' if gone else '') + f'  next: {C.NODE} {C.NARRATION}/tts.mjs {d}')
