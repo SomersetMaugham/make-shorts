@@ -45,8 +45,13 @@ sys.path.insert(0, 'scripts'); import config as _cfg0
 SKETCH = _cfg0.THEME == 'sketch'               # theme-sketch.md: handwriting (Gaegu) in ink on a highlighter stroke
 if SKETCH: CAP = ImageFont.truetype(F + 'Gaegu-Bold.ttf', 78)
 SUNGKIM = _cfg0.THEME == 'sungkim'             # theme-sungkim.md: black Pretendard on the paper (a thin paper outline), keywords in teal, run 0 is the cover
-if SUNGKIM: CAP = vfont(FONT, 50, 700)
+BRIEF = _cfg0.THEME == 'brief'                 # theme-brief.md: ink Pretendard on newsprint paper, section-coloured keyword highlights, run 0 is the cover
+if SUNGKIM or BRIEF: CAP = vfont(FONT, 50, 700)
 SG_INK = (17, 18, 20); SG_PAPER = (246, 243, 233); SG_TEAL = (15, 120, 108)
+BR_INK = (22, 22, 24); BR_PAPER = (245, 244, 240)
+BR_ACCENTS = {'crimson': (180, 35, 35), 'navy': (32, 74, 128), 'forest': (30, 107, 85),
+              'ochre': (176, 112, 22), 'plum': (106, 67, 130), 'slate': (93, 104, 120)}
+BRIEF_COLORS = json.load(open('gfx/brief_colors.json', encoding='utf-8')) if (BRIEF and os.path.exists('gfx/brief_colors.json')) else {}
 SK_INK = (34, 32, 28); SK_RED = (212, 56, 44); SK_HL = (255, 208, 0, 150)
 
 def hl_band(d, box, seed, rgba=SK_HL):
@@ -180,6 +185,13 @@ def caption_img(text, hl=False):
                 d.text((x, y), wd, font=font, fill=SG_INK + (255,), stroke_width=5, stroke_fill=SG_PAPER + (255,))
                 x += dummy.textlength(wd, font=font) + gap
         return np.asarray(im)
+    if BRIEF:                                     # ink words on newsprint #F5F4F0 with a crisp paper outline
+        for j, l in enumerate(lines):
+            x = (w - lw(l)) / 2; y = pad + j * lh
+            for wd in l.split():
+                d.text((x, y), wd, font=font, fill=BR_INK + (255,), stroke_width=5, stroke_fill=BR_PAPER + (255,))
+                x += dummy.textlength(wd, font=font) + gap
+        return np.asarray(im)
     for j, l in enumerate(lines):
         x = (w - lw(l)) / 2; y = pad + j * lh
         for wd in l.split():
@@ -233,9 +245,22 @@ def chip_parts_sungkim(text):
     return im, (sp, ly, sp + tw, ly + 4), SG_TEAL
 
 
+def chip_parts_brief(text, accent='crimson'):
+    """the Brief theme's keyword: Pretendard 800 in the run's section colour with a newsprint outline; a flat editorial
+    rule sweeps beneath (no neon glow)"""
+    col = BR_ACCENTS.get(accent, BR_ACCENTS['crimson'])
+    f = vfont(FONT, 56, 800); tw = f.getlength(text)
+    cap = f.getbbox('H')[3] - f.getbbox('H')[1]; sp = 40
+    im = Image.new('RGBA', (int(tw + 2 * sp), int(cap + 2 * sp + 30)), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    d.text((sp, sp - f.getbbox('H')[1]), text, font=f, fill=col + (255,), stroke_width=5, stroke_fill=BR_PAPER + (255,))
+    ly = sp + cap + 12
+    return im, (sp, ly, sp + tw, ly + 5), col
+
+
 def chip_parts(text, accent='azure'):
     if SKETCH: return chip_parts_sketch(text)
     if SUNGKIM: return chip_parts_sungkim(text)
+    if BRIEF: return chip_parts_brief(text, accent)
     acc = ACCENTS.get(accent, ACCENTS['azure'])
     size = CHIP_SIZE
     while True:                                                   # long phrases shrink to fit the 1080 frame
@@ -281,6 +306,9 @@ def chip_render(k, parts, t_rel):
         if sw > 0 and SKETCH:                                     # the red pen line, no glow
             x0, y0, x1, y1 = line; xe = x0 + (x1 - x0) * sw; im = im.copy()
             ImageDraw.Draw(im).line((x0, y0 + 3, xe, y0 + 3 - 6 * sw), fill=acc + (255,), width=7)
+        elif sw > 0 and BRIEF:                                    # crisp flat editorial rule, no glow
+            x0, y0, x1, y1 = line; xe = x0 + (x1 - x0) * sw; im = im.copy()
+            ImageDraw.Draw(im).rectangle((x0, y0, xe, y1), fill=acc + (255,))
         elif sw > 0:                                              # the accent line, with a soft glow, drawn left to right
             x0, y0, x1, y1 = line; xe = x0 + (x1 - x0) * sw
             glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).rounded_rectangle((x0, y0, xe, y1), 3, fill=255)
@@ -334,7 +362,7 @@ def cover_rgba(title_lines):
     hairline + bloom, the long panel shadow) with the azure accent line drawn beneath the words - the keyword-pop chip at
     title size. Centred at y ~432 (the spec's 262-603 band for two lines); the graphic keeps everything below 620."""
     if SKETCH: return cover_sketch(title_lines)
-    if SUNGKIM: return cover_sungkim(title_lines)
+    if SUNGKIM or BRIEF: return cover_sungkim(title_lines)
     acc = ACCENTS['azure']; track = -0.03; size = 104
     while True:
         ft = vfont(FONT, size, 600)
@@ -411,8 +439,14 @@ def over(dst, rgba, y=None):
 
 # ---------------------------------------------------------------- main loop
 chunks = build_chunks()
-cap_imgs = [chip_parts(c['text'], S.get('accent', 'azure')) if c['hl'] else caption_img(c['text']) for c in chunks]
-json.dump([dict(text=c['text'], hl=c['hl'], t0=round(c['t0'], 3), t1=round(c['t1'], 3)) for c in chunks],
+def _chunk_accent(c):
+    if not BRIEF: return S.get('accent', 'azure')
+    r = run_at(c['t0'])
+    col = BRIEF_COLORS.get(f'{sk}_r{r["i"]}') or S.get('accent', 'crimson')
+    return col if col in BR_ACCENTS else 'crimson'
+cap_imgs = [chip_parts(c['text'], _chunk_accent(c)) if c['hl'] else caption_img(c['text']) for c in chunks]
+json.dump([dict(text=c['text'], hl=c['hl'], t0=round(c['t0'], 3), t1=round(c['t1'], 3),
+                **({'color': _chunk_accent(c)} if (BRIEF and c['hl']) else {})) for c in chunks],
           open(f'{sk}/captions.json', 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
 if '--events-only' in sys.argv:
     print(f'{sk}: {len(chunks)} caption chunks -> {sk}/captions.json'); sys.exit(0)
@@ -475,7 +509,9 @@ def seg_inputs(r):
     """everything a run's segment depends on: its graphic (path, size, mtime), its captions, the cover, this code"""
     i = r['i']; files = [f'{GFX_DIR}/{sk}_r{i}.mp4']
     fst = [(f, os.path.getsize(f), int(os.path.getmtime(f) * 1000)) if os.path.exists(f) else (f, None, None) for f in files]
-    caps = [dict(text=c['text'], hl=c['hl'], t0=round(c['t0'], 4), t1=round(c['t1'], 4)) for c in chunks if c['t1'] > r['T0'] and c['t0'] < r['T1']]
+    caps = [dict(text=c['text'], hl=c['hl'], t0=round(c['t0'], 4), t1=round(c['t1'], 4),
+                 **({'color': _chunk_accent(c)} if (BRIEF and c['hl']) else {}))
+            for c in chunks if c['t1'] > r['T0'] and c['t0'] < r['T1']]
     key = dict(run=r, files=fst, caps=caps, cover=title if i == 0 else None, code=CODE_HASH, venc=VENC, draft=DRAFT)
     return json.dumps(key, sort_keys=True, default=str, ensure_ascii=False), [f for f, s, m in fst if s is None]
 

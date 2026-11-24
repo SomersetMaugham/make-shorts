@@ -1,8 +1,9 @@
 # The stage theme (the skill's own look)
 
 The default. The other looks: the sketch theme (hand-drawn schematics on paper, `"theme": "sketch"`,
-[theme-sketch.md](theme-sketch.md)), the code-reel theme (`"reel"`, [theme-reel.md](theme-reel.md)) and the Sungkim
-theme (`"sungkim"`, [theme-sungkim.md](theme-sungkim.md)), set in project.json.
+[theme-sketch.md](theme-sketch.md)), the code-reel theme (`"reel"`, [theme-reel.md](theme-reel.md)), the Sungkim
+theme (`"sungkim"`, [theme-sungkim.md](theme-sungkim.md)) and the Brief editorial magazine theme (`"brief"`,
+[theme-brief.md](theme-brief.md)), set in project.json.
 
 The graphics, captions, chips and cover share one look: a graphite stage lit from above with cards floating in it and a
 camera moving through it. It is the skill's neutral default (`theme: 'stage'` in the engine). The code implements it in

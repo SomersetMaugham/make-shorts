@@ -38,8 +38,10 @@ for sk in want:
         raise SystemExit(f'{sk}: no {capf} - run prep.sh {sk} first')
     caps = json.load(open(capf, encoding='utf-8'))
     top = {L['id'] for L in sh['lines'] if L.get('caption') == 'top'}
+    brief_colors = json.load(open('gfx/brief_colors.json', encoding='utf-8')) if (Cfg.THEME == 'brief' and os.path.exists('gfx/brief_colors.json')) else {}
     runs = [dict(i=r['i'], T0=r['T0'], T1=r['T1'], scene=r.get('scene', ''), src=f'gfx/{sk}_r{r["i"]}.html',
                  capY=sum(Cfg.LAYOUT['caption_top' if any(l in top for l in r['lines']) else 'caption']) / 2,
+                 color=brief_colors.get(f'{sk}_r{r["i"]}'),
                  ok=os.path.exists(f'gfx/{sk}_r{r["i"]}.html')) for r in c['runs']]
     cues = [dict(id=q['id'], start=q['start'], end=q['end'], text=q.get('text', '')) for q in c.get('cues', [])]
     audio = f'narration/{sk}/audio/narration.mp3'
@@ -54,6 +56,7 @@ HTML = r"""<!doctype html>
 <style>
 @font-face{font-family:Pretendard;src:url(fonts/PretendardVariable.ttf);font-weight:45 920;font-display:block}
 @font-face{font-family:Gaegu;src:url(fonts/Gaegu-Bold.ttf);font-weight:700;font-display:block}
+@font-face{font-family:Hahmlet;src:url(fonts/Hahmlet-VF.ttf);font-weight:100 900;font-display:block}
 /* the player: script-to-motion's css/player.css (start screen, debug bar, speed toast), carried over */
 html,body{margin:0;height:100%;background:#000;overflow:hidden}
 body{font-family:Pretendard,sans-serif;-webkit-font-smoothing:antialiased}
@@ -109,6 +112,12 @@ body.vp-playing:not(.vp-cursor){cursor:none}
 #stage.sg .chip{background:none;border:0;box-shadow:none;padding:0;font:800 56px/1 Pretendard;letter-spacing:0;color:#0F786C;-webkit-text-stroke:10px #F6F3E9;paint-order:stroke fill}
 #stage.sg .chip .ln{height:4px;margin-top:12px;background:#0F786C;box-shadow:none}
 #stage.sg #cover{visibility:hidden}
+/* the Brief theme (theme-brief.md): ink Pretendard on newsprint #F5F4F0, section-coloured keyword highlights; run 0 is the cover */
+#stage.br{background:#F5F4F0}
+#stage.br .cap{font:700 50px/70px Pretendard;color:#161618;-webkit-text-stroke:10px #F5F4F0;paint-order:stroke fill}
+#stage.br .chip{background:none;border:0;box-shadow:none;padding:0;font:800 56px/1 Pretendard;letter-spacing:-.02em;color:var(--br-acc,#B42323);-webkit-text-stroke:10px #F5F4F0;paint-order:stroke fill}
+#stage.br .chip .ln{height:5px;margin-top:10px;background:var(--br-acc,#B42323);box-shadow:none;border-radius:1px}
+#stage.br #cover{visibility:hidden}
 /* review desk (served by review_server.py): the marked box, notes, the list, the pins */
 #box{position:absolute;display:none;z-index:6;border:6px solid #FFD23F;border-radius:10px;box-shadow:0 0 0 3000px rgba(0,0,0,.18),0 0 30px rgba(255,210,63,.6);pointer-events:none}
 #draw{position:absolute;inset:0;z-index:7;display:none;cursor:crosshair}
@@ -150,6 +159,7 @@ body.vp-playing .rv-badge{opacity:0}
 const DATA = __DATA__, MISSING = __MISSING__;
 const TXT = { normal: '보통', copied: '복사됨', copyFailed: '복사하지 못했어요', shotCopied: '스크린샷 명령 복사됨' };
 const ACC = { azure: [47,149,255], ember: [255,138,91], mint: [79,214,160], iris: [156,124,255] };
+const BR_ACC = { crimson: '#B42323', navy: '#204A80', forest: '#1E6B55', ochre: '#B07016', plum: '#6A4382', slate: '#5D6878' };
 const params = new URLSearchParams(location.search);
 const sk = DATA[params.get('s')] ? params.get('s') : Object.keys(DATA)[0];
 const D = DATA[sk], duration = D.END;
@@ -174,6 +184,7 @@ const frames = D.runs.map((r) => {
 });
 if (D.theme === 'sketch') stage.classList.add('sk');
 if (D.theme === 'sungkim') stage.classList.add('sg');
+if (D.theme === 'brief') stage.classList.add('br');
 const chunkEls = D.caps.map((c) => {
   const el = document.createElement('div');
   if (c.hl) { el.className = 'chip'; el.innerHTML = '<span class="tx"></span><span class="ln"></span>'; el.querySelector('.tx').textContent = c.text; }
@@ -229,6 +240,7 @@ function render() {
     if (!on) return;
     if (c.hl) {
       const tr = t - c.t0, pin = Math.min(1, tr / 0.18), e = pw3(pin);
+      if (D.theme === 'brief') el.style.setProperty('--br-acc', BR_ACC[c.color || r.color] || BR_ACC.crimson);
       el.style.top = r.capY + 'px';
       el.style.transform = `translate(-50%, calc(-50% + ${12 * (1 - e)}px)) scale(${0.96 + 0.04 * e})`;
       el.style.opacity = Math.min(1, pin * 1.6);

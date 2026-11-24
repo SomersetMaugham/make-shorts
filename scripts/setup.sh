@@ -43,6 +43,9 @@ fetch $GF/088df5c822dacc8fad9dd64dbbe5649cd6830e99/ofl/gaegu/Gaegu-Bold.ttf "$FO
 fetch $GF/088df5c822dacc8fad9dd64dbbe5649cd6830e99/ofl/gaegu/OFL.txt "$FONTS/Gaegu-OFL.txt" 53a9ce47085d9fef613c7ecb3730dc80d25962510bbea231b89564f58240f251
 fetch $GF/f81a0e9fb2ff01bf783fff251ece4ffe2df61278/ofl/architectsdaughter/ArchitectsDaughter-Regular.ttf "$FONTS/ArchitectsDaughter-Regular.ttf" 6159718a08898e34bc1cb7354086141a5f9a70b73e54dbec27ead0d59a697359
 fetch $GF/f81a0e9fb2ff01bf783fff251ece4ffe2df61278/ofl/architectsdaughter/OFL.txt "$FONTS/ArchitectsDaughter-OFL.txt" 0e441ae9f18ad0c294cc5b6ae3974c2db1614cab220598578b1b58c4cc334485
+# The brief theme's Korean serif (references/theme-brief.md): Hahmlet variable TTF (SIL OFL 1.1).
+fetch $GF/c1eda9233c33ad7775b27efd794f931095cf6133/ofl/hahmlet/Hahmlet%5Bwght%5D.ttf "$FONTS/Hahmlet-VF.ttf" 892bffe530255770a7435226154a02f519055ff6bedf64254f37f21d15a59279
+fetch $GF/c1eda9233c33ad7775b27efd794f931095cf6133/ofl/hahmlet/OFL.txt "$FONTS/Hahmlet-OFL.txt" ddadb10d28a303e3ef3b1f7ec55d3027903b9ec566d2f87d3ee03f3c87c91711
 
 W=work
 mkdir -p "$W/scripts" "$W/gfx/assets" "$W/fonts" "$W/narration" edit

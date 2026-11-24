@@ -74,9 +74,12 @@ _LOOKS = {'sketch': 'hand-drawn on paper in the sketch theme',
           'reel': 'in the code-reel theme (dark navy, a fixed header, a diagram card on top, a divider and a code card below whose '
                   'white box highlights the line being discussed; one diagram may continue across several runs by design)',
           'sungkim': 'in the Sungkim theme (warm paper, a header with a one-line title, a visual box, a source line and info cards '
-                     'that stack in; header, boxes and earlier cards stay in place across runs by design)'}
+                     'that stack in; header, boxes and earlier cards stay in place across runs by design)',
+          'brief': 'in the Brief editorial magazine theme (newsprint paper #F5F4F0, top segmented progress bar, Hahmlet 700 '
+                   'section-coloured title over a double ink rule, framed upper visual, archive source chip and editorial lower '
+                   'cards; header, visual frame and earlier cards stay in place across runs by design)'}
 LOOK = (_LOOKS.get(THEME, 'on a graphite stage with glass cards') + ' (read '
-        + os.path.join(SKILL, 'references', {'sketch': 'theme-sketch.md', 'reel': 'theme-reel.md', 'sungkim': 'theme-sungkim.md'}.get(THEME, 'theme.md')) + ')')
+        + os.path.join(SKILL, 'references', {'sketch': 'theme-sketch.md', 'reel': 'theme-reel.md', 'sungkim': 'theme-sungkim.md', 'brief': 'theme-brief.md'}.get(THEME, 'theme.md')) + ')')
 prompt = f"""Hi, and thank you for taking this on. I'd like to ask you to act as the defect checker described in {RUBRIC}.
 Please read that file in full and answer in exactly the format of its §5. You didn't build this work, which is exactly
 why your fresh eyes are valuable. Please look at the images listed below and read the files named here. Please do not edit or
