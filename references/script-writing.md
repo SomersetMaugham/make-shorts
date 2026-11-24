@@ -47,8 +47,8 @@ time pressure.
    title or a menu label. The listener hears a label instead of an explanation. Say what happens: the action and its
    result.
 6. **A line cut down to keep it short.** No line has a length it must fit. Removing the words that carry the meaning
-   to keep a line or the video short trades understanding for nothing. A long sentence is split into cues, never cut
-   (**Content first, never time**).
+   to keep a line or the video short trades understanding for nothing. A long sentence is split into two sentences,
+   never cut (**Content first, never time**; §5 **One breath, one sentence**).
 7. **A line that only works with the picture.** You design the line and the screen together, so you read them as one.
    The viewer may not read a label while listening. The screen may show the example; the sentence must carry its
    meaning by sound alone.
@@ -193,8 +193,9 @@ what is said.**
   version's length, not because a cue feels long, not to keep a stretch brisk.
 - **Never plan to a length.** Don't put a target length in `storyboard.md`, and don't size the script by cues per
   minute or syllables per second. Plan what has to be said; the length is the result.
-- **A long sentence is split into cues, never cut.** A line that is long because it carries what it must carry stays
-  whole in meaning.
+- **A long sentence is split into sentences, never cut.** A line that is long because it carries what it must carry
+  stays whole in meaning: every word stays, rewritten as two (or three) sentences (§5 **One breath, one sentence**).
+  This is a limit on one sentence, not on the line or the video.
 - **When the user named a length** (in the request or a planning doc) and saying it properly takes more, keep the
   content and tell the user how long it came out and why. Never cut silently to fit. If the user then asks for a
   shorter video, decide with them what goes, topic by topic; never by thinning every line.
@@ -614,7 +615,7 @@ in plain words the first time it is heard.
   decision, 2026-11-13). The rest of this section is for videos with several topics or chapters.
 - **A word that only marks a boundary is not a bridge.** Spoken alone at a seam, it is a document's section mark read
   aloud, and the listener hears the jump it was meant to cover.
-- One idea per cue. A long sentence is split at a clause boundary into cues, never shortened.
+- One idea per cue. A long sentence is rewritten as two sentences at a clause boundary, never shortened.
 
 ## 5. Sentences built for the ear
 
@@ -626,6 +627,22 @@ in plain words the first time it is heard.
     sentences.
   - No noun chains ("~의 ~에 대한 ~의 증가"): say it with verbs.
   - No double negatives.
+- **One breath, one sentence** (the user, 2026-11-24: a long compound sentence makes the listener work to follow it).
+  A sentence the listener hears once has to be held in mind whole until its predicate arrives. So a sentence is at
+  most **40 spoken syllables** (numbers counted as said: "영쩜 육팔" is 4) and chains **at most one clause link**
+  (`-고`, `-면`, `-면서`, `-는데`, `-지만`, `-니(까)`, `-며`, `-어서`, `-는 동시에`). Over either, end the sentence and
+  start a new one, **keeping every word**: this splits, it never cuts. Splitting into cues with pauses is not enough,
+  since a pause inside one sentence still leaves the listener waiting for the predicate.
+  - "로그 퍼플렉시티가 0.68에서 0.70 구간에 들어서면, 지금 테스트조차 못 하는 새 능력이 나오는 동시에 AI가 안전한지
+    살피는 정렬 감시 기술은 오히려 약해진다는 거죠." (74 spoken syllables, 2 links) → "로그 퍼플렉시티가
+    0.68에서 0.70 구간에 들어섰다고 해 볼게요. 그러면 지금은 테스트조차 못 하는 새 능력이 나옵니다. 그런데 바로 그때,
+    AI가 안전한지 살피는 정렬 감시 기술은 오히려 약해진다는 거죠." (30, 22 and 36 syllables, one thought each)
+  - `prosody_prep.py` (run by `prep.sh`) prints `long sentence` warnings before recording. A warning is a question,
+    not a gate: a sentence that reads naturally over the limit (a list the screen shows, a quote said word for word)
+    may stay, but decide it, don't overlook it. 40 is a starting point (the HN short's median sentence was 38
+    written syllables); tune it with the user.
+  - The user's own script is used word for word (narration.md): there, mention long sentences in your summary
+    instead of rewriting them.
 - **Numbers.** One per sentence. Never two similar numbers side by side. Say the unit clearly. The exact figure goes on
   screen (§2).
 - **Screen and voice don't compete.** The screen shows what is being said at that moment. Never make the eye read one

@@ -62,8 +62,9 @@ Don't show the draft and wait; carry on to the finished video. The essentials:
     is for a first-time listener; script-writing.md §0b): the five questions, the neighbours, the seam pass (**Every
     topic change gets a cushion**), the internal-name list and the cold-listener review. No line skips them. That
     includes a line you fix later and every line of a batch edit.
-- One cue ≈ one sentence: the unit of visual sync. A long sentence is split at a clause boundary into two cues, never
-  shortened.
+- One cue ≈ one sentence: the unit of visual sync. A sentence too long to follow by ear (script-writing.md §5: over 40
+  spoken syllables or more than one clause link) is rewritten as two sentences, never shortened; `prosody_prep.py`
+  warns about it before recording.
 - Use `gapAfter` to give scene changes and questions a breath, longer than the beat inside a thought. The silence you
   hear is the gap plus the edges the two takes keep after your cuts, so choose it by reading the result with `wave.mjs`,
   not by a number: 0.4 s or more is dead air unless something sounds in it (a clip, a transition sound) — the user's

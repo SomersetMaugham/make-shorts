@@ -168,6 +168,7 @@ if '--skip-graphics' not in flags:
                 or (open(mark).read().strip() if os.path.exists(mark) else '240') != fps)
     todo = [i for i in ids if stale(i)]
     if todo:
+        os.makedirs('gfx/out60', exist_ok=True)   # a first render: render_full.sh would make it, but only after these marks
         for i in todo:             # 'pending' until the whole step has finished: a stopped run leaves its half-written
             open(f'gfx/out60/{i}.fps', 'w').write('pending')   # MP4s marked pending, and the next run renders them again
         step(f'graphics: {len(todo)} of {len(ids)} compositions at {fps} fps', ['bash', 'scripts/render_full.sh', *todo],
