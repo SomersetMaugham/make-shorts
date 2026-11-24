@@ -50,6 +50,18 @@ F6_CLITICS = frozenset({'는', '고', '라는', '라고', '란', '라', '며', '
 
 WARN_SHORT_CUE_MAX_SYLLABLES = 6
 WARN_ANIRA_MIN_SYLLABLES = 30
+# One sentence = one breath of meaning (script-writing.md §5, the user 2026-11-24: a long compound sentence makes the
+# listener work to follow it). A sentence over 40 spoken syllables, or chaining 2+ clauses, is split into two
+# sentences with every word kept. 40 = the HN short's median sentence (38), a starting point to tune, not evidence.
+WARN_SENTENCE_MAX_SYLLABLES = 40
+WARN_SENTENCE_MAX_LINKS = 1
+CLAUSE_LINK_ENDINGS = frozenset({   # Kiwi EC forms that join two clauses ("-어"/"-게"/"-지" are left out: auxiliaries)
+    '고', '면', '으면', '면서', '으면서', '는데', '은데', 'ᆫ데', '지만', '니', '으니', '니까', '으니까',
+    '며', '으며', '어서', '아서', '여서',
+})
+_SIMULTANEOUS_RE = re.compile(r'는 동시에')   # "-는 동시에" joins two clauses without an EC
+_SENTENCE_END_RE = re.compile(r'(?<=[.?!])\s+')
+_TAG_RE = re.compile(r'\[[^\]]*\]')
 # Common light/grammatical one-syllable verb stems are not acoustically fragile.
 SAFE_SHORT_VV_STEMS = frozenset({
     '하', '되', '오', '가', '보', '주', '쓰', '서', '나', '내', '두', '들', '살',
@@ -537,7 +549,33 @@ def _collect_warnings(
         warnings.append(
             f'"아니라," in a {total_syl}-syllable cue (> {WARN_ANIRA_MIN_SYLLABLES}) — consider splitting into two sentences ("아닙니다.")'
         )
+    warnings.extend(long_sentence_warnings(raw_say))
     return warnings
+
+
+def long_sentence_warnings(say: str) -> list[str]:
+    """Sentences too long to follow by ear: over WARN_SENTENCE_MAX_SYLLABLES spoken syllables, or chaining more than
+    WARN_SENTENCE_MAX_LINKS clause links. Counted on `say` (numbers in their spoken form, tags removed). Advice for the
+    writer: split into two sentences, keeping every word (script-writing.md §5); it never blocks."""
+    kiwi = _get_kiwi()
+    out: list[str] = []
+    for sent in _SENTENCE_END_RE.split(_TAG_RE.sub('', say).strip()):
+        sent = re.sub(r'\s+', ' ', re.sub(r'\s*,\s*,', ',', sent)).strip()
+        if not sent:
+            continue
+        syl = count_syllables(sent)
+        links = len(_SIMULTANEOUS_RE.findall(sent))
+        if kiwi is not None:
+            links += sum(1 for t in kiwi.tokenize(sent) if t.tag == 'EC' and t.form in CLAUSE_LINK_ENDINGS)
+        over = []
+        if syl > WARN_SENTENCE_MAX_SYLLABLES:
+            over.append(f'{syl} syllables > {WARN_SENTENCE_MAX_SYLLABLES}')
+        if links > WARN_SENTENCE_MAX_LINKS:
+            over.append(f'{links} clause links > {WARN_SENTENCE_MAX_LINKS}')
+        if over:
+            short = sent if len(sent) <= 40 else sent[:38] + '…'
+            out.append(f'long sentence ({", ".join(over)}): "{short}" — split it into two sentences, keeping every word')
+    return out
 
 
 def _render_say(
