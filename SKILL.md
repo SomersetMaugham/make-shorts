@@ -43,9 +43,12 @@ report, publishing copy). Another language only when the user asks.
   code-reel theme (theme-reel.md, `"reel"`: navy, a diagram card over a code card whose highlight follows the
   narration; kit `scripts/reel_kit.py`) when the user says "코드 릴 스타일"; the Sungkim theme (theme-sungkim.md,
   `"sungkim"`: warm paper, headline, visual box, source line, stacking info cards; kit `scripts/sungkim_kit.py`) when
-  the user says "성킴 스타일" / "성킴스타일" / "성킴 테마". Set `"theme"` in `project.json` before the first build;
-  captions, chips and cover follow it. In the reel and Sungkim themes every run is one `reel_page` / `sungkim_page`
-  (no world camera); give the graphics writer the theme file and the kit.
+  the user says "성킴 스타일" / "성킴스타일" / "성킴 테마"; and the Brief editorial magazine theme (theme-brief.md,
+  `"brief"`: newsprint paper `#F5F4F0`, Hahmlet 700 + Pretendard + Geist Mono, progress bar, double ink rules, light
+  magazine cover, section-aware caption highlights, minimal ink-and-rule sting; kit `scripts/brief_kit.py`) when the
+  user says "브리프 스타일" / "브리프 테마" / "매거진 스타일". Set `"theme"` in `project.json` before the first build;
+  captions, chips and cover follow it. In the reel, Sungkim and Brief themes every run is one `reel_page` /
+  `sungkim_page` / `brief_page` (no world camera); give the graphics writer the theme file and the kit.
 - **The material:** a topic, an article, notes, links, a planning doc or a finished script. The user's script is used
   word for word (only `say` gets spoken forms). Files they give (logos, screenshots) go to `work/gfx/assets/`.
 - **The folder:** the user's, otherwise the current folder. It may be empty.
@@ -182,4 +185,4 @@ Read `references/lessons.md` before improvising. The biggest ones:
 - `references/`: `editing-spec.md` (the contract), `narration.md` (script-to-motion's narration rules),
   `script-writing.md` (script-to-motion's writing rules, and the story spine for shorts), `story-ko.md` (the Korean
   shapes of hooks, turns and endings), `pipeline.md` (the commands), `graphics.md` (the engine API),
-  `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `theme-reel.md` (the code-reel look), `theme-sungkim.md` (the Sungkim look), `parts.md` (the parts catalogue: every circuit part from the kit), `roles.md` (who does each step), `speed.md` (parallelism), `lessons.md`.
+  `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `theme-reel.md` (the code-reel look), `theme-sungkim.md` (the Sungkim look), `theme-brief.md` (the Brief editorial magazine look), `parts.md` (the parts catalogue: every circuit part from the kit), `roles.md` (who does each step), `speed.md` (parallelism), `lessons.md`.
