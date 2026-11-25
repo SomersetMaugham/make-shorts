@@ -8,7 +8,7 @@ every short unless the user says otherwise; ask before moving a step to someone 
 | 0. Setup | `setup.sh`, or refresh an existing project's copies of the kit and scripts (back up the old ones first) | Claude | parts sheet, regression |
 | 1. Research and fact-check | the facts list, 2+ sources each, `factcheck_<sk>.md` + `research_<sk>/` | **agy Hydrogen** (`gemini-4-hydrogen-high`, web tools only) | Claude opens the sources and compares |
 | 2. Script | story spine → lines, first-time-listener gates (script-writing.md) | **Claude** | step 3 |
-| 3. Cold-listener review | reads only `script.txt`, as a viewer who knows nothing | **a Claude subagent** | Claude applies it |
+| 3. Cold-listener review | reads only `script.txt`, as a viewer who knows nothing (script-writing.md §0b, step 5) | **Gemini app** (Hydrogen, a new chat; if it fails, ask the user, then a Claude subagent) | Claude applies it |
 | (optional) Fun and easy discussion | ideas to make the explanation more fun and easier; at most 3 rounds per short, many items batched per round | **agy Neon** (`gemini-4-neon-*`) | Claude checks every factual claim |
 | 4. Timeline | `shorts.json` → `prep.sh` (silent placeholders, nothing recorded) → read the runs | **Claude** | runs ≤ ~8 s, no two neighbours of one scene kind |
 | 5. Graphics brief | `GFX_BRIEF_<sk>.md`: 3–5 sections, a hero run each, the parts catalogue PNGs attached | **Claude** | — |
@@ -27,6 +27,13 @@ Rules that go with it:
   numbers with units, file paths, a numbered list of tasks, the files not to touch, the finish condition and the DIGEST
   format, and "if anything is unclear or conflicts, stop and report it instead of guessing". No vague words ("roughly",
   "if possible", "as needed", "etc.", "nice"). Prompts built into scripts follow the same rule.
+- **The Gemini app's model menu** (`mcp__gemini-app__ask_gemini`; user, 2026-11-26) has 5 rows, top to bottom:
+  1 자동 모드 (auto), 2 **Hydrogen**, 3 **Neon**, 4 Carbon (unavailable), 5 사고 수준 (thinking level). The app shows
+  no model names to accessibility, so the MCP server picks a row by number: `GEMINI_MODEL_ROW` / `GEMINI_MODEL_ROWS` in
+  the `gemini-app` entry of `~/.claude.json` (now `2` / `5` = Hydrogen, the model for the graphics code and the
+  cold-listener review). Neon is row `3`; never rows 1, 4 or 5. Changing the row needs a Claude Code restart, so ask
+  the user first. The row is enforced only while the Gemini window is visible: hidden or minimized, the app's last
+  chosen model answers. If Google reorders the menu again, the user tells you the new order and you update this line.
 - **No score decides anything** (elevate.md): the checker finds defects; taste is the user's and the approved
   references' (earlier parts of the series, the parts catalogue).
 - **Verify every delegated result yourself**: agy's "done" is a claim. Build, shoot and check before reporting.

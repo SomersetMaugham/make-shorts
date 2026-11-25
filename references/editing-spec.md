@@ -55,8 +55,8 @@ DELIVERABLES (in edit/)
   and the fact check (each figure, its sources, any disagreement). Facts are no one's expression: the wording is yours.
 - Write the narration by script-to-motion's rules (references/script-writing.md): spoken Korean for a listener who hears
   each line once; every name and term explained when first heard; one idea and one number per sentence; the conclusion
-  first; no AI-style phrasing. Each line passes the first-time-listener gates and the cold-listener review (a subagent
-  that sees only script.txt) before it can be recorded.
+  first; no AI-style phrasing. Each line passes the first-time-listener gates and the cold-listener review (the Gemini
+  app, Hydrogen, seeing only script.txt) before it can be recorded.
 - `shorts.json`: per short a title, cover lines, highlights (keyword chips), an accent, and the lines: one line ≈ one
   sentence = one narration cue (`id`, `text` shown, `say` spoken, optional `gapAfter`), each with its `scene` and optional
   `switches`.
