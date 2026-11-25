@@ -13,7 +13,8 @@ How to read them here:
 - References to other script-to-motion files (sound.md, google-tts.md, fish-audio.md) are in references/narration.md.
 - Other script-to-motion files it names (claude-roles.md, player-api.md, footage.md, sponsored.md, `<skill>/scripts/…`)
   are not part of this skill; the narration tools are in `scripts/narration/`.
-- The cold-listener review is a subagent that has never seen the project: give it only `narration/<sk>/script.txt`.
+- The cold-listener review is the Gemini app (Hydrogen, a new chat) that has never seen the project: give it only
+  `narration/<sk>/script.txt` (script-writing.md §0b, step 5).
 
 ---
 
@@ -78,16 +79,17 @@ time pressure.
    episode nicknames, file and folder names, labels from `진행상황.md`, `storyboard.md` and code comments), then find
    each one in the narration and every on-screen string and read it in its line (script-writing.md §0b). No pattern
    matcher does this for you: only you know which names are yours.
-4. **The cold-listener review** (in Claude Code the reviewer is the Gemini app, model "Hydrogen", in a new chat —
-   `references/claude-roles.md` §1 — in place of the subagent)**:** a separate subagent that has never seen the project gets only `script.txt` (the lines
+4. **The cold-listener review:** the Gemini app (model Hydrogen, menu row 2; `references/roles.md`, "The Gemini
+   app's model menu"), in a new chat, which has never seen the project, gets only `script.txt` (the lines
    in order, nothing else) and the brief in script-writing.md §0b, word for word. It reads it once, top to bottom, and
    returns every line where it cannot tell what, which, when, who or why, and every place where the talk jumps to a
    new topic without a cushion.
    - Fix every flagged line you wrote, then run the review again on the stretch you changed.
    - A flagged line the user wrote or dictated is not reworded: tell the user in one line and propose a fix.
    - Run it on the first draft, and again on every stretch you rewrite, before recording it.
-   - When no subagent can be started, do it yourself as a separate written step from `script.txt` alone, reading as a
-     stranger, and say so in the hand-off.
+   - When the Gemini app fails, ask the user before moving the review to a Claude subagent (the Agent tool,
+     general-purpose, same input and brief). When neither can run, do it yourself as a separate written step from
+     `script.txt` alone, reading as a stranger, and say so in the hand-off.
 
 Every brief you give a subagent that writes or edits narration or on-screen copy carries this section word for word.
 
@@ -498,15 +500,17 @@ voice** (when the user wrote or dictated lines, their sentence shape and endings
    code comments. Then search the narration (`script.txt`) and the page's on-screen strings for exactly those names,
    one by one, and read every hit in its line. A hit stays only where the narration has already told the viewer what
    it is. A file or program the viewer must use is a term (§3): said with what it is the first time it is heard.
-5. **The cold-listener review.** Start a separate subagent (the Agent tool, general-purpose) that has **never seen the
-   project**. Give it **only** `script.txt` (the lines in order, numbered, no ids, no notes, no screen) and this brief,
-   word for word:
+5. **The cold-listener review.** Ask the Gemini app (`mcp__gemini-app__ask_gemini`, a new chat: no `continue`; model
+   Hydrogen, menu row 2, with the Gemini window visible so the row is enforced), which has **never seen the project**.
+   Give it **only** `script.txt` (the lines in order, numbered, no ids, no notes, no screen; pass it in `files`) and
+   this brief, word for word, as the `prompt` (the Gemini app always gets a new chat, so nothing earlier leaks in):
 
    ```
-   You are a viewer hearing a Korean video narration for the first time. You know nothing about the video, its
-   project, its files, its tools or how it was made. Below is every line, in order, exactly as it will be spoken,
-   one line per row, numbered. Read it once, top to bottom, as if you were hearing it; never look back to resolve
-   something. Report every line where any of these happens:
+   Hi, could you help me by reading a Korean video narration as a viewer who hears it for the first time? Please
+   read it as someone who knows nothing about the video, its project, its files, its tools or how it was made. The
+   attached file holds every line, in order, exactly as it will be spoken, one line per row, numbered. Please read
+   it once, top to bottom, as if you were hearing it, without looking back to resolve something. Could you report
+   every line where any of these happens:
      - you cannot tell what something is, which one, when, who does it, or what it is done to;
      - a name, nickname, code, id, file name or term appears that you were never told about;
      - a connective or a word that refers back to something earlier does not follow from the line before, or two
@@ -522,14 +526,15 @@ voice** (when the user wrote or dictated lines, their sentence shape and endings
    Then two more rows, always: "opening · <the question the first lines made you want answered, or 'none'>" and
    "ending · <whether the last lines answered it, and what they made you want to know next, or 'nothing'>".
    Report nothing else: no praise, no summary, no rewrites. If every line is clear, answer only "clear" plus the two
-   rows. Answer in Korean.
+   rows. Answer in Korean. Thank you very much.
    ```
    Fix every flagged line you wrote (an "abrupt" flag with a cushion, never with clearer wording; in a short
    one-question video with the one-move turn of SKILL.md → Short videos, never with an added bridge sentence) and run the review
    again on the changed stretch until it answers "clear". An "opening · none" or an "ending · nothing" is a failed
    hook or ending (Short videos: the story spine): fix it, then run the pull checklist. A
    flagged line the user wrote or dictated is not reworded: tell the user in one line and propose a fix. Run it on the
-   first draft, and again on every stretch you rewrite before it is recorded. If no subagent can be started, do it
+   first draft, and again on every stretch you rewrite before it is recorded. If the Gemini app fails, ask the user
+   before moving the review to a Claude subagent (same input and brief); if neither can run, do it
    yourself as a separate written step from `script.txt` alone, reading as a stranger, and say so in the hand-off.
 
 **Recording waits for the gates.** No line goes to `tts.mjs --approved` before gates 1–5 have passed for it. That

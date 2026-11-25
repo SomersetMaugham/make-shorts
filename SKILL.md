@@ -23,7 +23,7 @@ report, publishing copy). Another language only when the user asks.
 > that it stands on sound alone, and that every claim is in the record. A short answers **one question** as a story:
 > a hook that opens a gap (two hooks tried, facts checked, first frame decided), turns instead of a list, the answer,
 > and an ending of at most three sentences (answer, a new-angle line, the next part's question); no recap, no
-> announcement, no second topic. Then the seam pass, the internal-name list and the **cold-listener review** by a subagent that sees only
+> announcement, no second topic. Then the seam pass, the internal-name list and the **cold-listener review** by the Gemini app (Hydrogen, a new chat) that sees only
 > `script.txt`. Never trust your own reading of your own line. The full rules: `references/script-writing.md`.
 
 ## The narration is script-to-motion's (read `references/narration.md` before step 3)
