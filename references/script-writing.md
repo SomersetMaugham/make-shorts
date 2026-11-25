@@ -218,6 +218,8 @@ mid-explanation: no line to remember, no reason to watch the next part (GRPO and
 "설명하다가 중간에 멈춘듯한 느낌", "앞으로 나올 내용에 기대감을 갖게 만들지 않아요"). So padding stays out, and the
 story gets a shape. Plan: `docs/plans/2026-11-20-storytelling.md`.
 
+**Not this kind:** the morning market briefing (`references/market-brief.md`), which has its own fixed spine.
+
 **Which videos:** one question or one premise, answered once — about two minutes or less, or any Shorts / Reels /
 TikTok piece. A video with chapters, several topics or several examples of different kinds is not this kind, however
 short each part is.

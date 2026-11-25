@@ -21,6 +21,14 @@ every short unless the user says otherwise; ask before moving a step to someone 
 | 12. Wrap-up | thumbnail, `PUBLISH.md`, `check_publish.py`, STATUS | Claude | — |
 | Commit / push | skill changes | **only on the user's word** (each push asked) | — |
 
+**The morning market briefing** (market-brief.md) changes only these steps; the rest of the table holds:
+
+| step | what | who | checked by |
+|---|---|---|---|
+| 1a. Numbers | `fetch_market.py` → `market_data.json` (closes, session calendar, heatmap, weather, solar terms) | **Claude** | no ⚠ date line; Claude looks at both heatmap PNGs |
+| 1b. Research | `research.json`: news, after hours, NDF, night futures, tonight's and Korea's events, a second source for every spoken index figure | **agy Hydrogen** (`gemini-4-hydrogen-high`, web tools only) | Claude opens the sources of every spoken figure |
+| 2. Script | `brief_draft.py` → rewrite every line by the briefing spine and the gates → `shorts.json` | **Claude** | step 3 (the cold-listener review, as for every short) |
+
 Rules that go with it:
 - **Delegate in polite, unambiguous English** to agy and the Gemini app (user, 2026-11-22; global CLAUDE.md "위임 말투와
   언어"): a kind manager asking a trusted colleague, never commands, and no room for the other side's own interpretation —

@@ -25,6 +25,8 @@ report, publishing copy). Another language only when the user asks.
 > and an ending of at most three sentences (answer, a new-angle line, the next part's question); no recap, no
 > announcement, no second topic. Then the seam pass, the internal-name list and the **cold-listener review** by the Gemini app (Hydrogen, a new chat) that sees only
 > `script.txt`. Never trust your own reading of your own line. The full rules: `references/script-writing.md`.
+> **The morning market briefing** ("미국장 브리핑", "출근길 브리핑") is the other format: the same gates and review, but
+> a fixed order of beats instead of the story spine — `references/market-brief.md`.
 
 ## The narration is script-to-motion's (read `references/narration.md` before step 3)
 - Google Cloud TTS Chirp 3 HD, voice `ko-KR-Chirp3-HD-Enceladus` (gcloud sign-in, no key); Fish Audio or edge-tts only
@@ -49,6 +51,9 @@ report, publishing copy). Another language only when the user asks.
   user says "브리프 스타일" / "브리프 테마" / "매거진 스타일". Set `"theme"` in `project.json` before the first build;
   captions, chips and cover follow it. In the reel, Sungkim and Brief themes every run is one `reel_page` /
   `sungkim_page` / `brief_page` (no world camera); give the graphics writer the theme file and the kit.
+- **The format:** a question short (the default) or the morning market briefing (`references/market-brief.md`:
+  US close → Korean open, Finviz heatmap, tonight's schedule, a weather or season line; `scripts/market/`), set as
+  `"format": "market-brief"` in `project.json`. One short is one format.
 - **The material:** a topic, an article, notes, links, a planning doc or a finished script. The user's script is used
   word for word (only `say` gets spoken forms). Files they give (logos, screenshots) go to `work/gfx/assets/`.
 - **The folder:** the user's, otherwise the current folder. It may be empty.
@@ -175,6 +180,8 @@ Read `references/lessons.md` before improvising. The biggest ones:
   `compose.py` (captions, chips, cover, segments, `--draft`), `check_text.py`, `check_narration.py`, `mix.py`,
   `verify_final.py`, `thumbnail.py`, `report_data.py`, `check_publish.py`, `draftsheet.py`, `sheet.py`, `config.py`,
   `init_project.py`.
+- `scripts/market/`: the morning market briefing's `fetch_market.py` (US closes, the session calendar, the Finviz
+  heatmap, weather, solar terms → `market_data.json`) and `brief_draft.py` (draft lines → `brief_draft.json`).
 - `scripts/narration/`: script-to-motion's TTS tools (`tts.mjs`, `wave.mjs`, `sync.mjs`, `phrasing-check.mjs`,
   `autocut.py`, `lib/`), with `SOURCE.md` (provenance, local changes) and `sync_upstream.sh` (reports upstream changes).
 - `assets/gfx/`: `engine.js` (world camera, depth of field, motion blur, captures, the stage theme), `sketch.js` +
@@ -185,4 +192,4 @@ Read `references/lessons.md` before improvising. The biggest ones:
 - `references/`: `editing-spec.md` (the contract), `narration.md` (script-to-motion's narration rules),
   `script-writing.md` (script-to-motion's writing rules, and the story spine for shorts), `story-ko.md` (the Korean
   shapes of hooks, turns and endings), `pipeline.md` (the commands), `graphics.md` (the engine API),
-  `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `theme-reel.md` (the code-reel look), `theme-sungkim.md` (the Sungkim look), `theme-brief.md` (the Brief editorial magazine look), `parts.md` (the parts catalogue: every circuit part from the kit), `roles.md` (who does each step), `speed.md` (parallelism), `lessons.md`.
+  `theme.md` (the stage look), `theme-sketch.md` (the sketch look: paper, pens, the drawing kit), `theme-reel.md` (the code-reel look), `theme-sungkim.md` (the Sungkim look), `theme-brief.md` (the Brief editorial magazine look), `market-brief.md` (the morning market briefing format), `parts.md` (the parts catalogue: every circuit part from the kit), `roles.md` (who does each step), `speed.md` (parallelism), `lessons.md`.
