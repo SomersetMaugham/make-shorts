@@ -298,11 +298,31 @@ def main():
             add('season', ti.rstrip('.') + ('.' if not ti.endswith('?') else ''), si.rstrip('.') + ('.' if not si.endswith('?') else ''),
                 f'weather.notes.{notes[0]["kind"]}: {notes[0]["fact"]}')
     if so.get('end'): add('thanks', so['end'], src='sign-off (the last line)')
+    # chapter titles for the YouTube description (chapters.py merges any shorter than 10 s): the first line of each beat
+    CH = [('headline', None, '간밤 요약과 오늘의 질문'), ('number', None, '미국 지수·필라델피아 반도체 지수'),
+          ('pair', 'vix', '공포지수(VIX)와 종목별 등락'), ('news', None, '시장을 움직인 재료'),
+          ('pair', 'ndf', '우리 시장: 환율·코스피 야간선물'), ('outlook', None, '오늘 국장 전망'),
+          ('calendar', None, '오늘 밤 일정'), ('signoff', None, '출근길 날씨')]
+    for scene, key, title in CH:
+        x = next((x for x in lines if x['scene'] == scene and (key is None or key in x['src'])), None)
+        if x and not any(y.get('chapter') == title for y in lines): x['chapter'] = title
+    # the links for the description (shorts.json "sources"): the data and weather providers, then every page the
+    # research quoted, in the order the briefing uses them; Claude keeps only what the narration or the screen names
+    srcs = [dict(name='Finviz S&P 500 맵', url='https://finviz.com/map.ashx?t=sec'),
+            dict(name='시세: Yahoo Finance', url='https://finance.yahoo.com'), dict(name='시세: CNBC', url='https://www.cnbc.com/markets/')]
+    for k in ('news', 'after_hours', 'ndf', 'night_futures', 'kospi_prev', 'street_view', 'korea_today', 'events_tonight'):
+        v = r.get(k); vs = v if isinstance(v, list) else [v] if v else []
+        for e in vs:
+            for u in (e.get('source'), e.get('source2')):
+                if u and u.startswith('http') and all(u != z['url'] for z in srcs):
+                    note = 'TODO 중계 주소: 실제 기사 주소로 바꾸기' if 'vertexaisearch' in u else 'TODO 매체 이름'   # curl -s -o /dev/null -w '%{redirect_url}'
+                    srcs.append(dict(name=f'{note} ({k})', url=u))
+    srcs.append(dict(name='날씨: Open-Meteo', url='https://open-meteo.com'))
     # neighbours may not share a scene kind (editing-spec 3): Claude fixes any repeat while editing (the season
     # beat's two sentences share one run on purpose)
     rep = [f'{a_["id"]}/{b["id"]} {a_["scene"]}' for a_, b in zip(lines, lines[1:]) if a_['scene'] == b['scene'] and a_['scene'] not in ('season', 'outlook')]
     out = dict(sk=a.sk, date=m['date'], disclaimer='투자 권유가 아닌 정보 제공 목적입니다. 투자 판단의 책임은 본인에게 있습니다.',
-               outlook=ol, unconfirmed=unconfirmed, repeated_scene_neighbours=rep, lines=lines)
+               outlook=ol, unconfirmed=unconfirmed, sources=srcs, repeated_scene_neighbours=rep, lines=lines)
     json.dump(out, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     for x in lines:                                    # an index line built on an unconfirmed number waits for Claude
         keys = [k for k in unconfirmed if f'indices.{k}' in x['src'] or f'/{k}' in x['src']]

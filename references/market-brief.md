@@ -185,7 +185,9 @@ The lines speak to the viewer on the way to work, in the narrator's voice; the l
     "street_view": [{"house": "…증권", "view": "one line in Korean", "direction": "up|down|mixed", "source": "https://…"}],
     "check": [{"what": "S&P 500 close", "value": 0.0, "source": "https://…"}]}
    ```
-   `kospi_prev` is the previous KRX session's close from the news (Yahoo can miss a session); `street_view` holds two
+   Every `source` is the publisher's own article URL: a search tool's relay link (vertexaisearch…/grounding-api-redirect)
+   is resolved first (`curl -s -o /dev/null -w '%{redirect_url}' <link>`), because these URLs also become the
+   description's links. `kospi_prev` is the previous KRX session's close from the news (Yahoo can miss a session); `street_view` holds two
    brokers' morning views or more; `short` is the name the narration says. `check` holds a second source for every
    index figure that will be spoken. A figure that differs from
    `market_data.json` by more than 0.02 percentage points is not spoken until Claude has opened both sources.
@@ -195,6 +197,13 @@ The lines speak to the viewer on the way to work, in the narrator's voice; the l
    narrator's voice), fills the `todo`s from `research.json`, fixes neighbouring runs of one scene kind, and only then
    copies the lines into `shorts.json`. From there the pipeline is the skill's: `prep.sh`, the graphics, the preview,
    the review, recording on the user's word.
+
+## The description: chapters and links
+
+`brief_draft.py` marks the first line of each beat with a `chapter` title and writes a `sources` draft (Finviz, the two
+quote services, Open-Meteo and every page the research quoted). Claude keeps only the pages the narration names or the
+screen shows, gives each its outlet and headline, copies `chapter` / `sources` into shorts.json, and after the render
+runs `python3 scripts/chapters.py s1 --publish 01` (spec 8b). Short beats merge into the chapter before them.
 
 ## The daily routine
 

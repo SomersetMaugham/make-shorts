@@ -146,7 +146,9 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
 8. **Deliver (before the render):** `edit/PUBLISH.md` with the Korean copy for every short (spec 8b;
    `$PY scripts/check_publish.py` must pass) and the report's narration, script and graphics parts. **After the user's
    render:** look at `chk/<sk>_final.png` and `chk/<sk>_thumbs.png`, pick the thumbnail
-   (`$PY scripts/thumbnail.py <sk> --pick <t> NN slug`) and finish `report.md` with the numbers of `report_data.py <sk>`.
+   (`$PY scripts/thumbnail.py <sk> --pick <t> NN slug`), write the description's chapters and source links
+   (`python3 scripts/chapters.py <sk> --publish NN`, from `"chapter"` / `"sources"` in shorts.json; spec 8b) and finish
+   `report.md` with the numbers of `report_data.py <sk>`.
    Tell the user which lines to listen to.
 9. **Edits** are incremental: a wording change → `prep.sh` (the cue becomes a placeholder until the user OKs a re-take);
    a cut or `at` → `prep.sh`; a graphic → `build_gfx.py`; then `preview.py` and a reload. The next `render.py`
@@ -179,7 +181,7 @@ Read `references/lessons.md` before improvising. The biggest ones:
   cut.json + voice.wav), `brief_runs.py`, `build_gfx.py` / `build_gfx_common.py` (compositions, `W()` phrase anchors),
   `compose.py` (captions, chips, cover, segments, `--draft`), `check_text.py`, `check_narration.py`, `mix.py`,
   `verify_final.py`, `thumbnail.py`, `report_data.py`, `check_publish.py`, `draftsheet.py`, `sheet.py`, `config.py`,
-  `init_project.py`.
+  `init_project.py`, `chapters.py` (the YouTube description's chapters and source links).
 - `scripts/market/`: the morning market briefing's `fetch_market.py` (US closes, the session calendar, the Finviz
   heatmap, weather, solar terms → `market_data.json`), `brief_draft.py` (draft lines and the outlook → `brief_draft.json`)
   and `outlook_log.py` (every outlook and its signals, scored against the KOSPI open: data for better outlooks).
