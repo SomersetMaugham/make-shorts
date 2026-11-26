@@ -23,6 +23,7 @@ python3 render.py --screenshot --short s1 --from 40 --to 62 --gapframe 30 --fast
 python3 render.py --screenshot --run s1_r9 --gapframe 10 --fast --jobs 3                  # one run (a graphic's own check)
 python3 render.py --screenshot --short s1 --from 46.6 --to 47.6 --gapframe 3 --fast --jobs 3  # a run boundary / camera move, frame by frame
 python3 render.py --screenshot --short s1 --at 12.5,43.9 --res full                       # exactly these moments, 1080x1920, one image each
+python3 render.py --screenshot --short s1 --at runs --res full --out chk/whole-1         # every run at +0.3 s (just cut in: empty zones show) and 0.4 s before its end
 python3 render.py --screenshot --short s1 --from 40 --to 47 --gapframe 6 --out chk/before # keep a set (before / after)
 ```
 

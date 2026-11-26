@@ -57,6 +57,12 @@ Any hit is a must-fix:
   or the key element under the platforms' button column (x > 960, y 1000–1700). These hold in every camera position.
 - Overlaps and clipping; things that should touch and do not (a wire that misses its pin).
 - Run 0 frame 0 not cover-safe, or a hero missing at a run's frame 0.
+- Accidental emptiness just after a run cuts in (the frames shot at +0.3 s): a band of the content zone 300 px tall or
+  more with nothing in it that the design did not leave on purpose, e.g. a cards zone waiting for its first card (the
+  user found nine such runs in the first market briefing, 2026-11-26; the Brief theme's smallest cards zone is 308 px).
+  One frame cannot show how long a zone stays empty: Claude confirms each finding against the build, where the Brief
+  theme warns (`⚠ … lower cards zone`) when a zone stays under 35 % for more than 1.0 s; a zone that fills within
+  1.0 s is not a defect, and a warning left in the build always is.
 - A frame that is a slide or a document page (a title and bullet lines on a card or on paper); the stage theme's
   infographic look (thin lines and small diagrams on a dark gradient beside a label column).
 - A drawing that appears all at once in the sketch theme (it must be drawn on).

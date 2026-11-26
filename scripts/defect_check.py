@@ -45,7 +45,8 @@ def describe(f):
     t = float(m.group(1)); q = next((c for c in C['cues'] if c['id'] == m.group(2)), None)
     r = next((r for r in C['runs'] if r['T0'] <= t < r['T1']), None)
     mm, ss = divmod(t, 60)
-    return (f'{f}: {int(mm)}:{ss:05.2f} [{m.group(2)}]' + (f' {sk}_r{r["i"]} ({r.get("scene", "")})' if r else '')
+    return (f'{f}: {int(mm)}:{ss:05.2f} [{m.group(2)}]' + (f' {sk}_r{r["i"]} ({r.get("scene", "")}, {t - r["T0"]:.2f} s into the run'
+            + (', just after it cut in' if t - r['T0'] < 0.6 else '') + ')' if r else '')
             + (f' — spoken: "{q["text"]}"' if q else ''))
 
 

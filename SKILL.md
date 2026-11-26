@@ -99,8 +99,8 @@ Commands in detail: `references/pipeline.md`. `SKILL` is this skill's folder; ev
    **Before the user sees it, look and check, on your own** (references/visual-review.md, references/elevate.md):
    (a) the visual review — the whole short and each section on sheets, then every run boundary, camera move and key
    moment frame by frame, checked by the defect checker (`defect_check.py motion <n> chk/motion-<n>`); fix the floor;
-   (b) the whole check — fresh images into `chk/whole-<n>` (whole `--gapframe 120`, sections `--gapframe 30`, key
-   moments `--at … --res full`), `defect_check.py whole <n> chk/whole-<n> [--before chk/whole-<n-1>]` lists the
+   (b) the whole check — fresh images into `chk/whole-<n>` (whole `--gapframe 120`, sections `--gapframe 30`, every
+   run just after it cuts in and settled `--at runs --res full`, key moments `--at … --res full`), `defect_check.py whole <n> chk/whole-<n> [--before chk/whole-<n-1>]` lists the
    defects; confirm each by opening its frame (drop taste requests), fix, re-shoot the changed stretches, check again,
    until nothing confirmed is left (at most three rounds, then report what is left). The heavy looking (dozens of
    frames) is Gemini Neon's (`gemini-4-neon-medium`); you open only the frames it names. Design every frame by the craft

@@ -501,6 +501,33 @@ def _cfg(r, thumb):
 
 
 # ----------------------------------------------------------------------------------------------------- page builders
+
+# ---------------------------------------------------------------------------------------------- empty-screen guard
+FILL_MIN = 0.35        # share of the lower cards zone that must be filled ...
+EMPTY_MAX = 1.0        # ... within this many seconds of the run's start (the user, 2026-11-26: "화면이 비어있어요",
+                       #     noted 0.9 s and 1.4 s into runs whose zone was empty)
+FRAME0_MIN = 0.2       # or this share already filled at frame 0 (one badge card in place reads as a finished page)
+EMPTY_WARNINGS = []
+
+
+def _check_lower_fill(rid, r, cards, cards_h):
+    """Warn when the lower cards zone stays (nearly) empty after a run cuts in: the hero is on screen at frame 0, but a
+    zone whose cards all land later reads as an unfinished page (the first market briefing: 9 runs, caught by the user
+    in review). Fill = the height of the cards already landed (+ gaps) / the zone's height."""
+    lands = sorted((0.0 if t <= 0.02 else max(0.02, t - LEAD), c['h']) for t, c in cards)
+    filled, empty_for = 0.0, r['dur']
+    for i, (tl, h) in enumerate(lands):
+        filled += h + (GAP if i else 0)
+        if filled >= FILL_MIN * cards_h:
+            empty_for = tl; break
+    fill0 = sum(h for tl, h in lands if tl <= 0.02) / cards_h
+    if os.environ.get('BRIEF_FILL_DEBUG'):
+        print(f'fill {rid}: frame0 {fill0:.0%}, {FILL_MIN:.0%} filled after {empty_for:.2f}s of {r["dur"]:.2f}s')
+    if empty_for > EMPTY_MAX and fill0 < FRAME0_MIN:
+        msg = (f'⚠ {rid}: the lower cards zone is under {FILL_MIN:.0%} filled for the first {min(empty_for, r["dur"]):.1f} s'
+               f' (frame 0: {fill0:.0%}) - put a card in place at frame 0 (t=0) or land one within {EMPTY_MAX} s')
+        EMPTY_WARNINGS.append(msg); print(msg)
+
 def brief_page(rid, r, sec, vis_html, source, cards=(), layout='default', vis_dark=False,
                vis_js='', vis_css='', thumb=(), mapped=True, stings=()):
     """One body run in the `brief` editorial magazine theme.
@@ -517,6 +544,7 @@ def brief_page(rid, r, sec, vis_html, source, cards=(), layout='default', vis_da
     total = sum(c['h'] for _, c in cards) + GAP * max(0, len(cards) - 1)
     if total > cards_h:
         raise SystemExit(f'{rid}: lower cards are {total} px tall - at most {cards_h} fit in layout {layout!r} (y {cards_y}-{cards_y + cards_h})')
+    _check_lower_fill(rid, r, cards, cards_h)
     dk, mn, _ = PALETTE[sec['color']]
     cards_html = ''.join(_card_html(c, sec, 0.0 if t <= 0.02 else max(0.02, t - LEAD), f'{i}') for i, (t, c) in enumerate(cards))
     body = (f'{_progress_html(sec, mn)}'
