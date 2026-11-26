@@ -503,10 +503,11 @@ def _cfg(r, thumb):
 # ----------------------------------------------------------------------------------------------------- page builders
 
 # ---------------------------------------------------------------------------------------------- empty-screen guard
-FILL_MIN = 0.35        # share of the lower cards zone that must be filled ...
-EMPTY_MAX = 1.0        # ... within this many seconds of the run's start (the user, 2026-11-26: "화면이 비어있어요",
-                       #     noted 0.9 s and 1.4 s into runs whose zone was empty)
-FRAME0_MIN = 0.2       # or this share already filled at frame 0 (one badge card in place reads as a finished page)
+FILL_MIN = 0.4         # share of the lower cards zone that must be filled ...
+EMPTY_MAX = 0.5        # ... within this many seconds of the run's start. Set from the user's review of 2026-11-26:
+                       #     zones 23-30 % full, or empty 0.6 s after the cut, were called "화면이 비어있어요";
+                       #     zones 41 % full or more were not
+FRAME0_MIN = 0.4       # or this share already filled at frame 0
 EMPTY_WARNINGS = []
 
 
