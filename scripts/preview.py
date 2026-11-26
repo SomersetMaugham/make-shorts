@@ -13,7 +13,8 @@ The player is script-to-motion's (assets/template/js/player.js + css/player.css)
   0 or Home the start · R from the top at 1× · Shift+> / Shift+< speed 0.25×–3× · F fullscreen · C captions on/off
   S copy "time / length [cue · run +time-in-run] line" (for review notes) · A copy the screenshot command for ±1 s
   (paste after `python3 render.py ` in work/) · D the debug bar (time, cue marks, the line; click to seek; with Shift held,
-  move the mouse to scrub: fine at the bottom of the screen, coarse at the top). The position and the captions setting are
+  move the mouse to scrub: fine at the bottom of the screen, coarse at the top). A reload by hand starts from the top; a
+  reload by the review server keeps the moment. The position and the captions setting are
   remembered. Letter keys work by their physical position, so they also work with the Korean input on.
 Opens from file:// by double-click (the page talks to the compositions by postMessage). Served by
 scripts/review_server.py (http://127.0.0.1:8765/index.html) it is also the review desk. Notes are collected while you watch and go to the agent together when you press
@@ -66,6 +67,7 @@ body.vp-playing:not(.vp-cursor){cursor:none}
 #stage iframe.on{visibility:visible}
 .vp-start{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
   background:#000;color:#fff;opacity:1;visibility:visible;transition:opacity .45s ease,visibility 0s linear 0s}
+.vp-keys{font:500 15px/1.4 Pretendard,sans-serif;color:rgba(255,255,255,.62);letter-spacing:.01em}
 .vp-start.vp-hidden{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .45s ease,visibility 0s linear .45s}
 .vp-load{width:min(360px,42vw);height:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
 .vp-load-fill{width:100%;height:100%;background:#fff;transform:scaleX(0);transform-origin:0 50%}
@@ -144,7 +146,7 @@ body.vp-playing:not(.vp-cursor){cursor:none}
 body.vp-playing .rv-badge{opacity:0}
 </style></head><body>
 <div id="stage"><div id="caps"></div><div id="cover"></div><div id="box"></div><div id="draw"></div></div>
-<div class="vp-start" id="start"><div class="vp-load"><div class="vp-load-fill" id="loadFill"></div></div><button class="vp-go" aria-label="재생"></button></div>
+<div class="vp-start" id="start"><div class="vp-load"><div class="vp-load-fill" id="loadFill"></div></div><button class="vp-go" aria-label="재생"></button><div class="vp-keys">Space 재생 · 0 / Home 처음으로 · ←/→ 0.5초 · Shift+←/→ 5초</div></div>
 <div class="vp-debug" id="debug"><select id="pick"></select><div class="vp-debug-time" id="dbgTime"></div>
   <div class="vp-debug-bar" id="bar"><div class="vp-debug-fill" id="fill"></div><div class="vp-debug-info" id="dbgInfo"></div></div></div>
 <div class="vp-rate" id="toast"></div>
@@ -512,9 +514,11 @@ if (REVIEW) {
 }
 
 // ---------- boot: the start screen until every composition is loaded, then wait for Space / a click ----------
-const saved = params.has('t') ? parseFloat(params.get('t')) : parseFloat(store.get(POS_KEY));
-if (Number.isFinite(saved)) t = clamp(saved, 0, duration);
 let hot = false; try { hot = sessionStorage.getItem('vp-hot') === '1'; sessionStorage.removeItem('vp-hot'); } catch (e) {}
+// ?t= seeks there; a reload by the review server (hot) keeps the moment; a reload by hand starts from the top (the user,
+// 2026-11-26: after a batch of fixes they reload to watch again from the start, and arrowing back was tedious)
+const saved = params.has('t') ? parseFloat(params.get('t')) : hot ? parseFloat(store.get(POS_KEY)) : 0;
+if (Number.isFinite(saved)) t = clamp(saved, 0, duration);
 if (params.has('still')) start.style.display = 'none';   // no fade: a screenshot must not catch the start screen half gone
 else if (hot) start.classList.add('vp-hidden');   // hot: reloaded by the review server, stay at the moment
 const notes = [];
@@ -525,7 +529,7 @@ if (miss.length) notes.push('그래픽 없음: ' + miss.join(', '));
 (function waitLoad() {
   if (loaded < D.runs.length) return requestAnimationFrame(waitLoad);
   render();
-  if (hot) toast('페이지 갱신됨 · Space로 재생', 1800);
+  if (hot) toast('페이지 갱신됨 · Space로 재생 · 0 / Home 처음으로', 2200);
   else if (!params.has('still')) { start.classList.add('vp-blocked'); if (notes.length) toast(notes.join(' · '), 3500); }
 })();
 requestAnimationFrame(tick);
