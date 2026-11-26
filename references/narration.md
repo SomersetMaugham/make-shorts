@@ -369,6 +369,8 @@ cues had it. Extra commas do not help, a plain re-take is a coin flip, and "..."
   `work/pronunciation.json` (this project) hold readings the user corrected once ("마이너스 극" → "마이너스극",
   "1점" → "일쩜", "GRPO" → "지알피오"); `narration_init.py` applies them to every new or reworded `say`. When a review
   note fixes a reading that would come back, add it there (SKILL.md step 5) so the user never writes it twice.
+  A reading that holds only in a context is a `"regex": true` entry: "0.36" is said `영쩜 삼뉵`, but only in the digits
+  after `쩜` (`"from": "(쩜 [영일이삼사오육칠팔구]*)삼육"`, `"to": "\\1삼뉵"`), so `삼육대` and `삼십육` stay as they are.
 - **Done before recording** (2026-11-20): `narration_init.py` puts `[pause short]` after every comma in a new or reworded
   line's `say`. On the PN short Chirp ran on through 16 of 19 commas, and the breaks found after recording cost the user
   more review notes than anything else (11 of 19 notes over three shorts were pauses). So tag first and record once.

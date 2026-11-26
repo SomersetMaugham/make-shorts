@@ -33,6 +33,12 @@
    "to": "영쩜",
    "word": true,
    "note": "GRPO n001"
+  },
+  {
+   "from": "(쩜 [영일이삼사오육칠팔구]*)삼육",
+   "to": "\\1삼뉵",
+   "regex": true,
+   "note": "market brief 2026-11-26 n002: '0.36%' as '영쩜 삼육' was heard as '영쩜 삼일'; 36 is said 삼뉵. Only in the digits after a decimal point (쩜), never in other words (삼육대 etc.)"
   }
  ]
 }
