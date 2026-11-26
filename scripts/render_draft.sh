@@ -4,6 +4,9 @@
 # Drafts are small (about 80 frames) so they use 4 Chrome workers each (own browser each, see render_full.sh) and run all at once.
 # No MP4 before the review is done: the user checks work/index.html, asks for fixes, and once the review is complete
 # renders with render.py, which is the only caller allowed here (it sets CVS_RENDER=1). references/pipeline.md.
+# HyperFrames pinned: npx otherwise takes whatever was published last, and on 2026-11-26 0.9.97 was listed
+# but its tarball 404ed two minutes after release, failing every render. Raise it after a test render.
+HF_VERSION="${HF_VERSION:-0.9.96}"
 if [ -z "${CVS_RENDER:-}" ]; then
   echo "refused: no MP4 before the review of index.html is done. Check with render.py --screenshot; the user renders with render.py."; exit 3
 fi
@@ -14,7 +17,7 @@ PY=../.venv/Scripts/python.exe; [ -f "$PY" ] || PY=../.venv/bin/python
 mkdir -p gfx/draft chk
 one() {
   r=$1
-  (cd gfx && npx --yes hyperframes render -c $r.html --fps 10 --quality draft --video-frame-format png --workers ${HF_DRAFT_WORKERS:-4} \
+  (cd gfx && npx --yes hyperframes@${HF_VERSION} render -c $r.html --fps 10 --quality draft --video-frame-format png --workers ${HF_DRAFT_WORKERS:-4} \
      --output draft/$r.mp4 --quiet > draft/$r.log 2>&1) || { echo "FAILED $r (see gfx/draft/$r.log)"; return 1; }
   "$PY" scripts/draftsheet.py $r 8 && echo "draft $r -> chk/${r}_sheet.png"
 }

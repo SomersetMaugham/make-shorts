@@ -16,6 +16,9 @@
 # you add (measured: 1 worker 11 fps, 16 workers 15 fps). Separate browsers: 4 workers 29 fps, 8 -> 41 fps, 16 -> 51 fps.
 # No MP4 before the review is done: the user checks work/index.html, asks for fixes, and once the review is complete
 # renders with render.py, which is the only caller allowed here (it sets CVS_RENDER=1). references/pipeline.md.
+# HyperFrames pinned: npx otherwise takes whatever was published last, and on 2026-11-26 0.9.97 was listed
+# but its tarball 404ed two minutes after release, failing every render. Raise it after a test render.
+HF_VERSION="${HF_VERSION:-0.9.96}"
 if [ -z "${CVS_RENDER:-}" ]; then
   echo "refused: no MP4 before the review of index.html is done. Check with render.py --screenshot; the user renders with render.py."; exit 3
 fi
@@ -53,7 +56,7 @@ one() {
   trap 'rm -rf "$slot"' EXIT
   t0=$(date +%s)
   rm -rf png240/$r
-  if ! npx --yes hyperframes render -c $r.html --fps $RENDER_FPS --quality high --format png-sequence --video-frame-format png \
+  if ! npx --yes hyperframes@${HF_VERSION} render -c $r.html --fps $RENDER_FPS --quality high --format png-sequence --video-frame-format png \
        --workers $HF_WORKERS --output png240/$r --quiet > png240/$r.log 2>&1; then
     echo "FAILED $r: render (see gfx/png240/$r.log)"; rm -rf "$slot"; return 1
   fi
