@@ -160,7 +160,12 @@ The lines speak to the viewer on the way to work, in the narrator's voice; the l
 
 ## The data and the research
 
-1. **The numbers:** in `work/`, `.venv/bin/python scripts/market/fetch_market.py` (yfinance is installed once:
+1. **The numbers, from two sources:** every index and stock is fetched from Yahoo (yfinance) and from CNBC's public
+   quote service and cross-checked (the user, 2026-11-26): `check.status` is `ok` when both have the same session and
+   agree within 0.05 %p (the 10-year yield within 2 bp), `mismatch`, `single` or `stale` otherwise. The fetch prints
+   `cross-check (Yahoo vs CNBC): N agree; ⚠ not confirmed …`; brief_draft.py speaks only `ok` numbers and marks a
+   line built on any other `확인 필요(...)`, to be settled from the news (`check` in research.json) before it is said.
+   In `work/`, `.venv/bin/python scripts/market/fetch_market.py` (yfinance is installed once:
    `uv pip install --python .venv/bin/python yfinance`). It writes `market_data.json`: the session calendar
    (the last completed US session, holidays since, tonight's holiday or early close), the indices and the watch list
    with their session dates, the heatmap, the weather and the season. It prints a ⚠ when an index's date is not the

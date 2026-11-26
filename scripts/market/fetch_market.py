@@ -4,6 +4,8 @@
                                                   [--no-heatmap] [--heatmap captures/finviz_<date>.png]
 
 What it collects, and from where (every value keeps its source and the session date it belongs to):
+- Every number is fetched twice and cross-checked (`check` on each index and stock): Yahoo via yfinance and CNBC's
+  quote service. brief_draft.py speaks only numbers whose `check.status` is 'ok'.
 - US closes of the last completed session: S&P 500, Nasdaq, Dow, SOX (Philadelphia semiconductor index), the 10-year
   Treasury yield, VIX, and the watch list of single stocks (references/market-brief.md "The watch list"), through
   yfinance (Yahoo Finance; unofficial, so the research step checks every figure that is spoken against a second
@@ -20,7 +22,7 @@ What it collects, and from where (every value keeps its source and the session d
 
 Nothing here writes narration. brief_draft.py turns this file (plus research.json) into draft lines for Claude to edit.
 """
-import argparse, datetime as dt, json, math, os, subprocess, sys, urllib.request
+import argparse, datetime as dt, json, math, os, subprocess, sys, urllib.parse, urllib.request
 
 KST = dt.timezone(dt.timedelta(hours=9))
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36'
@@ -77,6 +79,49 @@ def quotes(symbols, before=None):
         out[sym] = dict(date=str(h.index[-1].date()), close=round(c, 4), prev_date=str(h.index[-2].date()),
                         prev_close=round(p, 4), change=round(c - p, 4), change_pct=round((c - p) / p * 100, 2))
     return out
+
+
+CNBC = {'^GSPC': '.SPX', '^IXIC': '.IXIC', '^DJI': '.DJI', '^SOX': '.SOX', '^TNX': 'US10Y', '^VIX': '.VIX',
+        'KRW=X': 'KRW=', '^KS11': '.KS11'}                     # Yahoo symbol -> CNBC symbol; stocks keep their ticker
+
+
+def cnbc_quotes(yahoo_syms):
+    """The second source for every number (the user, 2026-11-26: cross-check prices and indices): CNBC's public quote
+    service, no key. Returns {yahoo symbol: {close, prev_close, change_pct, date}}; date is the session's date in the
+    exchange's own time zone, read from last_time."""
+    out, syms = {}, [CNBC.get(s, s) for s in yahoo_syms]
+    back = {CNBC.get(s, s): s for s in yahoo_syms}
+    num = lambda x: float(str(x).replace(',', '').replace('%', '').replace('+', '')) if x not in (None, '', 'UNCH') else None
+    for i in range(0, len(syms), 20):
+        url = ('https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols='
+               + urllib.parse.quote('|'.join(syms[i:i + 20])) + '&requestMethod=itv&noform=1&partnerId=2&fund=1&exthrs=0&output=json')
+        try:
+            rows = get_json(url)['FormattedQuoteResult']['FormattedQuote']
+        except Exception as e:
+            print(f'  ⚠ CNBC: no answer ({e}); every number is single-source'); return out
+        for q in rows:
+            ys = back.get(q.get('symbol'))
+            if not ys or num(q.get('last')) is None: continue
+            close, prev = num(q.get('last')), num(q.get('previous_day_closing'))
+            out[ys] = dict(close=close, prev_close=prev, date=str(q.get('last_time', ''))[:10],
+                           change_pct=round((close - prev) / prev * 100, 2) if prev else num(q.get('change_pct')))
+    return out
+
+
+def cross_check(sym, y, c, last_session):
+    """'ok' when both sources have the same session and agree (0.05 %p on a % change; 2 bp on the 10-year yield),
+    'mismatch' when they disagree, 'single' when only one has it, 'stale' when neither has the expected session."""
+    if not y and not c: return dict(status='missing')
+    yd, cd = (y or {}).get('date'), (c or {}).get('date')
+    if not c or cd != (y or {}).get('date'):
+        good = [s for s, d in (('Yahoo', yd), ('CNBC', cd)) if d == last_session]
+        return dict(status='single' if good else 'stale', source2='CNBC', date2=cd, close2=(c or {}).get('close'),
+                    change_pct2=(c or {}).get('change_pct'), note=f'Yahoo {yd}, CNBC {cd}; expected {last_session}')
+    if sym == '^TNX':
+        ok = abs((y['close'] - c['close']) * 100) <= 2.0
+    else:
+        ok = abs(y['change_pct'] - c['change_pct']) <= 0.05
+    return dict(status='ok' if ok else 'mismatch', source2='CNBC', date2=cd, close2=c['close'], change_pct2=c['change_pct'])
 
 
 def easter(y):   # anonymous Gregorian computus
@@ -278,8 +323,22 @@ def main():
     if not a.no_market:
         q = quotes([s for s, _ in INDICES.values()] + [t for t, _, _ in WATCH], before={'^KS11': a.date})
         data['indices'] = {k: dict(symbol=s, name=n, **(q[s] or {})) for k, (s, n) in INDICES.items()}
+        cq = cnbc_quotes([s for s, _ in INDICES.values()] + [t for t, _, _ in WATCH])
+        last0 = data['session']['last_session']
+        for k, (s, n) in INDICES.items():
+            if k == 'kospi':                                # KRX: compare the previous session's close
+                c = cq.get(s) or {}
+                prev_c = c.get('prev_close') if c.get('date') == a.date else c.get('close')
+                y = data['indices'][k]
+                data['indices'][k]['check'] = dict(source2='CNBC', close2=prev_c,
+                    status='ok' if y.get('close') and prev_c and abs(y['close'] - prev_c) <= 0.5 else 'single' if prev_c else 'missing')
+            elif k == 'usdkrw':
+                data['indices'][k]['check'] = dict(source2='CNBC', close2=(cq.get(s) or {}).get('close'), status='info')
+            else:
+                data['indices'][k]['check'] = cross_check(s, q.get(s), cq.get(s), last0)
         last = data['session']['last_session']
-        moves = [dict(ticker=t, name=n, group=g, **q[t]) for t, n, g in WATCH if q.get(t) and q[t]['date'] == last]
+        moves = [dict(ticker=t, name=n, group=g, **q[t], check=cross_check(t, q[t], cq.get(t), last))
+                 for t, n, g in WATCH if q.get(t) and q[t]['date'] == last]
         data['watch_stale'] = [dict(ticker=t, date=q[t]['date']) for t, n, g in WATCH if q.get(t) and q[t]['date'] != last]
         moves.sort(key=lambda m: m['change_pct'], reverse=True)
         data['watch'] = moves
@@ -307,6 +366,10 @@ def main():
         for k, v in data['indices'].items():
             print(f'  {k:7s} {v.get("date")} {v.get("close")} ({v.get("change_pct"):+}%)' if v.get('close') else f'  {k}: no data')
         if data['checks']['index_dates_not_last_session']: print('  ⚠ dates off the last session:', data['checks']['index_dates_not_last_session'])
+        bad = [f'{k} ({v["check"]["status"]})' for k, v in data['indices'].items() if v.get('check', {}).get('status') in ('mismatch', 'single', 'stale', 'missing')]
+        bad += [f'{w["ticker"]} ({w["check"]["status"]})' for w in data['watch'] if w['check']['status'] != 'ok']
+        n_ok = sum(v.get('check', {}).get('status') == 'ok' for v in data['indices'].values()) + sum(w['check']['status'] == 'ok' for w in data['watch'])
+        print(f'  cross-check (Yahoo vs CNBC): {n_ok} agree' + (f'; ⚠ not confirmed, not spoken until checked: {", ".join(bad)}' if bad else ''))
         if data.get('watch_stale'):
             print(f'  ⚠ watch list: {len(data["watch_stale"])} stock(s) have no {data["session"]["last_session"]} close on Yahoo yet '
                   f'(last: {sorted({w["date"] for w in data["watch_stale"]})}) and were left out; run again later before speaking stock moves')

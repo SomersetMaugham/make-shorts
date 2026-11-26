@@ -158,6 +158,11 @@ def main():
     m = json.load(open(a.market, encoding='utf-8'))
     r = json.load(open(a.research, encoding='utf-8')) if os.path.exists(a.research) else {}
     ix, lines = m.get('indices', {}), []
+    # only cross-checked numbers are spoken (the user, 2026-11-26): an index or stock whose two sources disagree, or that
+    # only one source has, is left out here and shown in `unconfirmed` for Claude to check against the news
+    unconfirmed = [k for k, v in ix.items() if v.get('check', {}).get('status') in ('mismatch', 'single', 'stale', 'missing')]
+    unconfirmed += [w['ticker'] for w in m.get('watch', []) if w.get('check', {}).get('status', 'ok') != 'ok']
+    m['watch'] = [w for w in m.get('watch', []) if w.get('check', {}).get('status', 'ok') == 'ok']
 
     def add(scene, text, say=None, src='', todo=False, figures=None):
         lines.append(dict(id=f'c{len(lines) + 1:02d}', scene=scene, text=text, say=say or text, src=src,
@@ -297,8 +302,13 @@ def main():
     # beat's two sentences share one run on purpose)
     rep = [f'{a_["id"]}/{b["id"]} {a_["scene"]}' for a_, b in zip(lines, lines[1:]) if a_['scene'] == b['scene'] and a_['scene'] not in ('season', 'outlook')]
     out = dict(sk=a.sk, date=m['date'], disclaimer='투자 권유가 아닌 정보 제공 목적입니다. 투자 판단의 책임은 본인에게 있습니다.',
-               outlook=ol, repeated_scene_neighbours=rep, lines=lines)
+               outlook=ol, unconfirmed=unconfirmed, repeated_scene_neighbours=rep, lines=lines)
     json.dump(out, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    for x in lines:                                    # an index line built on an unconfirmed number waits for Claude
+        keys = [k for k in unconfirmed if f'indices.{k}' in x['src'] or f'/{k}' in x['src']]
+        if keys and not x.get('todo'):
+            x['todo'] = True; x['text'] = f'확인 필요({",".join(keys)}): ' + x['text']
+    if unconfirmed: print(f'⚠ not cross-checked, left out or to confirm before speaking: {", ".join(unconfirmed)}')
     print(f'brief_draft: {a.out} · {len(lines)} lines · todo {sum(1 for x in lines if x.get("todo"))}'
           + (f' · same scene side by side: {rep}' if rep else ''))
     for x in lines: print(f'  {x["id"]} [{x["scene"]}] {x["text"]}\n      say: {x["say"]}')

@@ -72,6 +72,11 @@ corner (`credit_pos='tr'`: top-right; a raw `<img>` of a source adds `credit_chi
   least 35 % filled, or 20 % is already in place at frame 0 (one `badge_card` at `t=0`). `brief_page` prints
   `⚠ s1_rN: the lower cards zone is under 35% filled …` otherwise; fix every such warning before the preview.
 
+## Animating inside `vis_js` (`window.TOP_RENDER = function(t) {…}`)
+- `REEL.prog(t, start, duration[, ease])` takes a **duration**, not an end time: `prog(t, 1.2, 0.3)` runs from 1.2 s to
+  1.5 s. Passing an end time (`prog(t, 1.2, 1.5)`) stretches the move to 1.5 s and leaves labels half faded when the
+  run ends (the first market briefing: 20 calls, found 2026-11-26). Write `prog(t, a, b - a)` when you think in ends.
+
 ## Intro and outro sting (`brief_sting`)
 - **Intro (optional, on cover run 0)**: `brief_sting(t0=0.15, mode='intro', accent='crimson')` — a subtle 1.4 s crimson
   registration glint gliding across the cover masthead hairline without delaying the hook.
