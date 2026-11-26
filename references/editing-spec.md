@@ -161,8 +161,15 @@ YouTube Shorts
     the payoff itself
   - the tool, product or topic people search for, by its real name
   - bold but true; every title different; no emoji, no hashtags
-- Description: one or two lines (about 150 characters) in natural, keyword-rich Korean, then a blank line, then exactly
-  three hashtags about this short's content (the tool, its maker, the topic). No filler tags (#쇼츠, #추천, #fyp, #viral).
+- Description: one or two lines (about 150 characters) in natural, keyword-rich Korean; a blank line; the chapters; a
+  blank line; `자료` and the source links; then (a disclaimer where the format has one, and) exactly three hashtags about
+  this short's content on the last line (the tool, its maker, the topic). No filler tags (#쇼츠, #추천, #fyp, #viral).
+- Chapters and links (the user, 2026-11-26): mark the line that opens each chapter in shorts.json with
+  `"chapter": "<title>"` (what the stretch is about, in the viewer's words) and list the pages the narration names or
+  the screen shows in `"sources": [{"name": "매체 · 기사 제목", "url": "https://…"}]` (the publisher's own URL, never a
+  search or relay link). After the render, `python3 scripts/chapters.py <sk> --publish NN` writes both into the
+  description from the recorded timeline: the first chapter is 0:00, chapters under 10 s merge into the one before,
+  three or more are needed (YouTube's rule); check_publish.py checks them again.
 
 TikTok (one caption, no title; search reads all of it)
 - First line: the hook, under 100 characters, the title's idea in a conversational voice (pull word and open loop).

@@ -1,6 +1,7 @@
 """Check edit/PUBLISH.md against the publishing rules (editing-spec 8b) before handing it over.
 usage: $PY scripts/check_publish.py [../edit/PUBLISH.md]      exit 1 on a broken rule; warnings don't fail
-Errors: a YouTube title wider than 54 columns (Hangul and other wide characters count 2: the feed cuts by width), emoji or
+Errors: chapters in the YouTube description that YouTube would not show (first not 0:00, fewer than 3, one under
+10 s); a YouTube title wider than 54 columns (Hangul and other wide characters count 2: the feed cuts by width), emoji or
 # in it, or a duplicate; not exactly three hashtags (or filler tags) on the description's last line; a TikTok hook of 100+
 or an Instagram hook of 125+ characters; URLs in the TikTok / Instagram captions; 3-5 hashtags broken (Instagram max 5);
 a missing thumbnail file; a line sending viewers to a "full video" (there is none: these shorts stand alone).
@@ -60,6 +61,16 @@ for sec in re.split(r'\n(?=## Short )', text)[1:]:
     paras = desc.split('\n\n')
     if len(paras[0]) > 150: warns.append(f'{name}: description opener is {len(paras[0])} characters (about 150 at most in Korean)')
     tags(desc.strip().splitlines()[-1], 3, 3, f'{name} YouTube')
+    # chapters (chapters.py): YouTube shows them only when the first is 0:00, there are 3+, each 10 s or longer
+    stamps = [(int(mm) * 60 + int(ss), t) for mm, ss, t in re.findall(r'^(\d+):(\d\d) (.+)$', desc, re.M)]
+    if stamps:
+        if stamps[0][0] != 0: errs.append(f'{name} YouTube: the first chapter must be 0:00, not {stamps[0][0]} s')
+        if len(stamps) < 3: errs.append(f'{name} YouTube: {len(stamps)} chapters; YouTube needs 3 or more')
+        for (t0, a0), (t1, a1) in zip(stamps, stamps[1:]):
+            if t1 - t0 < 10: errs.append(f'{name} YouTube: chapter "{a0}" is {t1 - t0} s (10 s at least)')
+    else:
+        warns.append(f'{name} YouTube: no chapters in the description (python3 scripts/chapters.py <sk> --publish NN)')
+    if '자료\n' not in desc: warns.append(f'{name} YouTube: no source links ("sources" in shorts.json, chapters.py)')
     for cap, where, hook_max, hi in ((ttc, 'TikTok', 100, 5), (igc, 'Instagram', 125, 5)):
         lines = cap.strip().splitlines()
         if len(lines[0]) >= hook_max: errs.append(f'{name} {where}: hook is {len(lines[0])} characters (under {hook_max})')
