@@ -13,7 +13,9 @@ script-writing.md, **Short videos: the story spine**). The two formats never mix
 first-time-listener gates, the seam pass, the internal-name list and the cold-listener review on every line; the
 narration (Chirp 3 HD, speed 1, `say` readings, the pronunciation lexicon); recording only on the user's word; the
 preview, the review desk and no MP4 before the review is complete; the user's render; the publishing package.
-The look is the Brief theme (`theme-brief.md`) unless the user names another.
+The look is the Brief theme (`theme-brief.md`) unless the user names another, with both of its stings: the intro on
+the cover and **the outro on the last run** (`script.json` `"tail": 3.4`, `stings=[brief_sting(t0=r['dur'] - 2.9,
+mode='outro')]`; the first briefing shipped without it and the user caught it, 2026-11-26). Say so in the graphics brief.
 
 | | question short | morning market briefing |
 |---|---|---|
