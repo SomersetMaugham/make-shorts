@@ -100,7 +100,7 @@ def number_card(badge, value, sub='', prev='', color=None, count_from=None, coun
 
 def bars_card(title, rows, color=None, dur=1.15):
     """Comparison bars: rows = [(label, value 0..1, shown text, colour or None)]."""
-    return dict(kind='bars', title=title, rows=rows, color=color, dur=dur, h=74 + 94 * len(rows))
+    return dict(kind='bars', title=title, rows=rows, color=color, dur=dur, h=84 + 100 * len(rows))   # rows render ~100 px each (title, mono figures); 94 cut the last bar (2026-11-26)
 
 
 def pair_card(left, right):
@@ -130,12 +130,25 @@ def phrase_marks(json_path, phrase, t):
     return dict(boxes=d['phrases'][phrase], t=t)
 
 
+def credit_chip(credit, pos='br'):
+    """The source's name drawn on the capture itself (the user, 2026-11-26: every capture names its source in its
+    top-right or bottom-right corner, so a crop passed around still carries it). pos 'br' (default) or 'tr'."""
+    if not credit or not str(credit).strip():
+        raise SystemExit('capture: credit="출처: <매체·사이트 이름>" is required on every real capture (top-right or bottom-right)')
+    edge = 'top' if pos == 'tr' else 'bottom'
+    return (f'<div class="cap-credit" style="position:absolute;right:14px;{edge}:14px;z-index:6;padding:5px 12px;'
+            f'background:rgba(17,18,20,.84);color:#fff;font:600 26px/1.25 Pretendard,sans-serif;border-radius:6px;'
+            f'letter-spacing:-.2px;white-space:nowrap">{html.escape(str(credit))}</div>')
+
+
 def capture_html(src, fw, fh, focus=None, zoom=None, w=960, h=548, marks=(), text_px=None, keep=(), min_text=None,
-                 mark_style='highlight', color='navy', dim=False):
+                 mark_style='highlight', color='navy', dim=False, credit='', credit_pos='br'):
     """Real source capture inside #brVis with readability & crop guards.
     mark_style: 'highlight' (editorial translucent wash + crisp 4 px underline) or 'underline' (4 px underline only).
     color: palette name (default 'navy') or hex colour for the mark.
-    dim: when True and marks are present, subtly dims bands outside the cited paragraph so the quote pops cleanly."""
+    dim: when True and marks are present, subtly dims bands outside the cited paragraph so the quote pops cleanly.
+    credit: the source's name shown on the capture (required), e.g. '출처: 매일경제'; credit_pos 'br' or 'tr'."""
+    chip = credit_chip(credit, credit_pos)
     floor = min_text or MIN_CAPTURE_TEXT
     base = max(w / fw, h / fh)
     if zoom is None:
@@ -177,7 +190,7 @@ def capture_html(src, fw, fh, focus=None, zoom=None, w=960, h=548, marks=(), tex
             out += (f'<div data-sweep="{t_sw:.3f}" style="position:absolute;left:{L:.1f}px;top:{B + 2:.1f}px;'
                     f'width:{R - L:.1f}px;height:4px;background:{main_col};'
                     f'transform-origin:0 50%;transform:scaleX(0)"></div>')
-    return out
+    return out + chip
 
 
 # ----------------------------------------------------------------------------------------------------- HTML builders

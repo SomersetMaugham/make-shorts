@@ -240,7 +240,7 @@ function render() {
     if (!on) return;
     if (c.hl) {
       const tr = t - c.t0, pin = Math.min(1, tr / 0.18), e = pw3(pin);
-      if (D.theme === 'brief') el.style.setProperty('--br-acc', BR_ACC[c.color || r.color] || BR_ACC.crimson);
+      if (D.theme === 'brief') el.style.setProperty('--br-acc', BR_ACC[r.color || c.color] || BR_ACC.crimson);   // the run's colour from the graphics build first: captions.json may predate it
       el.style.top = r.capY + 'px';
       el.style.transform = `translate(-50%, calc(-50% + ${12 * (1 - e)}px)) scale(${0.96 + 0.04 * e})`;
       el.style.opacity = Math.min(1, pin * 1.6);

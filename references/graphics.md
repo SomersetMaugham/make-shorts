@@ -62,7 +62,7 @@ t_phrase = W(ws, '핵심 구절')
 - **`page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_js='')`**: writes `gfx/<rid>.html`.
   - `videos=[(card_id, 'assets/clip.mp4', fw, fh)]`: attaches video footage to a card.
   - `backdrop=('img'|'video', src, fw, fh)`: creates a blurred, enlarged clone behind captures.
-- **`capture_card(cid, fw, fh, x=540, y=720, inner0=None, inner=(), backdrop=True, land=None, **kw)`**: generates the standard capture card: 1032×1200, radius 36, centred at (540, 760) (y 160–1360).
+- **`capture_card(cid, fw, fh, x=540, y=720, inner0=None, inner=(), backdrop=True, land=None, **kw)`**: generates the standard capture card: 1032×1200, radius 36, centred at (540, 760) (y 160–1360). `credit='출처: <source>'` is required (the source's name in the card's bottom-right corner; `creditPos='tr'` for top-right).
 - **`logo_html(src)`**: returns a responsive SVG/PNG logo tag (`<img src="{src}" style="width:100%;height:100%;object-fit:contain;display:block">`).
 - **`tile_html(color='azure', glyph='code', size=140, tilt=-8, svg=None)`**: generates a glossy 3D icon tile with inner shadow and top highlight. Glyphs: `code`, `arrow`, `check`, `shield`, `sparkle`, `bolt`, `bars`, `eyes`, or custom SVG.
 - **`D`**: dictionary of asset dimensions loaded from `gfx/asset_dims.json` and `gfx/asset_dims_<tag>.json`.

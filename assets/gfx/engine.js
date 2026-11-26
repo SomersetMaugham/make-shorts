@@ -95,6 +95,10 @@
       // on the layer itself to reach the footage: overlayBlend:'multiply' turns a light band into a marker pen
       if (c.overlayBlend) o.style.mixBlendMode = c.overlayBlend;
       el.appendChild(o); }
+    if (c.credit) { const s = document.createElement('div'); s.className = 'cap-credit'; s.textContent = c.credit;   // the source on the capture itself
+      Object.assign(s.style, { position: 'absolute', right: '18px', [c.creditPos === 'tr' ? 'top' : 'bottom']: '18px', zIndex: 6, padding: '6px 14px',
+        background: 'rgba(17,18,20,.84)', color: '#fff', font: '600 26px/1.25 Pretendard, sans-serif', borderRadius: '8px', whiteSpace: 'nowrap' });
+      el.appendChild(s); }
     world.appendChild(el);
     c.el = el; c.r = r; cardById[c.id] = c;
   }

@@ -99,7 +99,19 @@ def phrase_marks(json_path, phrase, t):
     return dict(boxes=d['phrases'][phrase], t=t)
 
 
-def capture_html(src, fw, fh, focus=None, zoom=None, w=968, h=553, marks=(), text_px=None, keep=(), min_text=None):
+def credit_chip(credit, pos='br'):
+    """The source's name drawn on the capture itself (the user, 2026-11-26: every capture names its source in its
+    top-right or bottom-right corner, so a crop passed around still carries it). pos 'br' (default) or 'tr'."""
+    if not credit or not str(credit).strip():
+        raise SystemExit('capture: credit="출처: <매체·사이트 이름>" is required on every real capture (top-right or bottom-right)')
+    edge = 'top' if pos == 'tr' else 'bottom'
+    return (f'<div class="cap-credit" style="position:absolute;right:14px;{edge}:14px;z-index:6;padding:5px 12px;'
+            f'background:rgba(17,18,20,.84);color:#fff;font:600 26px/1.25 Pretendard,sans-serif;border-radius:6px;'
+            f'letter-spacing:-.2px;white-space:nowrap">{html.escape(str(credit))}</div>')
+
+
+def capture_html(src, fw, fh, focus=None, zoom=None, w=968, h=553, marks=(), text_px=None, keep=(), min_text=None,
+                 credit='', credit_pos='br'):
     """a real source capture filling the upper card, cropped around focus=(x, y) in the image's own pixels.
     marks: [phrase_marks(...) or dict(boxes=[[x0,y0,x1,y1],...], t=...)] - a red underline sweeps under each box at t
     (use W() - 0.2: it lands as the narration names it). Without focus the crop centres on the marks.
@@ -110,6 +122,7 @@ def capture_html(src, fw, fh, focus=None, zoom=None, w=968, h=553, marks=(), tex
     otherwise (the user, 2026-11-24, n020: a zoom for the byline cut the title's first and last letters).
     min_text: lower the readable-text floor for this crop only, when keeping a box whole needs a smaller zoom; say why
     in a comment at the call."""
+    chip = credit_chip(credit, credit_pos)   # the source on the capture itself (required)
     floor = min_text or MIN_CAPTURE_TEXT
     base = max(w / fw, h / fh)
     if zoom is None: zoom = max(1.0, (floor / text_px) / base) if text_px else 1.0
@@ -134,7 +147,7 @@ def capture_html(src, fw, fh, focus=None, zoom=None, w=968, h=553, marks=(), tex
                 raise SystemExit(f'capture_html {src}: the mark at ({x0},{y0})-({x1},{y1}) falls outside the crop - move focus or lower zoom')
             out += (f'<div data-sweep="{max(0.02, m["t"]):.3f}" style="position:absolute;left:{L:.1f}px;top:{T:.1f}px;'
                     f'width:{R - L:.1f}px;height:6px;border-radius:3px;background:#E0342C;transform-origin:0 50%;transform:scaleX(0)"></div>')
-    return out
+    return out + chip
 
 
 def _c(card, sec):

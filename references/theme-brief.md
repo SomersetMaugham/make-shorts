@@ -54,7 +54,8 @@ and `preview.py` read so every keyword highlight chip follows its run's section 
 
 ## Captures (`capture_html`)
 Same readability and crop-safety rules as `sungkim` (`scripts/capture_marks.py`, `MIN_CAPTURE_TEXT = 26 px`, `keep`
-boxes, bare numbers with no `~` or `약`), with two magazine upgrades:
+boxes, bare numbers with no `~` or `약`), and the required `credit='출처: <source>'` chip on the capture's bottom-right
+corner (`credit_pos='tr'`: top-right; a raw `<img>` of a source adds `credit_chip(...)`), with two magazine upgrades:
 - `mark_style='highlight'` (default): sweeps a translucent `multiply` wash band + crisp 4 px underline in the section
   colour under the cited phrase (`mark_style='underline'` draws the underline only).
 - `dim=True`: gently dims bands above and below the cited sentence on white paper captures so the eye snaps directly to
