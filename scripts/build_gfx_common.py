@@ -238,7 +238,11 @@ def page(rid, cfg, extra_html='', extra_css='', videos=(), backdrop=None, extra_
    page may not touch an iframe's window; HyperFrames renders never send it */
 window.addEventListener('message', function (e) {{ var d = e.data; if (d && typeof d.hfT === 'number' && window.__render) window.__render(d.hfT); }});</script>
 </body></html>"""
-    open(f'{OUT}/{rid}.html', 'w', encoding='utf8').write(html)
+    # written whole, then swapped in: the review page reloads a run as soon as its file changes, and a half-written
+    # file left that frame broken (2026-11-26, a page icon where the graphic should be)
+    tmp = f'{OUT}/.{rid}.html.tmp'
+    with open(tmp, 'w', encoding='utf8') as fh: fh.write(html)
+    os.replace(tmp, f'{OUT}/{rid}.html')
 
 def capture_card(cid, fw, fh, x=540, y=760, inner0=None, inner=(), backdrop=True, land=None, **kw):
     """a real page in the fixed capture frame: 1032x1200 centred at (540, 760), i.e. x 24-1056, y 160-1360.
