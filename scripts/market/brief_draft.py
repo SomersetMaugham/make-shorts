@@ -95,6 +95,37 @@ TERM_LINES = {   # a suggestion for the day of a term; Claude rewrites it in the
     '처서': ('오늘은 더위가 물러간다는 처서입니다. 아침저녁으로 바람이 한결 선선해집니다.', None),
     '경칩': ('오늘은 개구리가 깨어난다는 경칩입니다. 봄기운이 한 걸음 더 다가왔습니다.', None),
 }
+SIGNOFF = dict(before_weather='오늘 날씨 알려드리면서 브리핑을 마치겠습니다.', end='감사합니다.')   # the user, 2026-11-26
+
+
+def sgn(x, flat=0.0):
+    return 0 if x is None or abs(x) <= flat else (1 if x > 0 else -1)
+
+
+def signals(m, r):
+    """The night's signals for the Korean open, each as a number (sign = the direction it points). outlook_log.py
+    records them every day so their hit rates can be compared (market-brief.md "The outlook record")."""
+    ix = m.get('indices', {}); g = lambda k: (ix.get(k) or {}).get('change_pct')
+    nf = (r.get('night_futures') or {}).get('change_pct')
+    ndf = r.get('ndf') or {}
+    return dict(night_futures=nf, sox=g('sox'), nasdaq=g('nasdaq'), sp500=g('sp500'),
+                ndf_change=ndf.get('change'),                     # won per dollar: up = a weaker won = against stocks
+                vix_change=g('vix'), kospi_prev=(r.get('kospi_prev') or {}).get('change_pct', g('kospi')),
+                street=sum({'up': 1, 'down': -1}.get(v.get('direction'), 0) for v in r.get('street_view', [])))
+
+
+def outlook(m, r):
+    """A first reading of the direction of the open, for Claude to check against the research: night futures and the
+    brokers' views count twice, SOX and Nasdaq once, the NDF won against. |score| >= 2 picks a side, else 'mixed'."""
+    s = signals(m, r)
+    if s['night_futures'] is None and not r.get('street_view'): return None
+    parts = [('야간선물', 2 * sgn(s['night_futures'], 0.1)), ('증권가', 2 * sgn(s['street'])), ('SOX', sgn(s['sox'], 0.3)),
+             ('나스닥', sgn(s['nasdaq'], 0.3)), ('NDF', -sgn(s['ndf_change'], 1.0))]
+    score = sum(v for _, v in parts)
+    return dict(direction='up' if score >= 2 else 'down' if score <= -2 else 'mixed', score=score,
+                why=', '.join(f'{k} {v:+d}' for k, v in parts), signals=s)
+
+
 WEATHER_PRIORITY = ['cold_wave', 'cold_drop', 'snow', 'rain', 'dust', 'heat', 'big_range', 'warm_up']
 
 
@@ -141,6 +172,11 @@ def main():
         elif sp * nq < 0: mood = '지수마다 방향이 엇갈렸습니다'
         else: mood = f'{"오름세" if sp > 0 else "내림세"}로 마감했습니다'
         add('headline', f'간밤 미국 증시는 {mood}.', src='indices.sp500/nasdaq/sox')
+        # 1b the question the outlook answers (the user, 2026-11-26: ask in the opening, answer before the weather)
+        kp = (r.get('kospi_prev') or {}).get('change_pct', (ix.get('kospi') or {}).get('change_pct'))   # the news first: Yahoo can miss a session
+        q = ('반등할 수 있을까요' if kp is not None and kp <= -1 else '상승을 이어갈 수 있을까요' if kp is not None and kp >= 1
+             else '어느 쪽으로 출발할까요')
+        add('question', f'오늘 국장은 {q}?', src=f'indices.kospi {kp:+.2f}% (the previous Korean session)' if kp is not None else 'no KOSPI close')
         # 2 the big indices. `text` (the caption) says what `say` says, in plain numbers; the signed ▲/▼ values for
         # the cards go in `figures` (market-brief.md "Colours and signs")
         fig = lambda label, p: dict(label=label, value=pct_text(p), dir='up' if p > 0 else 'down' if p < 0 else 'flat')
@@ -197,7 +233,18 @@ def main():
         tail = '' if nf else '입니다'
         add('pair', ', '.join(pt) + tail + '.', ', '.join(ps) + tail + '.',
             f'ndf: {fx.get("source") if fx else "-"} · night_futures: {nf.get("source") if nf else "-"}', figures=figs)
-    # 9 today's watch point in Korea (a sector to watch, never a buy or sell call)
+    # 9 the outlook: the answer to 1b, from the night's signals and the brokers' views (market-brief.md "The outlook")
+    ol = outlook(m, r)
+    if ol:
+        kp = (r.get('kospi_prev') or {}).get('change_pct', (ix.get('kospi') or {}).get('change_pct')) or 0
+        say_dir = {'up': '반등 출발' if kp < 0 else '상승 출발', 'down': '약세 출발', 'mixed': '방향을 탐색하는 출발'}[ol['direction']]
+        add('outlook', f'밤사이 신호와 증권가 시각을 종합하면, 오늘 코스피는 {say_dir} 가능성이 큽니다.'
+            if ol['direction'] != 'mixed' else '밤사이 신호가 엇갈려, 오늘 코스피는 방향을 정하기 어려운 출발이 예상됩니다.',
+            src=f'outlook score {ol["score"]:+d}: {ol["why"]}')
+        ev = (r.get('korea_today') or r.get('events_tonight') or [None])[0]
+        add('outlook', f'다만 {ev.get("short") or ev["name"]} 결과에 따라 장중 흔들림이 커질 수 있습니다.' if ev else 'TODO 변수: 판단이 바뀔 수 있는 오늘의 변수 한 줄',
+            src=f'caveat: {ev.get("source") if ev else "-"}', todo=not ev)
+    # 9b a sector to watch (never a buy or sell call), only on a strong US group move
     if ix and lead and lead['group'] in KR_MAP and abs(lead['change_pct']) >= 2:
         us, kr = KR_MAP[lead['group']]
         add('diagram', f'간밤 {josa(us, "이/가")} {verb(lead["change_pct"])}던 만큼, 오늘은 {kr} 흐름을 지켜볼 만합니다.',
@@ -212,7 +259,13 @@ def main():
             f'오늘 밤 미국 증시는 {josa(tn["early_close"], "이라/라")} 새벽 {"두" if h == 2 else "세"} 시에 일찍 문을 닫습니다.', 'session.tonight (13:00 ET)')
     for e in r.get('events_tonight', [])[:1]:
         add('calendar', f'TODO 일정: {e.get("time_kst")} {e.get("name")}', src=f'research.events_tonight: {e.get("source")}', todo=True)
-    # 11 the season and weather line (market-brief.md: at most two short lines, only when a trigger fired)
+    # 11 the channel's sign-off opens the weather and closes the short (the user's words, 2026-11-26; project.json
+    #    market_signoff overrides): "오늘 날씨 알려드리면서 브리핑을 마치겠습니다." ... weather ... "감사합니다."
+    so = SIGNOFF
+    if os.path.exists('project.json'):
+        so = json.load(open('project.json', encoding='utf-8')).get('market_signoff', so)
+    if isinstance(so, str): so = dict(before_weather=so, end='')
+    if so.get('before_weather'): add('signoff', so['before_weather'], src='sign-off (before the weather)')
     term = (m.get('season') or {}).get('today')
     if term and term['name'] in TERM_LINES and not term.get('near_midnight'):
         for sent in TERM_LINES[term['name']][0].split('. '):
@@ -239,14 +292,12 @@ def main():
         for ti, si in pairs:   # one sentence per line (one cue each); same scene = one run
             add('season', ti.rstrip('.') + ('.' if not ti.endswith('?') else ''), si.rstrip('.') + ('.' if not si.endswith('?') else ''),
                 f'weather.notes.{notes[0]["kind"]}: {notes[0]["fact"]}')
-    # 12 the sign-off: the channel's fixed line from project.json, word for word (script-writing.md §7)
-    so = json.load(open('project.json', encoding='utf-8')).get('market_signoff') if os.path.exists('project.json') else None
-    if so: add('signoff', so, src='project.json market_signoff')
+    if so.get('end'): add('thanks', so['end'], src='sign-off (the last line)')
     # neighbours may not share a scene kind (editing-spec 3): Claude fixes any repeat while editing (the season
     # beat's two sentences share one run on purpose)
-    rep = [f'{a_["id"]}/{b["id"]} {a_["scene"]}' for a_, b in zip(lines, lines[1:]) if a_['scene'] == b['scene'] != 'season']
+    rep = [f'{a_["id"]}/{b["id"]} {a_["scene"]}' for a_, b in zip(lines, lines[1:]) if a_['scene'] == b['scene'] and a_['scene'] not in ('season', 'outlook')]
     out = dict(sk=a.sk, date=m['date'], disclaimer='투자 권유가 아닌 정보 제공 목적입니다. 투자 판단의 책임은 본인에게 있습니다.',
-               repeated_scene_neighbours=rep, lines=lines)
+               outlook=ol, repeated_scene_neighbours=rep, lines=lines)
     json.dump(out, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print(f'brief_draft: {a.out} · {len(lines)} lines · todo {sum(1 for x in lines if x.get("todo"))}'
           + (f' · same scene side by side: {rep}' if rep else ''))

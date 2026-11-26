@@ -181,7 +181,8 @@ Read `references/lessons.md` before improvising. The biggest ones:
   `verify_final.py`, `thumbnail.py`, `report_data.py`, `check_publish.py`, `draftsheet.py`, `sheet.py`, `config.py`,
   `init_project.py`.
 - `scripts/market/`: the morning market briefing's `fetch_market.py` (US closes, the session calendar, the Finviz
-  heatmap, weather, solar terms → `market_data.json`) and `brief_draft.py` (draft lines → `brief_draft.json`).
+  heatmap, weather, solar terms → `market_data.json`), `brief_draft.py` (draft lines and the outlook → `brief_draft.json`)
+  and `outlook_log.py` (every outlook and its signals, scored against the KOSPI open: data for better outlooks).
 - `scripts/narration/`: script-to-motion's TTS tools (`tts.mjs`, `wave.mjs`, `sync.mjs`, `phrasing-check.mjs`,
   `autocut.py`, `lib/`), with `SOURCE.md` (provenance, local changes) and `sync_upstream.sh` (reports upstream changes).
 - `assets/gfx/`: `engine.js` (world camera, depth of field, motion blur, captures, the stage theme), `sketch.js` +

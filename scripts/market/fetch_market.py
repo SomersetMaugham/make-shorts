@@ -29,7 +29,7 @@ CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 INDICES = {   # key: (Yahoo symbol, Korean name)
     'sp500': ('^GSPC', 'S&P 500'), 'nasdaq': ('^IXIC', '나스닥'), 'dow': ('^DJI', '다우'),
     'sox': ('^SOX', '필라델피아 반도체 지수'), 'us10y': ('^TNX', '미 국채 10년물 금리'), 'vix': ('^VIX', 'VIX'),
-    'usdkrw': ('KRW=X', '원/달러 (야후 현물)'),
+    'usdkrw': ('KRW=X', '원/달러 (야후 현물)'), 'kospi': ('^KS11', '코스피 (전 거래일)'),
 }
 # The watch list: the US names whose moves Korean sectors follow (market-brief.md "US -> Korea map").
 WATCH = [
@@ -56,7 +56,10 @@ TERM_CUSTOMS = {
 
 
 # ---------------------------------------------------------------- US market data
-def quotes(symbols):
+def quotes(symbols, before=None):
+    """before: {symbol: 'YYYY-MM-DD'} keeps only bars dated earlier (the KOSPI's last session before a briefing made
+    while the Korean market is open: yfinance's last bar is then today's, still moving)."""
+    before = before or {}
     try:
         import yfinance as yf
     except ImportError:
@@ -66,6 +69,7 @@ def quotes(symbols):
     for sym in symbols:
         h = yf.Ticker(sym).history(period='10d', auto_adjust=False)
         h = h[h['Close'].notna()]
+        if sym in before: h = h[[str(i.date()) < before[sym] for i in h.index]]
         if len(h) < 2:
             out[sym] = None; continue
         last, prev = h.iloc[-1], h.iloc[-2]
@@ -272,14 +276,20 @@ def main():
     day = dt.date.fromisoformat(a.date)
     data = dict(date=a.date, made_at=dt.datetime.now(KST).isoformat(timespec='seconds'), session=us_session(day))
     if not a.no_market:
-        q = quotes([s for s, _ in INDICES.values()] + [t for t, _, _ in WATCH])
+        q = quotes([s for s, _ in INDICES.values()] + [t for t, _, _ in WATCH], before={'^KS11': a.date})
         data['indices'] = {k: dict(symbol=s, name=n, **(q[s] or {})) for k, (s, n) in INDICES.items()}
-        moves = [dict(ticker=t, name=n, group=g, **q[t]) for t, n, g in WATCH if q.get(t)]
+        last = data['session']['last_session']
+        moves = [dict(ticker=t, name=n, group=g, **q[t]) for t, n, g in WATCH if q.get(t) and q[t]['date'] == last]
+        data['watch_stale'] = [dict(ticker=t, date=q[t]['date']) for t, n, g in WATCH if q.get(t) and q[t]['date'] != last]
         moves.sort(key=lambda m: m['change_pct'], reverse=True)
         data['watch'] = moves
-        stale = sorted({v['date'] for v in data['indices'].values() if v.get('date')} - {data['session']['last_session']})
-        data['checks'] = dict(index_dates_not_last_session=stale,
-                              note='KRW=X trades around the clock, so its date can be today; any other mismatch means '
+        stale = sorted({v['date'] for k, v in data['indices'].items() if v.get('date') and k not in ('usdkrw', 'kospi')}
+                       - {data['session']['last_session']})
+        kd = data['indices']['kospi'].get('date')
+        prev_wd = day - dt.timedelta(days=3 if day.weekday() == 0 else 1)
+        kospi_gap = bool(kd) and kd != str(prev_wd)
+        data['checks'] = dict(index_dates_not_last_session=stale, kospi_not_previous_weekday=kd if kospi_gap else None,
+                              note='KRW=X and KOSPI (^KS11) follow other calendars and are not checked; any other mismatch means '
                                    'Yahoo has not posted the close yet or the session calendar is wrong: stop and look')
         data['market_source'] = 'Yahoo Finance via yfinance (unofficial); research step confirms spoken figures'
         if not a.no_heatmap:
@@ -297,6 +307,12 @@ def main():
         for k, v in data['indices'].items():
             print(f'  {k:7s} {v.get("date")} {v.get("close")} ({v.get("change_pct"):+}%)' if v.get('close') else f'  {k}: no data')
         if data['checks']['index_dates_not_last_session']: print('  ⚠ dates off the last session:', data['checks']['index_dates_not_last_session'])
+        if data.get('watch_stale'):
+            print(f'  ⚠ watch list: {len(data["watch_stale"])} stock(s) have no {data["session"]["last_session"]} close on Yahoo yet '
+                  f'(last: {sorted({w["date"] for w in data["watch_stale"]})}) and were left out; run again later before speaking stock moves')
+        if data['checks']['kospi_not_previous_weekday']:
+            print(f'  ⚠ KOSPI: Yahoo\'s last session before {a.date} is {kd}, not {prev_wd} (a KRX holiday, or a session missing '
+                  'from Yahoo): take the previous close from the research (research.json "kospi_prev")')
         if 'heatmap' in data: print('  heatmap:', data['heatmap'].get('image') or data['heatmap'].get('error'))
     w = data['weather']; print(f'  weather {w["city"]}: {w["today"]} notes={[n["kind"] for n in w["notes"]]}')
     t = data['season']; print(f'  절기 today: {t["today"]} · next: {t["next"]["name"]} {t["next"]["kst"]} (in {t["days_to_next"]} d)')

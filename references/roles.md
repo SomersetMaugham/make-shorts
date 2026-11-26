@@ -26,8 +26,9 @@ every short unless the user says otherwise; ask before moving a step to someone 
 | step | what | who | checked by |
 |---|---|---|---|
 | 1a. Numbers | `fetch_market.py` → `market_data.json` (closes, session calendar, heatmap, weather, solar terms) | **Claude** | no ⚠ date line; Claude looks at both heatmap PNGs |
-| 1b. Research | `research.json`: news, after hours, NDF, night futures, tonight's and Korea's events, a second source for every spoken index figure | **agy Hydrogen** (`gemini-4-hydrogen-high`, web tools only) | Claude opens the sources of every spoken figure |
-| 2. Script | `brief_draft.py` → rewrite every line by the briefing spine and the gates → `shorts.json` | **Claude** | step 3 (the cold-listener review, as for every short) |
+| 1b. Research | `research.json`: news, after hours, NDF, night futures, the previous KOSPI close, tonight's and Korea's events, two brokers' morning views or more, a second source for every spoken index figure | **agy Hydrogen** (`gemini-4-hydrogen-high`, web tools only) | Claude opens the sources of every spoken figure |
+| 2. Script | `brief_draft.py` → rewrite every line by the briefing spine and the gates → `shorts.json`; the outlook checked against the research | **Claude** | step 3 (the cold-listener review, as for every short) |
+| 2b. Outlook record | `outlook_log.py add` after the script is final; `score` every morning; `report` every 20 trading days or so | **Claude** | weight changes only from 20+ days, proposed to the user with the numbers |
 
 Rules that go with it:
 - **Delegate in polite, unambiguous English** to agy and the Gemini app (user, 2026-11-22; global CLAUDE.md "위임 말투와
