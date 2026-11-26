@@ -20,10 +20,10 @@ mode='outro')]`; the first briefing shipped without it and the user caught it, 2
 | | question short | morning market briefing |
 |---|---|---|
 | shape | the story spine: hook, turns, answer, ending of at most three sentences | the briefing spine (below): a fixed order of beats, the same every day |
-| hook | opens a gap | the night in one line: what moved the US market (no announcement) |
-| ending | answer, new angle, next part's question | tonight's US session and schedule, the season or weather line, the channel's sign-off |
+| hook | opens a gap | the night in one line, then the question the outlook answers ("오늘 국장은 반등할 수 있을까요?") |
+| ending | answer, new angle, next part's question | the outlook (the answer), today's and tonight's schedule, the sign-off line, the weather, "감사합니다." |
 | research | facts, 2+ sources each, captures | the numbers script (`fetch_market.py`) + the research step for news, after hours, NDF, night futures, tonight's events; 2 sources for every spoken figure |
-| length | as the question needs | 45–70 s |
+| length | as the question needs | 60–90 s (the first briefing ran 90 s with its outro) |
 
 ## The briefing spine (the order of beats)
 
@@ -33,7 +33,7 @@ knows where to look.
 
 | # | beat | in it | left out when |
 |---|---|---|---|
-| 1 | the night | one line: the one thing that moved the market ("간밤 미국 증시는 반도체가 끌어내렸습니다") | never |
+| 1 | the night + the question | one line: the one thing that moved the market ("간밤 미국 증시는 반도체가 끌어내렸습니다"); then the question beat 9 answers, chosen from the previous KOSPI session: "오늘 국장은 반등할 수 있을까요?" (fell 1 % or more), "…상승을 이어갈 수 있을까요?" (rose 1 % or more), "…어느 쪽으로 출발할까요?" | never |
 | 2 | the indices | S&P 500 and Nasdaq (Claude adds the Dow when it went the other way; the draft leaves it out) | never |
 | 3 | SOX | the Philadelphia semiconductor index, the index Korea's chip makers follow; its biggest names on the card | never |
 | 4 | rates and fear | the 10-year Treasury yield; VIX | 10-year moved under 10 bp **and** VIX under 25 and moved under 10% |
@@ -41,14 +41,45 @@ knows where to look.
 | 6 | the news | the one or two stories that moved the market, each as cause → effect in one breath | no story moved the market as a whole |
 | 7 | after hours | an earnings or other result after the close that moved a stock ±3% or more | none |
 | 8 | the Korean open | the NDF 1-month dollar-won rate and the KOSPI 200 night futures | never (Yahoo's spot rate when the research has no NDF) |
-| 9 | the watch point | the US move → the Korean sector it usually pulls (the map below) | no US group moved ±2% or more |
+| 9 | the outlook | the answer to beat 1's question: the direction of today's KOSPI open from the night's signals and the brokers' views, then one line on what could change it ("다만 …에 따라"); "The outlook" below | never ("방향을 정하기 어려운 출발" when the signals disagree) |
+| 9b | the watch point | the US move → the Korean sector it usually pulls (the map below) | no US group moved ±2% or more |
 | 10 | tonight | a US holiday or early close; the one event tonight that matters (CPI, jobs, FOMC, a big earnings report) with its KST time; a Korean event today (금통위, option expiry, a late open on 수능 day, a KRX holiday) | nothing scheduled |
-| 11 | season and weather | Seoul's low, high and sky in one spoken line; the regional card (below); a season line and a line of care when a trigger fires | never (the weather run is there every day) |
-| 12 | sign-off | the channel's fixed line, word for word (`project.json` `market_signoff`; script-writing.md §7) | the user gave none |
+| 11 | sign-off, weather, thanks | the channel's sign-off, word for word (the user, 2026-11-26), split around the weather: "오늘 날씨 알려드리면서 브리핑을 마치겠습니다." opens the beat (it is also the turn into the weather the cold listener kept asking for); then Seoul's low, high and sky in one spoken line, the regional card (below), a season line and a line of care when a trigger fires; the last line is "감사합니다." (`project.json` `market_signoff` `{"before_weather", "end"}` overrides) | never |
 
 Lines are written so a listener who hears only the numbers still follows: one figure per clause, the direction in the
 verb (올랐습니다 / 내렸습니다), never two indices compared in one breath without saying which went where. The
 40-syllable breath rule holds; a beat that needs more is two lines.
+
+## The outlook
+
+The briefing answers its own opening question (the user, 2026-11-26: the facts alone inform, the outlook is the kick).
+- **What it says:** the direction and mood of today's KOSPI open only: 반등 출발 / 상승 출발 / 약세 출발 / 방향을 정하기
+  어려운 출발, and at most "변동성이 커질 수 있다". Never an index level, a target, a stock to buy or sell, or a
+  certainty ("반드시", "확실히").
+- **What it rests on:** the night's signals (KOSPI 200 night futures, SOX, Nasdaq, the NDF won) and the brokers'
+  morning views (`street_view` in research.json, two houses or more, each with its source). `brief_draft.py` scores a
+  first reading (night futures and the brokers count twice, SOX and Nasdaq once, a weaker won against; |score| ≥ 2
+  picks a side); Claude checks it against the research and may change it, and says why in the log.
+- **Always a caveat line:** "다만 …에 따라 장중 흔들림이 커질 수 있습니다", naming today's event (금통위, a US data
+  release, option expiry) or, without one, the signal that disagrees.
+- **When the signals disagree,** the line says so ("밤사이 신호가 엇갈려, …방향을 정하기 어려운 출발이 예상됩니다")
+  instead of forcing a side.
+
+## The outlook record
+
+Every call goes into one log for the series, `<channel>/market-brief/outlooks.json` (project.json `outlook_log`
+overrides): the date, the call as spoken, the draft's call and score, every signal's value, the brokers' views and
+today's events. It is never mentioned in a short (the user, 2026-11-26); it is data for making the outlook right more
+often: which signals to keep, weigh more, add or drop.
+- **After the script is final:** `python3 scripts/market/outlook_log.py add [--direction up|down|mixed]` (the call as
+  spoken when Claude changed the draft's).
+- **Every morning, before the new briefing:** `.venv/bin/python scripts/market/outlook_log.py score` fills in the
+  previous days' KOSPI open and close (Yahoo ^KS11) and whether the call hit (up: above +0.2 %, down: below −0.2 %,
+  mixed: within ±0.5 %). Yahoo misses a KRX session now and then (2026-11-25 was missing): the tool then skips the
+  day and says so; enter it from a news report with `score --manual <date> <open %> <close %>`.
+- **Now and then (every 20 trading days or so):** `python3 scripts/market/outlook_log.py report` prints the hit rate
+  of the calls and of every signal on its own against the open. Propose a change to the weights only from 20 days or
+  more, and bring it to the user with the numbers; the weights live in `brief_draft.py` `outlook()`.
 
 **A watch point, never a pick.** The briefing says what to *watch* ("오늘은 국내 전력기기 흐름을 지켜볼 만합니다"),
 never what to buy or sell, and never a price call. The last run shows
@@ -134,18 +165,24 @@ The lines speak to the viewer on the way to work, in the narrator's voice; the l
    (the last completed US session, holidays since, tonight's holiday or early close), the indices and the watch list
    with their session dates, the heatmap, the weather and the season. It prints a ⚠ when an index's date is not the
    last session (Yahoo has not posted the close): stop and run it again later; never speak a stale close.
+   Watch-list stocks without the last session's close are left out with a ⚠ (on 2026-11-26 a refetch returned
+   every stock's 11-24 bar, not 11-25's), and so is the heatmap names line until they are back.
 2. **The research** (agy Hydrogen, web tools only; roles.md): one request that returns `research.json` with a source
    URL for every value, in this shape:
    ```json
    {"news": [{"fact": "…", "source": "https://…", "source2": "https://…"}],
     "after_hours": {"ticker": "…", "name": "…", "event": "…", "change_pct": 0.0, "source": "https://…"},
-    "ndf": {"value": 0.0, "source": "https://…"},
+    "ndf": {"value": 0.0, "change": 0.0, "source": "https://…"},
     "night_futures": {"change_pct": 0.0, "source": "https://…"},
     "events_tonight": [{"time_kst": "22:30", "name": "…", "source": "https://…"}],
-    "korea_today": [{"name": "…", "source": "https://…"}],
+    "korea_today": [{"name": "…", "short": "금통위", "source": "https://…"}],
+    "kospi_prev": {"close": 0.0, "change_pct": 0.0, "source": "https://…"},
+    "street_view": [{"house": "…증권", "view": "one line in Korean", "direction": "up|down|mixed", "source": "https://…"}],
     "check": [{"what": "S&P 500 close", "value": 0.0, "source": "https://…"}]}
    ```
-   `check` holds a second source for every index figure that will be spoken. A figure that differs from
+   `kospi_prev` is the previous KRX session's close from the news (Yahoo can miss a session); `street_view` holds two
+   brokers' morning views or more; `short` is the name the narration says. `check` holds a second source for every
+   index figure that will be spoken. A figure that differs from
    `market_data.json` by more than 0.02 percentage points is not spoken until Claude has opened both sources.
 3. **The draft:** `python3 scripts/market/brief_draft.py` writes `brief_draft.json`: the beats in order with draft
    `text` / `say` (numbers already read as 쩜, 원·전, sino-Korean), `src`, `figures`, and `todo` lines for the news,
