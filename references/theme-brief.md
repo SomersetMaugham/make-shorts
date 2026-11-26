@@ -68,6 +68,9 @@ corner (`credit_pos='tr'`: top-right; a raw `<img>` of a source adds `credit_chi
 - `statement_card(text, sub='', badge='', color=None, quote_mark=True)` (h 264): magazine pull-quote framed by a double ink top rule and bottom ink rule.
 - `bars_card(title, rows, color=None)` / `pair_card(left, right)` (h 336) / `units_card(...)` (h 308) / `tiles_card(...)` (h 344).
 - All cards land `LEAD = 0.3 s` before their phrase (`t=0` = visible on frame 0). Clear lower cards on sub-topic turns.
+- **No empty cards zone after a cut** (the user, 2026-11-26): within 1.0 s of a run's start its lower cards zone is at
+  least 35 % filled, or 20 % is already in place at frame 0 (one `badge_card` at `t=0`). `brief_page` prints
+  `⚠ s1_rN: the lower cards zone is under 35% filled …` otherwise; fix every such warning before the preview.
 
 ## Intro and outro sting (`brief_sting`)
 - **Intro (optional, on cover run 0)**: `brief_sting(t0=0.15, mode='intro', accent='crimson')` — a subtle 1.4 s crimson

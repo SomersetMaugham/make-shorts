@@ -11,6 +11,7 @@ A copy sits in work/ (setup.sh puts it there); run it from work/ or the project 
     python3 render.py --screenshot --short s1 --from 12.0 --to 14.0 [--gapframe 10] [--fast] [--jobs 1]
     python3 render.py --screenshot --run s1_r3 [--gapframe 10]   the same over one whole run (a graphic's own check)
     python3 render.py --screenshot --short s1 --at 12.5,40 [--res full] [--out DIR]
+    python3 render.py --screenshot --short s1 --at runs --res full --out DIR   every run at +0.3 s and 0.4 s before its end
                                            exactly these moments, one image each (labelled with the time and cue): --res full
                                            is the stage at 1080x1920 (small type, detail; what the defect checker reads),
                                            without it 540x960. --out puts sheets or frames in DIR (before / after sets)
@@ -55,7 +56,9 @@ if '--screenshot' in flags_all:
     if not os.path.exists('index.html'): subprocess.run([PY, 'scripts/preview.py'], check=True)
     ts, t = [], a
     while t <= b + 1e-9: ts.append(round(t, 3)); t += gap / 60
-    if at: ts = [round(float(x), 3) for x in at.split(',') if x.strip()]
+    if at == 'runs':                                   # every run just after it cuts in (+0.3 s) and settled (0.4 s before its end)
+        ts = sorted({round(min(r['T0'] + 0.3, r['T1'] - 0.05), 3) for r in C[sk]['runs']} | {round(r['T1'] - 0.4, 3) for r in C[sk]['runs']})
+    elif at: ts = [round(float(x), 3) for x in at.split(',') if x.strip()]
     w, h = (1080, 1920) if res == 'full' else (540, 960) if fast or at else (720, 1280)   # Chrome keeps a window >= ~500 px wide
     out_dir = os.path.join(outd or 'chk', f'shot_{sk}_{a:.2f}-{b:.2f}' if not at else f'at_{sk}'); os.makedirs(out_dir, exist_ok=True)
     url = 'file://' + os.path.abspath('index.html')
