@@ -25,7 +25,7 @@ def build():
     band = '<div id="hlb" class="band" style="position:absolute;left:420px;top:510px;width:680px;height:70px"></div>'
     inner = [dict(t=t_step, dur=0.6, fx=760, fy=545, k=1.35)]
     cards = [capture_card('cap', fw, fh, inner0=dict(fx=960, fy=540, k=1.0), inner=inner,
-                          img='assets/pricing.png', overlay=band, overlayBlend='multiply')]
+                          img='assets/pricing.png', overlay=band, overlayBlend='multiply', credit='출처: 요금제 페이지')]
     moves = [dict(t=0.2, dur=r['dur'] - 0.2, kind='glide', to=dict(x=540, y=724, s=1.02))]
     cfg = dict(id='s1_r1', dur=r['dur'], mode='fv', cam0=dict(x=540, y=720, s=1.0), cards=cards,
                moves=moves, heroes=[dict(t=0, id='cap')],
@@ -55,7 +55,7 @@ def build():
     fw, fh = D.get('interface.png', (1920, 1080))
     t_whip = W(ws, '실행') - 0.45
     logo_card = dict(id='logo', kind='plain', x=540, y=720, w=580, h=160, html=logo_html('assets/logo.svg'))
-    ui_card = capture_card('ui', fw, fh, x=540, y=720 + 2200, img='assets/interface.png',
+    ui_card = capture_card('ui', fw, fh, x=540, y=720 + 2200, img='assets/interface.png', credit='출처: 제품 화면',
                            inner0=dict(fx=960, fy=540, k=1.15), backdrop={'tIn': t_whip + 0.35})
     moves = [dict(t=t_whip, kind='whip', to=dict(x=540, y=720 + 2200, s=1.0), via=dict(x=540, y=720 + 1100, s=0.88))]
     cfg = dict(id='s1_r3', dur=r['dur'], mode='fv', cam0=dict(x=540, y=720, s=1.0), cards=[logo_card, ui_card],

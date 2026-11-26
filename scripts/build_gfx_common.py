@@ -241,7 +241,10 @@ window.addEventListener('message', function (e) {{ var d = e.data; if (d && type
     open(f'{OUT}/{rid}.html', 'w', encoding='utf8').write(html)
 
 def capture_card(cid, fw, fh, x=540, y=760, inner0=None, inner=(), backdrop=True, land=None, **kw):
-    """a real page in the fixed capture frame: 1032x1200 centred at (540, 760), i.e. x 24-1056, y 160-1360"""
+    """a real page in the fixed capture frame: 1032x1200 centred at (540, 760), i.e. x 24-1056, y 160-1360.
+    credit='출처: <source>' is required: the engine draws it in the card's bottom-right corner (creditPos='tr': top-right)."""
+    if not str(kw.get('credit', '')).strip():
+        raise SystemExit(f'{cid}: capture_card needs credit="출처: <매체·사이트 이름>" (shown on the capture, the user 2026-11-26)')
     c = dict(id=cid, kind='capture', x=x, y=y, w=1032, h=1200, fw=fw, fh=fh, inner=list(inner), backdrop={'tIn': -1} if backdrop is True else backdrop, bg='#fff', **kw)
     if inner0: c['inner0'] = inner0
     if land: c['land'] = land

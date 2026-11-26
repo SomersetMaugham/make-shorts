@@ -46,7 +46,8 @@ Background `#F6F3E9`. compose.py lays nothing over frame 0: run 0 is the cover (
   sentence>" … [--remove "form,textarea"] [--live]` (`--live` for pages that render with scripts, e.g. openai.com;
   needs `websocket-client` in the venv). It removes stray page parts (comment boxes, banners), and writes the exact
   boxes of the cited sentences and the page's body text size to `<capture>.json`.
-- Crop with `capture_html(src, w, h, text_px=<from the json>, marks=[phrase_marks(json, '<sentence>', W(ws,'구절') - 0.2)])`:
+- Crop with `capture_html(src, w, h, text_px=<from the json>, marks=[phrase_marks(json, '<sentence>', W(ws,'구절') - 0.2)], credit='출처: <source>')`
+  (`credit` is required: the source's name on the capture's bottom-right corner, `credit_pos='tr'` for top-right):
   the crop centres on the marked sentence, the zoom makes the body text at least 26 px, and a red underline sweeps
   under the sentence as the narration names it. The kit STOPS the build when the text would be smaller or a mark
   falls outside the crop: pick a shorter part of the sentence (one line) rather than lowering the zoom.

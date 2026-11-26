@@ -107,6 +107,10 @@ that moves through it.
   highlighted as it is said. A capture sits sharp in a fixed frame (x 24, y 160, 1032x1200, radius 36, white, shadowed)
   on a blurred, enlarged, washed clone of itself (blur 40 px, saturate .7, brightness 1.05, a 72 % white wash); the frame
   never moves, the page pans and zooms inside it. Draw the TRUE number when a number is drawn.
+- **Every capture names its source on the capture itself** (the user, 2026-11-26): a dark chip `출처: <매체·사이트>` in
+  its bottom-right corner (top-right when that corner covers the cited line), Pretendard 600 26 px, so a crop passed
+  around still carries it. `capture_card(..., credit='출처: …')` and every theme's `capture_html(..., credit=…)` draw it
+  and stop the build without it; any other real image of a source (a raw `<img>` hero) adds `credit_chip('출처: …')`.
 - The frame's zones: content y 140-1395 (the main element's bottom edge at about 1360-1395), captions y 1410-1550, nothing below y 1560 (the platforms draw their title, description and music there), and no text or key element at x > 960 between y 1000 and 1700 (the like/comment/share column; config.LAYOUT ui_right). No decoration fills the bottom either (the old horizon wave of dots is gone). `*_r0` is also the
   cover frame: at frame 0 keep everything below y 620.
 - Every move and landing is anchored on a phrase, `W(ws, '<phrase>')`, so the graphic follows the narration when it is
