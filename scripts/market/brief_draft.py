@@ -11,7 +11,7 @@ Beats with no data are left out; beats that need words only the research has (th
 This is a draft, never the script: Claude rewrites every line by script-writing.md's first-time-listener gates and
 market-brief.md's briefing spine, then copies the lines into shorts.json. Nothing here goes to tts.mjs directly.
 """
-import argparse, datetime as dt, json, os, sys
+import argparse, datetime as dt, json, math, os, sys
 
 DIG = '영일이삼사오육칠팔구'
 
@@ -66,7 +66,7 @@ def won(x):
 
 
 def temp(t):
-    t = round(t)
+    t = math.floor(t + 0.5)   # half up: 14.5 -> 15 (Python's round() gives 14)
     return f'{"영하 " if t < 0 else ""}{abs(t)}도', f'{"영하 " if t < 0 else ""}{sino(abs(t))} 도'
 
 
@@ -156,10 +156,10 @@ def main():
         add('bars', f'우리 반도체와 함께 움직이는 필라델피아 반도체 지수는 {pct_plain(sox)} {verb(sox)}습니다.',
             f'우리 반도체와 함께 움직이는 필라델피아 반도체 지수는 {pct_say(sox)} {verb(sox)}습니다.', 'indices.sox',
             figures=[fig('SOX', sox)] + [fig(x['ticker'], x['change_pct']) for x in sorted((w for w in m.get('watch', []) if w['group'] == 'semis'), key=lambda w: -abs(w['change_pct']))][:4])
-        # 4 rates and VIX, only on a day they matter (market-brief.md: |10y| >= 5 bp, VIX >= 25 or moved >= 10%)
+        # 4 rates and VIX, only on a day they matter (market-brief.md: |10y| >= 10 bp, VIX >= 25 or moved >= 10%)
         ty, vx = ix['us10y'], ix['vix']
         bp = round(ty['change'] * 100)
-        if abs(bp) >= 5:
+        if abs(bp) >= 10:
             add('number', f'미 국채 10년물 금리는 {ty["close"]:.2f}%로 {abs(bp)}bp {verb(bp)}습니다.',
                 f'미 국채 십 년물 금리는 {decimal(round(ty["close"], 2), 2)} 퍼센트로 {decimal(abs(bp) / 100, 2)} 퍼센트포인트 {verb(bp)}습니다.',
                 'indices.us10y', figures=[dict(label='US10Y', value=f'{ty["close"]:.2f}% ({bp:+d}bp)', dir='up' if bp > 0 else 'down')])
@@ -219,10 +219,24 @@ def main():
             add('season', sent if sent.endswith(('.', '?')) else sent + '.', src=f'season.today {term["name"]} {term["kst"]}')
     elif term and not term.get('near_midnight'):
         add('season', f'오늘은 절기상 {term["name"]}입니다.', src=f'season.today {term["name"]}')
-    notes = sorted((m.get('weather') or {}).get('notes', []), key=lambda n: WEATHER_PRIORITY.index(n['kind']))
+    wx = m.get('weather') or {}
+    notes = sorted(wx.get('notes', []), key=lambda n: WEATHER_PRIORITY.index(n['kind']))
+    # the weather run is there every day: Seoul (the spoken city) said in one line, the other cities on the card
+    # (the user, 2026-11-26: 부산·대구·대전·광주·인천 low / high, sky, rain); a trigger adds its line of care
+    if wx.get('today'):
+        td = wx['today']; lo, lo_s = temp(td['low']); hi, hi_s = temp(td['high'])
+        cond = {'맑음': '맑겠습니다', '구름많음': '구름이 많겠습니다', '흐림': '흐리겠습니다'}[td['sky']]
+        if td.get('precip'): cond = f'{td["precip"]} 소식이 있습니다'
+        card = [dict(city=r['city'], low=temp(r['low'])[0], high=temp(r['high'])[0], sky=r['sky'], precip=r['precip'])
+                for r in wx.get('regions', [])]
+        add('season', f'오늘 {wx["city"]}은 아침 {lo}, 낮 {hi}로 {cond}.', f'오늘 {wx["city"]}은 아침 {lo_s}, 낮 {hi_s}로 {cond}.',
+            'weather.today + weather.regions (card)', figures=card)
+    notes = [n for n in notes if n['kind'] != 'warm_up']   # the base line already gives the temperature
     if notes:
         t, s = weather_line(notes[0], m['weather'])
-        for ti, si in zip(t.split('. '), s.split('. ')):   # one sentence per line (one cue each); same scene = one run
+        pairs = list(zip(t.split('. '), s.split('. ')))
+        if notes[0]['kind'] in ('rain', 'snow'): pairs = pairs[-1:]   # the base line said 비/눈 소식; keep the care line
+        for ti, si in pairs:   # one sentence per line (one cue each); same scene = one run
             add('season', ti.rstrip('.') + ('.' if not ti.endswith('?') else ''), si.rstrip('.') + ('.' if not si.endswith('?') else ''),
                 f'weather.notes.{notes[0]["kind"]}: {notes[0]["fact"]}')
     # 12 the sign-off: the channel's fixed line from project.json, word for word (script-writing.md §7)

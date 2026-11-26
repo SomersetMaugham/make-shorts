@@ -34,14 +34,14 @@ knows where to look.
 | 1 | the night | one line: the one thing that moved the market ("간밤 미국 증시는 반도체가 끌어내렸습니다") | never |
 | 2 | the indices | S&P 500 and Nasdaq (Claude adds the Dow when it went the other way; the draft leaves it out) | never |
 | 3 | SOX | the Philadelphia semiconductor index, the index Korea's chip makers follow; its biggest names on the card | never |
-| 4 | rates and fear | the 10-year Treasury yield; VIX | 10-year moved under 5 bp **and** VIX under 25 and moved under 10% |
+| 4 | rates and fear | the 10-year Treasury yield; VIX | 10-year moved under 10 bp **and** VIX under 25 and moved under 10% |
 | 5 | the heatmap | the Finviz map for its colour (about 2 s), then the 2–4 names that drove it on large cards | the capture failed (then cards only) |
 | 6 | the news | the one or two stories that moved the market, each as cause → effect in one breath | no story moved the market as a whole |
 | 7 | after hours | an earnings or other result after the close that moved a stock ±3% or more | none |
 | 8 | the Korean open | the NDF 1-month dollar-won rate and the KOSPI 200 night futures | never (Yahoo's spot rate when the research has no NDF) |
 | 9 | the watch point | the US move → the Korean sector it usually pulls (the map below) | no US group moved ±2% or more |
 | 10 | tonight | a US holiday or early close; the one event tonight that matters (CPI, jobs, FOMC, a big earnings report) with its KST time; a Korean event today (금통위, option expiry, a late open on 수능 day, a KRX holiday) | nothing scheduled |
-| 11 | season and weather | the line of "The weather and season line" | no trigger fired |
+| 11 | season and weather | Seoul's low, high and sky in one spoken line; the regional card (below); a season line and a line of care when a trigger fires | never (the weather run is there every day) |
 | 12 | sign-off | the channel's fixed line, word for word (`project.json` `market_signoff`; script-writing.md §7) | the user gave none |
 
 Lines are written so a listener who hears only the numbers still follows: one figure per clause, the direction in the
@@ -93,10 +93,19 @@ earnings), and then with its source.
 
 ## The weather and season line
 
-Beat 11 holds at most a season line and a weather line, each at most two short sentences (one sentence per cue;
-the beat is one run), and only when a trigger fires. They speak to the viewer on the way to work, in the
-narrator's voice, and close with one small piece of care ("감기 조심하세요", "우산 챙기세요"); never a lecture, never
-two pieces of advice.
+Beat 11 is there every day, as one run:
+- **Spoken:** Seoul's morning low, daytime high and sky in one line ("오늘 서울은 아침 오 도, 낮 십오 도로 흐리겠습니다";
+  rain or snow replaces the sky: "비 소식이 있습니다"). Then, only when a trigger fires, the season line and one line
+  of care, each at most two short sentences, one sentence per cue.
+- **On screen, not spoken (the user, 2026-11-26):** a regional card in the lower cards zone of the weather run
+  (`#brCards`, above the caption band) with 서울, 부산, 대구, 대전, 광주, 인천, one row each: city, low / high in whole
+  degrees, the sky (맑음 / 구름많음 / 흐림) and 비 or 눈 when there is any (precipitation code, or a chance of 60% or
+  more). The data is `weather.regions` in `market_data.json` and the weather line's `figures` in `brief_draft.json`.
+  Sky and rain get a small mark each, drawn in the Brief style (ink line icons, not emoji); temperatures in
+  Pretendard 700, at least 30 px.
+
+The lines speak to the viewer on the way to work, in the narrator's voice; the line of care is one small piece of care
+("감기 조심하세요", "우산 챙기세요"), never a lecture, never two pieces of advice. It follows these triggers:
 
 | trigger (`fetch_market.py` `weather.notes`, Seoul by default, `--city`) | threshold |
 |---|---|
@@ -106,7 +115,7 @@ two pieces of advice.
 | `dust` | PM2.5 day mean 36 µg/m³ or more, or PM10 81 or more (환경부 "나쁨") |
 | `heat` | high 33 °C or more |
 | `big_range` | high − low 10 °C or more |
-| `warm_up` | morning low 5 °C or more above yesterday's |
+| `warm_up` | morning low 5 °C or more above yesterday's (no line of care: the spoken line already gives the temperature) |
 
 - One weather line: the first trigger in that order. Temperatures are said as whole degrees ("영하 사 도").
 - **The season:** on the day of one of the 24 solar terms (절기), one line names it and, for the well-known ones, its

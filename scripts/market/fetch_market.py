@@ -161,14 +161,37 @@ def get_json(url):
 SNOW = {71, 73, 75, 77, 85, 86}
 
 
+RAIN = {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99}
+REGIONS = ['부산', '대구', '대전', '광주', '인천']   # the on-screen strip beside the spoken city (the user, 2026-11-26)
+
+
+def sky(code, rain_pct):
+    """WMO weather code -> (맑음 / 구름많음 / 흐림, 비 / 눈 / None). Precipitation counts when the day's code is rain or
+    snow, or its chance is 60% or more."""
+    s = '맑음' if code in (0, 1) else '구름많음' if code == 2 else '흐림'
+    wet = '눈' if code in SNOW else '비' if code in RAIN or (rain_pct or 0) >= 60 else None
+    return s, wet
+
+
 def weather(city, kst_date):
+    names = [city] + [c for c in REGIONS if c != city]
+    lats = ','.join(str(CITIES[c][0]) for c in names); lons = ','.join(str(CITIES[c][1]) for c in names)
+    allf = get_json('https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&timezone=Asia%%2FSeoul'
+                    '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code'
+                    '&past_days=1&forecast_days=2' % (lats, lons))
+    allf = allf if isinstance(allf, list) else [allf]
+    regions = []
+    for name, loc in zip(names, allf):
+        d = loc['daily']; j = d['time'].index(str(kst_date))
+        sk, wet = sky(d['weather_code'][j], d['precipitation_probability_max'][j])
+        regions.append(dict(city=name, low=d['temperature_2m_min'][j], high=d['temperature_2m_max'][j],
+                            rain_pct=d['precipitation_probability_max'][j], code=d['weather_code'][j], sky=sk, precip=wet))
+    f = allf[0]['daily']
     lat, lon = CITIES[city]
-    f = get_json('https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&timezone=Asia%%2FSeoul'
-                 '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code'
-                 '&past_days=1&forecast_days=2' % (lat, lon))['daily']
     i = f['time'].index(str(kst_date))
     today = dict(low=f['temperature_2m_min'][i], high=f['temperature_2m_max'][i],
                  rain_pct=f['precipitation_probability_max'][i], code=f['weather_code'][i])
+    today['sky'], today['precip'] = sky(today['code'], today['rain_pct'])
     yday = dict(low=f['temperature_2m_min'][i - 1], high=f['temperature_2m_max'][i - 1])
     aq = get_json('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%s&longitude=%s'
                   '&timezone=Asia%%2FSeoul&hourly=pm10,pm2_5&start_date=%s&end_date=%s' % (lat, lon, kst_date, kst_date))['hourly']
@@ -190,7 +213,7 @@ def weather(city, kst_date):
     if today['pm25'] >= 36 or today['pm10'] >= 81:
         notes.append(dict(kind='dust', value=[today['pm10'], today['pm25']],
                           fact=f'미세먼지 PM10 {today["pm10"]}, 초미세먼지 PM2.5 {today["pm25"]} (나쁨 이상)'))
-    return dict(city=city, today=today, yesterday=yday, notes=notes,
+    return dict(city=city, today=today, yesterday=yday, notes=notes, regions=regions,
                 source='Open-Meteo (open-meteo.com) forecast + air quality, model data, not KMA observations')
 
 
@@ -240,7 +263,8 @@ def solar_terms(kst_date):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--date', default=dt.datetime.now(KST).date().isoformat(), help='the KST morning of the briefing')
-    ap.add_argument('--city', default='서울', choices=sorted(CITIES))
+    pj = json.load(open('project.json', encoding='utf-8')) if os.path.exists('project.json') else {}
+    ap.add_argument('--city', default=pj.get('market_city', '서울'), choices=sorted(CITIES))
     ap.add_argument('--out', default='market_data.json')
     ap.add_argument('--heatmap'); ap.add_argument('--no-heatmap', action='store_true')
     ap.add_argument('--no-market', action='store_true', help='weather and season only (a quick test)')
