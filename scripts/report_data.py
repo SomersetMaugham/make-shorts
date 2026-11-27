@@ -26,10 +26,14 @@ for r in C['runs']:
 print(f"END={C['END']:.3f}")
 if os.path.exists(f'{sk}/mix.json'):
     print('\n## mix', json.dumps(json.load(open(f'{sk}/mix.json', encoding='utf-8'))))
+sys.path.insert(0, 'scripts'); import config as _cfg
+final_mp4 = f'{sk}/{_cfg.final_video_name()}'
+if not os.path.exists(final_mp4) and os.path.exists(f'{sk}/final_video.mp4'):
+    final_mp4 = f'{sk}/final_video.mp4'
 p = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_name,profile,width,height,r_frame_rate,nb_frames,sample_rate,channels:format=duration',
-                    '-of', 'compact', f'{sk}/final_video.mp4'], capture_output=True, text=True).stdout
+                    '-of', 'compact', final_mp4], capture_output=True, text=True).stdout
 print('\n## file\n' + p.strip())
-r = subprocess.run(['ffmpeg', '-hide_banner', '-nostats', '-i', f'{sk}/final_video.mp4', '-map', '0:a', '-af', 'ebur128=peak=true', '-f', 'null', '-'],
+r = subprocess.run(['ffmpeg', '-hide_banner', '-nostats', '-i', final_mp4, '-map', '0:a', '-af', 'ebur128=peak=true', '-f', 'null', '-'],
                    capture_output=True, text=True).stderr
 summ = r[r.rfind('Summary:'):]
 I = re.search(r'I:\s+(-?[\d.]+) LUFS', summ); TP = re.search(r'Peak:\s+(-?[\d.]+) dBFS', summ)

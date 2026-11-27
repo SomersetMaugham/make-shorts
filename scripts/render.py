@@ -180,5 +180,7 @@ if '--skip-graphics' not in flags:
     else:
         print(f'\n== graphics: every render is newer than its composition and made at {fps} fps, nothing to do')
 step('composite (gates, master, segments, concat, check, thumbnails)', ['bash', 'scripts/finish.sh', sk, *rest])
-print(f'\ndone in {(time.time() - t0) / 60:.1f} min: {os.path.join(W, sk, "final_video.mp4")}'
-      + (f'  (and ../edit/short-{rest[0]}_{rest[1]}/final.mp4)' if len(rest) == 2 else ''))
+sys.path.insert(0, 'scripts'); import config as _cfg
+final_name = _cfg.final_video_name()
+print(f'\ndone in {(time.time() - t0) / 60:.1f} min: {os.path.join(W, sk, final_name)}'
+      + (f'  (and ../edit/short-{rest[0]}_{rest[1]}/{final_name})' if len(rest) == 2 else ''))

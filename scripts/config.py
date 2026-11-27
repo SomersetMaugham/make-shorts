@@ -1,7 +1,9 @@
 """Project settings, read from project.json in the work directory (the cwd every script runs in).
 Written by init_project.py. Edit it by hand to override anything."""
+from datetime import datetime, timedelta, timezone
 import json, os
 
+_KST = timezone(timedelta(hours=9))
 _P = 'project.json'
 _cfg = json.load(open(_P, encoding='utf-8')) if os.path.exists(_P) else {}
 
@@ -13,6 +15,30 @@ def get(key, default=None):
 def save(**kw):
     _cfg.update(kw)
     json.dump(_cfg, open(_P, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+
+
+def market_brief_video_name(requested_at=None):
+    """MarketBrief_YYYY_MM_DD_A.mp4 (KST < 15:30, before market close) or _P.mp4 (KST >= 15:30)."""
+    if isinstance(requested_at, str) and requested_at.strip():
+        try:
+            dt = datetime.fromisoformat(requested_at.strip())
+            dt = dt.astimezone(_KST) if dt.tzinfo else dt.replace(tzinfo=_KST)
+        except ValueError:
+            dt = datetime.now(_KST)
+    elif isinstance(requested_at, datetime):
+        dt = requested_at.astimezone(_KST) if requested_at.tzinfo else requested_at.replace(tzinfo=_KST)
+    else:
+        dt = datetime.now(_KST)
+    suffix = 'P' if (dt.hour, dt.minute) >= (15, 30) else 'A'
+    return f"MarketBrief_{dt.strftime('%Y_%m_%d')}_{suffix}.mp4"
+
+
+def final_video_name():
+    """Final MP4 filename for this project: explicit project.json 'output_name', else MarketBrief_YYYY_MM_DD_A/P.mp4."""
+    name = _cfg.get('output_name')
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+    return market_brief_video_name(_cfg.get('requested_at'))
 
 
 LANG = _cfg.get('lang', 'ko')

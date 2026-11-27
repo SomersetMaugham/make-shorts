@@ -39,13 +39,14 @@ if [ -n "$DRAFT" ]; then
 fi
 "$PY" scripts/thumbnail.py $sk > logs/thumbs_$sk.log 2>&1 &
 TH=$!
+FINAL_NAME=$("$PY" -c "import sys; sys.path.insert(0,'scripts'); import config; print(config.final_video_name())")
 "$PY" scripts/compose.py $sk --concat
-"$PY" scripts/verify_final.py $sk/final_video.mp4 chk/${sk}_final.png 2>&1 | grep -vE "^\s*$" | tail -6
+"$PY" scripts/verify_final.py "$sk/$FINAL_NAME" chk/${sk}_final.png 2>&1 | grep -vE "^\s*$" | tail -6
 wait $TH && grep -E " s  run " logs/thumbs_$sk.log || { echo "thumbnail candidates: none rendered:"; tail -3 logs/thumbs_$sk.log; }
 if [ -n "$NN" ] && [ -n "$SLUG" ]; then
   D=../edit/short-${NN}_${SLUG}; mkdir -p "$D/stems"
-  cp $sk/final_video.mp4 "$D/final.mp4"; cp $sk/stems/voice.wav "$D/stems/"
+  cp "$sk/$FINAL_NAME" "$D/$FINAL_NAME"; cp $sk/stems/voice.wav "$D/stems/"
   cp narration/$sk/script.txt "$D/script.txt"
-  since "delivered $D/final.mp4 + stems/voice.wav + script.txt (pick the thumbnail: thumbnail.py $sk --pick <t> $NN $SLUG; write report.md there and the PUBLISH.md section)"
+  since "delivered $D/$FINAL_NAME + stems/voice.wav + script.txt (pick the thumbnail: thumbnail.py $sk --pick <t> $NN $SLUG; write report.md there and the PUBLISH.md section)"
 fi
 since "$sk finished. LOOK at chk/${sk}_final.png and chk/${sk}_thumbs.png"

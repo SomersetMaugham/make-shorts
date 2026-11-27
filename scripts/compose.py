@@ -29,7 +29,9 @@ END = C['END']; NF = int(round(END * FPS))
 RUNS = C['runs']
 GFX_DIR, GFX_FPS = ('gfx/draft', 10) if DRAFT else ('gfx/out60', 60)
 SEG_DIR = f'{sk}/seg_draft' if DRAFT else f'{sk}/seg'
-OUT_VIDEO = f'{sk}/draft_video.mp4' if DRAFT else f'{sk}/final_video.mp4'
+import zlib
+sys.path.insert(0, 'scripts'); import config as _cfg0
+OUT_VIDEO = f'{sk}/draft_video.mp4' if DRAFT else f'{sk}/{_cfg0.final_video_name()}'
 F = 'fonts/'
 # The skill's stage look (graphite stage, glass, one accent) with Pretendard for every word: the outputs are Korean
 # (Figtree and Geist Mono have no Hangul), and Pretendard's Latin keeps names and numbers in the same voice.
@@ -40,8 +42,6 @@ def vfont(name, size, weight):
     except Exception: pass
     return f
 CAP = vfont(FONT, 74, 700)                    # captions: Pretendard bold, white with a graphite stroke
-import zlib
-sys.path.insert(0, 'scripts'); import config as _cfg0
 SKETCH = _cfg0.THEME == 'sketch'               # theme-sketch.md: handwriting (Gaegu) in ink on a highlighter stroke
 if SKETCH: CAP = ImageFont.truetype(F + 'Gaegu-Bold.ttf', 78)
 SUNGKIM = _cfg0.THEME == 'sungkim'             # theme-sungkim.md: black Pretendard on the paper (a thin paper outline), keywords in teal, run 0 is the cover
