@@ -3,7 +3,8 @@
 A copy sits in work/ (setup.sh puts it there); run it from work/ or the project folder:
 
     python3 render.py s1 01 my-slug        every graphic with motion blur, then the composite -> ../edit/short-01_my-slug/
-    python3 render.py s1                   the same, without copying into edit/ (the MP4 is work/s1/final_video.mp4)
+    python3 render.py s1                   the same, without copying into edit/ (the MP4 is work/s1/final_video.mp4;
+                                           a market briefing's is MarketBrief_YYYY_MM_DD_A/P.mp4, A before 15:30 KST)
     python3 render.py s1 --fps 60          capture rate of the graphics: 60 (default, or project.json "render_fps"; one capture per frame), 240 (4 captures, 3 blended),
                                            or 120 (2, both blended); at 60 only engine.js's own viewport blur
     python3 render.py s1 --skip-graphics   only the composite (the graphics are already rendered and unchanged)
@@ -179,8 +180,9 @@ if '--skip-graphics' not in flags:
         for i in todo: open(f'gfx/out60/{i}.fps', 'w').write(fps)
     else:
         print(f'\n== graphics: every render is newer than its composition and made at {fps} fps, nothing to do')
-step('composite (gates, master, segments, concat, check, thumbnails)', ['bash', 'scripts/finish.sh', sk, *rest])
 sys.path.insert(0, 'scripts'); import config as _cfg
-final_name = _cfg.final_video_name()
+final_name = _cfg.final_video_name()          # worked out once, before the composite (a briefing's A/P is the render time)
+step('composite (gates, master, segments, concat, check, thumbnails)', ['bash', 'scripts/finish.sh', sk, *rest],
+     env=dict(os.environ, CVS_FINAL_NAME=final_name))
 print(f'\ndone in {(time.time() - t0) / 60:.1f} min: {os.path.join(W, sk, final_name)}'
-      + (f'  (and ../edit/short-{rest[0]}_{rest[1]}/{final_name})' if len(rest) == 2 else ''))
+      + (f"  (and ../edit/short-{rest[0]}_{rest[1]}/{'final.mp4' if final_name == 'final_video.mp4' else final_name})" if len(rest) == 2 else ''))

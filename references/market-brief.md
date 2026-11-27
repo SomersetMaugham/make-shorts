@@ -210,6 +210,10 @@ runs `python3 scripts/chapters.py s1 --publish 01` (spec 8b). Short beats merge 
 - **One project folder per day:** `<channel folder>/market-brief/<YYYY-MM-DD>/`, set up with `setup.sh` (uv reuses its
   cache, so the venv takes seconds). `project.json`: `"theme": "brief"`, `"format": "market-brief"`, and once the user
   has given them, `"market_signoff"` and `"market_city"`.
+- **The file name:** `MarketBrief_YYYY_MM_DD_A.mp4` for a render that starts before the KRX close (15:30 KST),
+  `MarketBrief_YYYY_MM_DD_P.mp4` from 15:30 on (`config.final_video_name`), in `<sk>/` and in `edit/short-NN_<slug>/`.
+  The morning and afternoon files have different names, so a second render that day does not overwrite the first.
+  `project.json` `"output_name"` overrides the name.
 - Copy yesterday's graphics module as the start of today's: the layouts stay, the numbers and captures change. The
   look and the beat order stay the same every day; that sameness is the format.
 - US closes are final from about 06:00 KST (07:00 in US daylight time); run `fetch_market.py` after that.

@@ -1,5 +1,5 @@
 """Verify a finished short: streams, loudness (EBU R128) and a 2 s contact sheet.
-usage: python scripts/verify_final.py s1/final_video.mp4 chk/s1_final.png
+usage: python scripts/verify_final.py s1/final_video.mp4 (or s1/MarketBrief_…mp4) chk/s1_final.png
 The loudness scan and the frame grabs run concurrently (one ffmpeg seek per frame, in parallel)."""
 import subprocess, sys, json, os
 from concurrent.futures import ThreadPoolExecutor
