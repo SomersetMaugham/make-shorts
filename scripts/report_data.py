@@ -26,10 +26,8 @@ for r in C['runs']:
 print(f"END={C['END']:.3f}")
 if os.path.exists(f'{sk}/mix.json'):
     print('\n## mix', json.dumps(json.load(open(f'{sk}/mix.json', encoding='utf-8'))))
-sys.path.insert(0, 'scripts'); import config as _cfg
-final_mp4 = f'{sk}/{_cfg.final_video_name()}'
-if not os.path.exists(final_mp4) and os.path.exists(f'{sk}/final_video.mp4'):
-    final_mp4 = f'{sk}/final_video.mp4'
+# finish.sh records the name it wrote; renders from before that are final_video.mp4
+final_mp4 = f"{sk}/{open(f'{sk}/final_name.txt').read().strip()}" if os.path.exists(f'{sk}/final_name.txt') else f'{sk}/final_video.mp4'
 p = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_name,profile,width,height,r_frame_rate,nb_frames,sample_rate,channels:format=duration',
                     '-of', 'compact', final_mp4], capture_output=True, text=True).stdout
 print('\n## file\n' + p.strip())

@@ -214,10 +214,10 @@ The two steps it runs, for reference (run them yourself only when the user asks)
    - `check_narration.py`: confirms no placeholders, no unreviewed takes, matching sync, and no unanchored keyword chips.
    - `mix.py`: masters `<sk>/voice.wav` to −14.0 LUFS integrated and true peak ≤ −1.0 dBTP (gain + limiter only) -> `<sk>/stems/voice.wav`, `<sk>/mix.wav`.
    - `compose.py --segments --no-concat`: renders each run segment in parallel, cached by `.key` files.
-   - `compose.py --concat`: stream-copies segments with `mix.wav` -> `<sk>/final_video.mp4`.
+   - `compose.py --concat`: stream-copies segments with `mix.wav` -> `<sk>/final_video.mp4` (a market briefing: `<sk>/MarketBrief_YYYY_MM_DD_A.mp4` before 15:30 KST at render time, `_P` from then on; `project.json` `"output_name"` overrides; the name is kept in `<sk>/final_name.txt`).
    - `thumbnail.py`: renders clean thumbnail candidate frames into `chk/<sk>_thumbs.png`.
    - `verify_final.py`: verifies 1080×1920, 60 fps, AAC 48 kHz stereo, loudness, and writes `chk/<sk>_final.png`.
-   - Copies deliverables to `../edit/short-01_slug-name/` (`final.mp4`, `stems/voice.wav`, `script.txt`).
+   - Copies deliverables to `../edit/short-01_slug-name/` (`final.mp4`, or the MarketBrief name for a briefing; `stems/voice.wav`, `script.txt`).
 
 3. **Select thumbnail**:
    Inspect `chk/<sk>_thumbs.png` (displays candidates at 1/3 size and Shorts-feed size with Instagram 4:5 guide). Pick the best frame:
@@ -235,7 +235,7 @@ The two steps it runs, for reference (run them yourself only when the user asks)
      ```
 
 Deliverables in `edit/short-NN_<slug>/`:
-- `final.mp4`: 1080×1920, 60 fps, H.264 high quality, AAC 48 kHz stereo.
+- `final.mp4` (a briefing: `MarketBrief_YYYY_MM_DD_A/P.mp4`): 1080×1920, 60 fps, H.264 high quality, AAC 48 kHz stereo.
 - `thumbnail.jpg`: clean 1080×1920 cover image (< 2 MB).
 - `stems/voice.wav`: 48 kHz stereo dialogue track before mastering.
 - `script.txt`: full spoken script.

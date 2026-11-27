@@ -45,7 +45,7 @@ INPUTS
 - Cover title: the user's, otherwise written from the hook.
 
 DELIVERABLES (in edit/)
-- short-NN_<slug>/final.mp4: 1080x1920, 60 fps, H.264 high, AAC 48 kHz stereo
+- short-NN_<slug>/final.mp4 (a market briefing: MarketBrief_YYYY_MM_DD_A/P.mp4, market-brief.md): 1080x1920, 60 fps, H.264 high, AAC 48 kHz stereo
 - short-NN_<slug>/thumbnail.jpg (section 8c), stems/voice.wav (the narration before the master), script.txt, report.md
 - edit/PUBLISH.md: the publishing package for every short (section 8b)
 
@@ -182,7 +182,7 @@ Instagram Reels
 - 3-5 hashtags on the last line (Instagram allows at most 5). No URLs.
 
 Layout of each section (every piece of copy in its own fenced block):
-  ## Short NN: <slug>  (file: edit/short-NN_<slug>/final.mp4)
+  ## Short NN: <slug>  (file: edit/short-NN_<slug>/final.mp4, or the briefing's MarketBrief name)
   **Thumbnail** (short-NN_<slug>/thumbnail.jpg, from <time> s: <what it shows>). The YouTube thumbnail and the Instagram
   cover; on TikTok, upload it as the cover or pick the frame at <time> s.
 

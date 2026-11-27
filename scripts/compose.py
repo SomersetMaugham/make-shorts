@@ -1,5 +1,5 @@
 """Final compositor for one short: every run is a full-frame graphic (no camera, no source video), with the captions
-(glass keyword chips) and the cover on frame 0. Writes <sk>/final_video.mp4 (video + mix) and <sk>/captions.json.
+(glass keyword chips) and the cover on frame 0. Writes <sk>/final_video.mp4 (MarketBrief_YYYY_MM_DD_A/P.mp4 for a market briefing; config.final_video_name) (video + mix) and <sk>/captions.json.
 usage: python compose.py s1 --events-only            captions.json only
        python compose.py s1 --preview t1,t2,...      full-resolution frames -> <sk>/preview/
        python compose.py s1 --preview t1,... --clean the same frames without captions or cover -> <sk>/thumb/ (thumbnail.py)
@@ -8,7 +8,7 @@ usage: python compose.py s1 --events-only            captions.json only
                                                     every run as its own process in parallel, cached by its inputs (a run whose
                                                     graphic, captions and code are unchanged is skipped), frame counts verified,
                                                     then --concat
-       python compose.py s1 --concat                stream-copy the segments + the mix -> <sk>/final_video.mp4
+       python compose.py s1 --concat                stream-copy the segments + the mix -> <sk>/final_video.mp4 (or the briefing name)
   add --draft to any of these: the 10 fps draft graphics (gfx/draft/, each frame held for 6) instead of the full 60 fps
   renders, into <sk>/seg_draft/ and <sk>/draft_video.mp4 - the review copy the user watches before deciding to record."""
 import json, sys, os, subprocess, re, numpy as np, cv2
@@ -31,7 +31,7 @@ GFX_DIR, GFX_FPS = ('gfx/draft', 10) if DRAFT else ('gfx/out60', 60)
 SEG_DIR = f'{sk}/seg_draft' if DRAFT else f'{sk}/seg'
 import zlib
 sys.path.insert(0, 'scripts'); import config as _cfg0
-OUT_VIDEO = f'{sk}/draft_video.mp4' if DRAFT else f'{sk}/{_cfg0.final_video_name()}'
+OUT_VIDEO = f'{sk}/draft_video.mp4' if DRAFT else f"{sk}/{os.environ.get('CVS_FINAL_NAME') or _cfg0.final_video_name()}"   # finish.sh sets the name once per render
 F = 'fonts/'
 # The skill's stage look (graphite stage, glass, one accent) with Pretendard for every word: the outputs are Korean
 # (Figtree and Geist Mono have no Hangul), and Pretendard's Latin keeps names and numbers in the same voice.
